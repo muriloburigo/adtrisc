@@ -25,8 +25,8 @@ export default async function DashboardPage() {
   ])
 
   const stats = [
-    { label: 'Total de Alunos', value: totalAlunos ?? 0, icon: Users, color: 'text-sky-400' },
-    { label: 'Alunos Ativos', value: alunosAtivos ?? 0, icon: Users, color: 'text-green-500' },
+    { label: 'Total de Atletas', value: totalAlunos ?? 0, icon: Users, color: 'text-sky-400' },
+    { label: 'Atletas Ativos', value: alunosAtivos ?? 0, icon: Users, color: 'text-green-500' },
     { label: 'Turmas Ativas', value: totalTurmas ?? 0, icon: Users2, color: 'text-sky-400' },
     { label: 'Pgtos Pendentes', value: pagamentosPendentes ?? 0, icon: CreditCard, color: 'text-yellow-500' },
   ]
@@ -58,11 +58,11 @@ export default async function DashboardPage() {
         {/* Últimos alunos */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-navy-500">Últimos alunos cadastrados</h2>
+            <h2 className="text-sm font-semibold text-navy-500">Últimos atletas cadastrados</h2>
             <Link href="/alunos" className="text-xs text-sky-400 hover:underline">Ver todos</Link>
           </div>
           {(ultimosAlunos ?? []).length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Nenhum aluno ainda.</p>
+            <p className="text-sm text-gray-400 py-4 text-center">Nenhum(a) atleta ainda.</p>
           ) : (
             <div className="space-y-3">
               {(ultimosAlunos as unknown as UltimoAluno[]).map((a) => (

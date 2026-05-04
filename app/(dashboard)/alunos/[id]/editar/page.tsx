@@ -30,7 +30,7 @@ export default async function EditarAlunoPage({ params }: { params: Promise<{ id
 
   return (
     <div className="p-8 max-w-3xl">
-      <PageHeader title="Editar Aluno" subtitle={aluno.nome} />
+      <PageHeader title="Editar Atleta" subtitle={aluno.nome} />
       <AlunoForm action={action} aluno={aluno} turmas={turmas} mae={mae} pai={pai} submitLabel="Salvar alterações" />
     </div>
   )

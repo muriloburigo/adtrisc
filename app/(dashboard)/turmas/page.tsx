@@ -5,17 +5,36 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Badge, { statusTurmaVariant } from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
+import FilterBar from '@/components/ui/FilterBar'
 import { Users2, Plus, Clock, Users } from 'lucide-react'
 import { formatarDiasSemana, formatarHorario, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
 import type { DiaSemana } from '@/types/database'
 
-export default async function TurmasPage() {
+export default async function TurmasPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>
+}) {
+  const filters    = await searchParams
+  const q          = filters.q          ?? ''
+  const modalidade = filters.modalidade ?? ''
+  const status     = filters.status     ?? ''
+  const ano        = filters.ano        ?? ''
+  const semestre   = filters.semestre   ?? ''
+
   const supabase = await createClient()
 
-  const { data } = await supabase
+  let query = supabase
     .from('turmas')
     .select('*, coaches:coach_id ( full_name )')
     .order('nome')
+
+  if (modalidade) query = query.eq('modalidade', modalidade)
+  if (status)     query = query.eq('status', status)
+  if (ano)        query = query.eq('ano', parseInt(ano))
+  if (semestre)   query = query.eq('semestre', parseInt(semestre))
+
+  const { data } = await query
 
   type TurmaRow = {
     id: string; nome: string; modalidade: string; status: string
@@ -25,13 +44,67 @@ export default async function TurmasPage() {
     idade_min: number | null; idade_max: number | null
   }
 
-  const turmas = (data ?? []) as unknown as TurmaRow[]
+  let turmas = (data ?? []) as unknown as TurmaRow[]
+
+  if (q) {
+    const lower = q.toLowerCase()
+    turmas = turmas.filter((t) => t.nome.toLowerCase().includes(lower))
+  }
+
+  // Collect unique anos from all records (unfiltered) for the ano dropdown
+  const { data: anosRaw } = await supabase
+    .from('turmas')
+    .select('ano')
+    .not('ano', 'is', null)
+    .order('ano', { ascending: false })
+
+  const anosUnicos = [...new Set((anosRaw ?? []).map((r: { ano: number }) => r.ano))].filter(Boolean) as number[]
+  const anoOptions = anosUnicos.map((a) => ({ value: String(a), label: String(a) }))
+
+  const filterFields = [
+    { type: 'search' as const, key: 'q', placeholder: 'Buscar por nome…' },
+    {
+      type: 'select' as const,
+      key: 'modalidade',
+      placeholder: 'Todas as modalidades',
+      options: [
+        { value: 'natacao',   label: 'Natação'   },
+        { value: 'ciclismo',  label: 'Ciclismo'  },
+        { value: 'corrida',   label: 'Corrida'   },
+        { value: 'triathlon', label: 'Triathlon' },
+      ],
+    },
+    {
+      type: 'select' as const,
+      key: 'status',
+      placeholder: 'Todos os status',
+      options: [
+        { value: 'ativa',    label: 'Ativa'    },
+        { value: 'inativa',  label: 'Inativa'  },
+        { value: 'suspensa', label: 'Suspensa' },
+      ],
+    },
+    ...(anoOptions.length > 0
+      ? [{ type: 'select' as const, key: 'ano', placeholder: 'Todos os anos', options: anoOptions }]
+      : []),
+    {
+      type: 'select' as const,
+      key: 'semestre',
+      placeholder: 'Ambos os semestres',
+      options: [
+        { value: '1', label: '1º Semestre' },
+        { value: '2', label: '2º Semestre' },
+      ],
+    },
+  ]
+
+  const initialValues = { q, modalidade, status, ano, semestre }
 
   return (
     <div className="p-8">
       <PageHeader
         title="Turmas"
-        subtitle={`${turmas.length} turma${turmas.length !== 1 ? 's' : ''} cadastrada${turmas.length !== 1 ? 's' : ''}`}
+        subtitle={`${turmas.length} turma${turmas.length !== 1 ? 's' : ''} encontrada${turmas.length !== 1 ? 's' : ''}`}
         action={
           <Link href="/turmas/nova">
             <Button><Plus size={16} />Nova Turma</Button>
@@ -39,16 +112,18 @@ export default async function TurmasPage() {
         }
       />
 
+      <FilterBar fields={filterFields} initialValues={initialValues} />
+
       {turmas.length === 0 ? (
         <Card>
           <EmptyState
             icon={Users2}
-            title="Nenhuma turma cadastrada"
-            description="Crie a primeira turma para começar"
+            title="Nenhuma turma encontrada"
+            description={q || modalidade || status || ano || semestre ? 'Tente ajustar os filtros' : 'Crie a primeira turma para começar'}
             action={
-              <Link href="/turmas/nova">
-                <Button><Plus size={16} />Nova Turma</Button>
-              </Link>
+              !q && !modalidade && !status && !ano && !semestre
+                ? <Link href="/turmas/nova"><Button><Plus size={16} />Nova Turma</Button></Link>
+                : undefined
             }
           />
         </Card>
@@ -75,11 +150,10 @@ export default async function TurmasPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Users size={14} className="text-sky-400" />
-                    <span>Cap. {t.capacidade} alunos</span>
+                    <span>Cap. {t.capacidade} atletas</span>
                   </div>
                 </div>
 
-                {/* Ano / Semestre / Faixa etária */}
                 {(t.ano || t.semestre || t.idade_min || t.idade_max) && (
                   <div className="flex flex-wrap gap-1.5 mt-3">
                     {t.ano && (

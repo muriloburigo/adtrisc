@@ -178,7 +178,7 @@ export default function AttendanceChecklist({
       {alunos.length === 0 && (
         <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
           <AlertCircle size={16} />
-          Nenhum aluno cadastrado nesta turma.
+          Nenhum(a) atleta cadastrado(a) nesta turma.
         </div>
       )}
     </div>

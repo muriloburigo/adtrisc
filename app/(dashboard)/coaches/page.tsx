@@ -4,23 +4,41 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
+import FilterBar from '@/components/ui/FilterBar'
 import { UserCheck, Plus, Users2 } from 'lucide-react'
 import type { ProfileRow } from '@/types/database'
 
-export default async function CoachesPage() {
+export default async function CoachesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>
+}) {
+  const filters = await searchParams
+  const q = filters.q ?? ''
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
-  const { data: coachesRaw } = await supabase
+  let query = supabase
     .from('profiles')
     .select('id, full_name, email, created_at')
     .eq('role', 'coach')
     .order('full_name')
 
-  type CoachWithTurmas = ProfileRow & { turma_count?: number }
-  const coaches = (coachesRaw ?? []) as CoachWithTurmas[]
+  const { data: coachesRaw } = await query
 
-  // Conta turmas por coach
+  type CoachWithTurmas = ProfileRow & { turma_count?: number }
+  let coaches = (coachesRaw ?? []) as CoachWithTurmas[]
+
+  if (q) {
+    const lower = q.toLowerCase()
+    coaches = coaches.filter(
+      (c) =>
+        (c.full_name ?? '').toLowerCase().includes(lower) ||
+        (c.email ?? '').toLowerCase().includes(lower),
+    )
+  }
+
   const { data: turmasCounts } = await supabase
     .from('turmas')
     .select('coach_id')
@@ -31,11 +49,15 @@ export default async function CoachesPage() {
     if (t.coach_id) countMap[t.coach_id] = (countMap[t.coach_id] ?? 0) + 1
   }
 
+  const filterFields = [
+    { type: 'search' as const, key: 'q', placeholder: 'Buscar por nome ou e-mail…' },
+  ]
+
   return (
     <div className="p-8">
       <PageHeader
         title="Treinadores"
-        subtitle={`${coaches.length} ${coaches.length === 1 ? 'treinador(a) cadastrado(a)' : 'treinadores cadastrados'}`}
+        subtitle={`${coaches.length} ${coaches.length === 1 ? 'treinador(a) encontrado(a)' : 'treinadores encontrados'}`}
         action={
           <Link href="/coaches/novo">
             <Button><Plus size={16} />Novo(a) Treinador(a)</Button>
@@ -43,13 +65,19 @@ export default async function CoachesPage() {
         }
       />
 
+      <FilterBar fields={filterFields} initialValues={{ q }} />
+
       {coaches.length === 0 ? (
         <Card>
           <EmptyState
             icon={UserCheck}
-            title="Nenhum(a) treinador(a) cadastrado(a)"
-            description="Cadastre o/a primeiro(a) treinador(a)"
-            action={<Link href="/coaches/novo"><Button><Plus size={16} />Novo(a) Treinador(a)</Button></Link>}
+            title={q ? 'Nenhum(a) treinador(a) encontrado(a)' : 'Nenhum(a) treinador(a) cadastrado(a)'}
+            description={q ? 'Tente ajustar os filtros' : 'Cadastre o/a primeiro(a) treinador(a)'}
+            action={
+              !q
+                ? <Link href="/coaches/novo"><Button><Plus size={16} />Novo(a) Treinador(a)</Button></Link>
+                : undefined
+            }
           />
         </Card>
       ) : (

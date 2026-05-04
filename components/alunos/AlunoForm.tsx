@@ -90,7 +90,7 @@ export default function AlunoForm({
         <h3 className="text-sm font-semibold text-navy-500 uppercase tracking-wide">Dados do Participante</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <Input label="Nome completo" name="nome" defaultValue={aluno?.nome} placeholder="Nome do aluno" required />
+            <Input label="Nome completo" name="nome" defaultValue={aluno?.nome} placeholder="Nome do(a) atleta" required />
           </div>
 
           <Select

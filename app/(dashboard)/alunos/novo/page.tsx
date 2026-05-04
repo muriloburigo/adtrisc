@@ -30,8 +30,8 @@ export default async function NovoAlunoPage({
 
   return (
     <div className="p-8 max-w-3xl">
-      <PageHeader title="Novo Aluno" subtitle="Preencha a ficha de inscrição completa" />
-      <AlunoForm action={actionComTurma} turmas={turmas} submitLabel="Cadastrar Aluno" />
+      <PageHeader title="Novo(a) Atleta" subtitle="Preencha a ficha de inscrição completa" />
+      <AlunoForm action={actionComTurma} turmas={turmas} submitLabel="Cadastrar Atleta" />
     </div>
   )
 }

@@ -16,7 +16,7 @@ type Profile = Database['public']['Tables']['profiles']['Row']
 const nav = [
   { href: '/dashboard',      label: 'Dashboard',     icon: LayoutDashboard, roles: ['admin','coach','aluno','pai'] as UserRole[] },
   { href: '/turmas',         label: 'Turmas',         icon: Users2,          roles: ['admin','coach'] as UserRole[] },
-  { href: '/alunos',         label: 'Alunos',         icon: Users,           roles: ['admin','coach'] as UserRole[] },
+  { href: '/alunos',         label: 'Atletas',        icon: Users,           roles: ['admin','coach'] as UserRole[] },
   { href: '/presencas',      label: 'Presenças',      icon: ClipboardCheck,  roles: ['admin','coach'] as UserRole[] },
   { href: '/avaliacoes',     label: 'Avaliações',     icon: Dumbbell,        roles: ['admin','coach'] as UserRole[] },
   { href: '/coaches',        label: 'Treinadores',    icon: UserCheck,       roles: ['admin'] as UserRole[] },
