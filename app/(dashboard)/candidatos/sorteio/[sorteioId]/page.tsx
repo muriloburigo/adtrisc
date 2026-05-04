@@ -92,13 +92,13 @@ export default async function SorteioAuditoriaPage({
           </div>
           <div className="sm:col-span-2">
             <dt className="text-xs text-gray-400 mb-1">Semente (seed)</dt>
-            <dd className="font-mono text-xs bg-gray-50 rounded-lg px-3 py-2 break-all text-navy-500 select-all">
+            <dd className="font-mono text-[11px] sm:text-xs bg-gray-50 rounded-lg px-3 py-2 break-all leading-relaxed text-navy-500 select-all">
               {s.seed}
             </dd>
           </div>
           <div className="sm:col-span-2">
             <dt className="text-xs text-gray-400 mb-1">ID do sorteio</dt>
-            <dd className="font-mono text-xs bg-gray-50 rounded-lg px-3 py-2 break-all text-gray-500 select-all">
+            <dd className="font-mono text-[11px] sm:text-xs bg-gray-50 rounded-lg px-3 py-2 break-all leading-relaxed text-gray-500 select-all">
               {s.id}
             </dd>
           </div>
@@ -164,12 +164,12 @@ export default async function SorteioAuditoriaPage({
               <span className="hidden group-open:inline">▼</span>
               Ver lista original de candidatos (ordem de inscrição)
             </summary>
-            <div className="mt-3 bg-gray-50 rounded-xl p-4 font-mono text-xs text-gray-600 space-y-1 max-h-64 overflow-y-auto">
+            <div className="mt-3 bg-gray-50 rounded-xl p-3 sm:p-4 font-mono text-[11px] sm:text-xs text-gray-600 space-y-1 max-h-64 overflow-y-auto overflow-x-auto">
               {s.candidatos_snapshot.map((c) => (
-                <div key={c.candidato_id} className="flex gap-3">
+                <div key={c.candidato_id} className="flex gap-2 sm:gap-3 min-w-0">
                   <span className="w-5 text-gray-400 text-right flex-shrink-0">{c.posicao_inscricao}.</span>
-                  <span className="text-gray-500 truncate">{c.candidato_id}</span>
-                  <span className="text-navy-500">{c.nome}</span>
+                  <span className="text-gray-400 truncate hidden sm:block">{c.candidato_id}</span>
+                  <span className="text-navy-500 flex-shrink-0">{c.nome}</span>
                 </div>
               ))}
             </div>
@@ -181,7 +181,7 @@ export default async function SorteioAuditoriaPage({
               <span className="hidden group-open:inline">▼</span>
               Ver código do algoritmo
             </summary>
-            <pre className="mt-3 bg-gray-50 rounded-xl p-4 text-xs text-gray-600 overflow-x-auto whitespace-pre">{`function hashSeed(seed) {
+            <pre className="mt-3 bg-gray-50 rounded-xl p-3 sm:p-4 text-[11px] sm:text-xs text-gray-600 overflow-x-auto whitespace-pre">{`function hashSeed(seed) {
   let h = 0
   for (let i = 0; i < seed.length; i++)
     h = Math.imul(31, h) + seed.charCodeAt(i) | 0

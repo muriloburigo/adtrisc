@@ -9,7 +9,7 @@ export default function PoliticaPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header style={{ background: '#0C143D' }} className="sticky top-0 z-10 shadow">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3 sm:gap-4">
           <div className="w-9 h-9 bg-white rounded-lg overflow-hidden flex-shrink-0">
             <Image src="/logo-white.jpg" alt="ADTRISC" width={36} height={36} className="object-contain" />
           </div>
@@ -26,7 +26,7 @@ export default function PoliticaPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Título */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
