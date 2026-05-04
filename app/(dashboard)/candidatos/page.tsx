@@ -5,10 +5,11 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import FilterBar from '@/components/ui/FilterBar'
 import EmptyState from '@/components/ui/EmptyState'
-import { Users, ExternalLink } from 'lucide-react'
+import { Users, ExternalLink, History } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { StatusBadge } from './StatusSelect'
-import type { CandidatoRow, UserRole } from '@/types/database'
+import SorteioButton from './SorteioButton'
+import type { CandidatoRow, SorteioRow, UserRole } from '@/types/database'
 
 export default async function CandidatosPage({
   searchParams,
@@ -32,6 +33,30 @@ export default async function CandidatosPage({
   const { data: turmasRaw } = await supabase
     .from('turmas').select('id, nome').order('nome')
   const turmaOptions = (turmasRaw ?? []).map((t: { id: string; nome: string }) => ({ value: t.id, label: t.nome }))
+
+  // Sorteio data — only when a turma filter is active
+  let turmaSelecionada: { id: string; nome: string; capacidade: number } | null = null
+  let pendentesCount = 0
+  let sorteiosAnteriores: (SorteioRow & { realizador: { full_name: string | null } | null })[] = []
+
+  if (turmaId) {
+    const { data: td } = await supabase.from('turmas').select('id, nome, capacidade').eq('id', turmaId).single()
+    turmaSelecionada = td ?? null
+
+    const { count } = await supabase
+      .from('candidatos')
+      .select('id', { count: 'exact', head: true })
+      .eq('turma_id', turmaId)
+      .eq('status', 'pendente')
+    pendentesCount = count ?? 0
+
+    const { data: sa } = await supabase
+      .from('sorteios')
+      .select('id, realizado_em, vagas, total_candidatos, realizador:realizado_por(full_name)')
+      .eq('turma_id', turmaId)
+      .order('realizado_em', { ascending: false })
+    sorteiosAnteriores = sa ?? []
+  }
 
   let query = supabase
     .from('candidatos')
@@ -109,6 +134,52 @@ export default async function CandidatosPage({
       </div>
 
       <FilterBar fields={filterFields} initialValues={{ q, status, turma: turmaId }} />
+
+      {/* Sorteio panel — visible only when a turma is selected */}
+      {turmaSelecionada && role === 'admin' && (
+        <div className="mb-4 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-violet-700">{turmaSelecionada.nome}</p>
+            <p className="text-xs text-violet-500 mt-0.5">
+              {pendentesCount} pendente{pendentesCount !== 1 ? 's' : ''} · {turmaSelecionada.capacidade} vagas
+            </p>
+          </div>
+          <SorteioButton
+            turmaId={turmaSelecionada.id}
+            turmaNome={turmaSelecionada.nome}
+            totalPendentes={pendentesCount}
+            vagas={turmaSelecionada.capacidade}
+            totalSorteiosAnteriores={sorteiosAnteriores.length}
+          />
+        </div>
+      )}
+
+      {/* Previous draws */}
+      {sorteiosAnteriores.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <History size={11} /> Sorteios anteriores
+          </h3>
+          <div className="flex flex-col gap-1.5">
+            {sorteiosAnteriores.map((s) => (
+              <Link
+                key={s.id}
+                href={`/candidatos/sorteio/${s.id}`}
+                className="flex items-center gap-3 bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50 rounded-xl px-4 py-2.5 transition-colors group"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-navy-500 group-hover:text-violet-700 truncate">
+                    {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(s.realizado_em))}
+                    {' '}· por {(s.realizador as { full_name: string | null } | null)?.full_name ?? 'Desconhecido'}
+                  </p>
+                  <p className="text-xs text-gray-400">{s.total_candidatos} candidatos · {s.vagas} vagas</p>
+                </div>
+                <span className="text-xs text-violet-400 font-medium group-hover:text-violet-600">Ver auditoria →</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Card padding={false}>
         {candidatos.length === 0 ? (

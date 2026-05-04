@@ -3,6 +3,32 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type SexoEnum = 'M' | 'F' | 'outro'
 export type CandidatoStatus = 'pendente' | 'sorteado' | 'nao_sorteado' | 'convertido'
 
+export type ResultadoSorteioItem = {
+  posicao: number
+  candidato_id: string
+  nome: string
+  sorteado: boolean
+}
+
+export type SnapshotSorteioItem = {
+  posicao_inscricao: number
+  candidato_id: string
+  nome: string
+}
+
+export interface SorteioRow {
+  id: string
+  turma_id: string
+  realizado_por: string | null
+  realizado_em: string
+  seed: string
+  vagas: number
+  total_candidatos: number
+  candidatos_snapshot: SnapshotSorteioItem[]
+  resultado: ResultadoSorteioItem[]
+  created_at: string
+}
+
 export interface CandidatoRow {
   id: string
   turma_id: string | null
@@ -143,6 +169,11 @@ export interface Database {
         Row: CandidatoRow
         Insert: Omit<CandidatoRow, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<CandidatoRow, 'id' | 'created_at' | 'updated_at'>>
+      }
+      sorteios: {
+        Row: SorteioRow
+        Insert: Omit<SorteioRow, 'id' | 'created_at'>
+        Update: never
       }
     }
     Views: Record<string, never>
