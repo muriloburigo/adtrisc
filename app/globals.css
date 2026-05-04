@@ -40,3 +40,7 @@ body {
   font-family: var(--font-geist-sans), Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+a, button, [role="button"], select, label[for], summary {
+  cursor: pointer;
+}
