@@ -51,6 +51,18 @@ export default async function TurmasPage({
     turmas = turmas.filter((t) => t.nome.toLowerCase().includes(lower))
   }
 
+  // Contagem de atletas ativos por turma
+  const { data: atletasRaw } = await supabase
+    .from('alunos')
+    .select('turma_id')
+    .eq('status', 'ativo')
+    .not('turma_id', 'is', null)
+
+  const atletasMap: Record<string, number> = {}
+  for (const a of (atletasRaw ?? []) as { turma_id: string }[]) {
+    atletasMap[a.turma_id] = (atletasMap[a.turma_id] ?? 0) + 1
+  }
+
   // Collect unique anos from all records (unfiltered) for the ano dropdown
   const { data: anosRaw } = await supabase
     .from('turmas')
@@ -129,7 +141,15 @@ export default async function TurmasPage({
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {turmas.map((t) => (
+          {turmas.map((t) => {
+            const ativos = atletasMap[t.id] ?? 0
+            const pct    = t.capacidade > 0 ? Math.min((ativos / t.capacidade) * 100, 100) : 0
+            const cheia  = ativos >= t.capacidade
+            const quase  = !cheia && pct >= 80
+            const barColor = cheia ? 'bg-red-400' : quase ? 'bg-amber-400' : 'bg-emerald-400'
+            const textColor = cheia ? 'text-red-500' : quase ? 'text-amber-500' : 'text-emerald-600'
+
+            return (
             <Link key={t.id} href={`/turmas/${t.id}`}>
               <Card className="hover:border-sky-400 hover:shadow-sm transition-all cursor-pointer h-full">
                 <div className="flex items-start justify-between mb-3">
@@ -150,7 +170,15 @@ export default async function TurmasPage({
                   </div>
                   <div className="flex items-center gap-2">
                     <Users size={14} className="text-sky-400" />
-                    <span>Cap. {t.capacidade} atletas</span>
+                    <span className={`font-medium ${textColor}`}>{ativos}</span>
+                    <span className="text-gray-400">/ {t.capacidade} atletas</span>
+                    {cheia && <span className="text-xs font-semibold text-red-500 ml-auto">Lotada</span>}
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${barColor}`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
 
@@ -181,7 +209,8 @@ export default async function TurmasPage({
                 )}
               </Card>
             </Link>
-          ))}
+          )
+        })}
         </div>
       )}
     </div>
