@@ -5,7 +5,7 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import FilterBar from '@/components/ui/FilterBar'
 import EmptyState from '@/components/ui/EmptyState'
-import { Users, ExternalLink, History } from 'lucide-react'
+import { Users, ExternalLink, History, BookOpen } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { StatusBadge } from './StatusSelect'
 import SorteioButton from './SorteioButton'
@@ -108,14 +108,24 @@ export default async function CandidatosPage({
         title="Candidatos"
         subtitle={`${candidatos.length} candidato${candidatos.length !== 1 ? 's' : ''} encontrado${candidatos.length !== 1 ? 's' : ''}`}
         action={
-          <a
-            href="/inscricao"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-sky-500 border border-sky-200 hover:bg-sky-50 px-3 py-2 rounded-lg transition-colors font-medium"
-          >
-            <ExternalLink size={13} /> Link público
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href="/regras-sorteio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors font-medium"
+            >
+              <BookOpen size={13} /> Regras
+            </a>
+            <a
+              href="/inscricao"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-sky-500 border border-sky-200 hover:bg-sky-50 px-3 py-2 rounded-lg transition-colors font-medium"
+            >
+              <ExternalLink size={13} /> Link público
+            </a>
+          </div>
         }
       />
 

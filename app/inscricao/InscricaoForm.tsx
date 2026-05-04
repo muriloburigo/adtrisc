@@ -265,7 +265,10 @@ export default function InscricaoForm({ turmas }: { turmas: TurmaOption[] }) {
         {isPending ? 'Enviando inscrição...' : 'Enviar Inscrição'}
       </button>
       <p className="text-xs text-gray-400 text-center pb-6">
-        Ao enviar, você confirma que leu e aceitou os termos acima.
+        Ao enviar, você confirma que leu e aceitou os termos acima.{' '}
+        <a href="/regras-sorteio" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">
+          Ver regras do sorteio
+        </a>
       </p>
     </form>
   )
