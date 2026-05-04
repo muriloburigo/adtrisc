@@ -30,7 +30,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
   const resps = (respsRaw ?? []) as ResponsavelRow[]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader
         title={a.nome}
         subtitle={a.turmas?.nome ?? ''}

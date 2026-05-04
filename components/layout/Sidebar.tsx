@@ -38,7 +38,7 @@ export default function Sidebar({ user }: { user: Profile | null }) {
   const visibleNav = nav.filter((item) => item.roles.includes(role))
 
   return (
-    <aside className="w-60 bg-navy-500 flex flex-col h-full">
+    <aside className="hidden md:flex w-60 bg-navy-500 flex-col h-full flex-shrink-0">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-navy-600 flex items-center gap-3">
         <div className="w-9 h-9 flex-shrink-0 bg-white rounded-lg overflow-hidden flex items-center justify-center">

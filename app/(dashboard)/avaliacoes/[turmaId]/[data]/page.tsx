@@ -46,7 +46,7 @@ export default async function AvaliacaoCampoPage({
   return (
     <div className="h-full flex flex-col">
       {/* Header compacto */}
-      <div className="px-6 pt-6 pb-3 border-b border-gray-100">
+      <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b border-gray-100">
         <Link
           href="/avaliacoes"
           className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-navy-500 transition-colors mb-2"

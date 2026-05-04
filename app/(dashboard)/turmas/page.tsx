@@ -113,7 +113,7 @@ export default async function TurmasPage({
   const initialValues = { q, modalidade, status, ano, semestre }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader
         title="Turmas"
         subtitle={`${turmas.length} turma${turmas.length !== 1 ? 's' : ''} encontrada${turmas.length !== 1 ? 's' : ''}`}

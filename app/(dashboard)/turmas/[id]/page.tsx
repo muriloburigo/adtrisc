@@ -29,7 +29,7 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   const alunos = (alunosRaw ?? []) as AlunoBasic[]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader
         title={turma.nome}
         subtitle={`${turma.modalidade} · ${formatarDiasSemana(turma.dias_semana)}`}

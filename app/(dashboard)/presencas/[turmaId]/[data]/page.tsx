@@ -39,7 +39,7 @@ export default async function PresencaChecklistPage({
   const turmaLabel = `${turma.nome} · ${dataFormatada}`
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-8 max-w-2xl">
       <div className="mb-4">
         <Link
           href="/presencas"

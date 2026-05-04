@@ -54,7 +54,7 @@ export default async function CoachesPage({
   ]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader
         title="Treinadores"
         subtitle={`${coaches.length} ${coaches.length === 1 ? 'treinador(a) encontrado(a)' : 'treinadores encontrados'}`}

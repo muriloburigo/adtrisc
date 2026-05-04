@@ -78,7 +78,7 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-navy-500">Dashboard</h1>
         <p className="text-sm text-gray-400 mt-0.5">Visão geral da escolinha</p>

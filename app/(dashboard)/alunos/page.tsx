@@ -72,7 +72,7 @@ export default async function AlunosPage({
   const initialValues = { q, turma: turmaId, status }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader
         title="Atletas"
         subtitle={`${alunos.length} atleta${alunos.length !== 1 ? 's' : ''} encontrado${alunos.length !== 1 ? 's' : ''}`}
@@ -98,38 +98,58 @@ export default async function AlunosPage({
             }
           />
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-6 py-3 text-gray-500 font-medium">Nome</th>
-                <th className="text-left px-6 py-3 text-gray-500 font-medium">Turma</th>
-                <th className="text-left px-6 py-3 text-gray-500 font-medium">Sexo</th>
-                <th className="text-left px-6 py-3 text-gray-500 font-medium">Idade</th>
-                <th className="text-left px-6 py-3 text-gray-500 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <>
+            {/* Mobile: card list */}
+            <div className="md:hidden divide-y divide-gray-100">
               {alunos.map((a) => (
-                <tr key={a.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3.5">
-                    <Link href={`/alunos/${a.id}`} className="font-medium text-navy-500 hover:text-sky-400 transition-colors">
-                      {a.nome}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-3.5 text-gray-500">{a.turmas?.nome ?? '—'}</td>
-                  <td className="px-6 py-3.5 text-gray-500">
-                    {a.sexo === 'M' ? 'Masc.' : a.sexo === 'F' ? 'Fem.' : a.sexo ?? '—'}
-                  </td>
-                  <td className="px-6 py-3.5 text-gray-500">
-                    {a.data_nascimento ? `${calcularIdade(a.data_nascimento)} anos` : '—'}
-                  </td>
-                  <td className="px-6 py-3.5">
-                    <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
-                  </td>
-                </tr>
+                <Link key={a.id} href={`/alunos/${a.id}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                  <div className="w-9 h-9 rounded-full bg-sky-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {a.nome.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-navy-500 truncate">{a.nome}</p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {a.turmas?.nome ?? 'Sem turma'}{a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
+                    </p>
+                  </div>
+                  <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
+                </Link>
               ))}
-            </tbody>
-          </table>
+            </div>
+            {/* Desktop: table */}
+            <table className="hidden md:table w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-6 py-3 text-gray-500 font-medium">Nome</th>
+                  <th className="text-left px-6 py-3 text-gray-500 font-medium">Turma</th>
+                  <th className="text-left px-6 py-3 text-gray-500 font-medium">Sexo</th>
+                  <th className="text-left px-6 py-3 text-gray-500 font-medium">Idade</th>
+                  <th className="text-left px-6 py-3 text-gray-500 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {alunos.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-3.5">
+                      <Link href={`/alunos/${a.id}`} className="font-medium text-navy-500 hover:text-sky-400 transition-colors">
+                        {a.nome}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-3.5 text-gray-500">{a.turmas?.nome ?? '—'}</td>
+                    <td className="px-6 py-3.5 text-gray-500">
+                      {a.sexo === 'M' ? 'Masc.' : a.sexo === 'F' ? 'Fem.' : a.sexo ?? '—'}
+                    </td>
+                    <td className="px-6 py-3.5 text-gray-500">
+                      {a.data_nascimento ? `${calcularIdade(a.data_nascimento)} anos` : '—'}
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </Card>
     </div>

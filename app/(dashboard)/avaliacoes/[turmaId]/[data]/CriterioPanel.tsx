@@ -1,13 +1,12 @@
 'use client'
 
 import { useState, useTransition, useRef, useEffect } from 'react'
-import { CheckCircle, ChevronRight } from 'lucide-react'
+import { CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { saveCampoParaTurma, type EntradaCampo } from '../../actions'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 
 type AlunoBasic = { id: string; nome: string }
 
-// ── Critérios ──────────────────────────────────────────────────────────────
 const CRITERIOS = [
   { key: 'massa_corporal',         label: 'Massa Corporal',       unit: 'kg',  step: '0.1',  group: 'Medidas Corporais' },
   { key: 'estatura',               label: 'Estatura',             unit: 'm',   step: '0.001', group: 'Medidas Corporais' },
@@ -27,7 +26,6 @@ const CRITERIOS = [
 type CampoKey = typeof CRITERIOS[number]['key']
 const GROUPS = ['Medidas Corporais', 'Testes Físicos'] as const
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function initValores(
   alunos: AlunoBasic[],
   avaliacaoMap: Record<string, Partial<AvaliacaoFisicaRow>>,
@@ -47,7 +45,6 @@ function preenchidos(valores: Record<string, string>, alunos: AlunoBasic[]): num
   return alunos.filter((a) => valores[a.id] !== '').length
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
 export default function CriterioPanel({
   turmaId,
   data,
@@ -65,21 +62,26 @@ export default function CriterioPanel({
   const [erro, setErro] = useState('')
   const [isPending, startTransition] = useTransition()
   const firstInputRef = useRef<HTMLInputElement>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
 
   const criterio = CRITERIOS.find((c) => c.key === criterioAtivo)!
   const valoresAtivos = valores[criterioAtivo]
   const countAtivos = preenchidos(valoresAtivos, alunos)
+  const isSaved = savedCampos.has(criterioAtivo)
+  const criterioIdx = CRITERIOS.findIndex((c) => c.key === criterioAtivo)
+  const isFirst = criterioIdx === 0
+  const isLast = criterioIdx === CRITERIOS.length - 1
 
   useEffect(() => {
     firstInputRef.current?.focus()
+    // scroll active tab into view on mobile
+    const activeTab = tabsRef.current?.querySelector('[data-active="true"]')
+    activeTab?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
   }, [criterioAtivo])
 
   function setValor(campo: CampoKey, alunoId: string, v: string) {
     setSavedCampos((prev) => { const n = new Set(prev); n.delete(campo); return n })
-    setValores((prev) => ({
-      ...prev,
-      [campo]: { ...prev[campo], [alunoId]: v },
-    }))
+    setValores((prev) => ({ ...prev, [campo]: { ...prev[campo], [alunoId]: v } }))
   }
 
   function handleSave() {
@@ -89,7 +91,6 @@ export default function CriterioPanel({
       const n = parseFloat(raw.replace(',', '.'))
       return { alunoId: a.id, value: isNaN(n) ? null : n }
     })
-
     startTransition(async () => {
       const result = await saveCampoParaTurma(turmaId, data, criterioAtivo, entries)
       if (result.error) { setErro(result.error); return }
@@ -97,61 +98,56 @@ export default function CriterioPanel({
     })
   }
 
-  function proximoCriterio() {
-    const idx = CRITERIOS.findIndex((c) => c.key === criterioAtivo)
-    if (idx < CRITERIOS.length - 1) setCriterioAtivo(CRITERIOS[idx + 1].key)
+  function anteriorCriterio() {
+    if (!isFirst) setCriterioAtivo(CRITERIOS[criterioIdx - 1].key)
   }
 
-  const isSaved = savedCampos.has(criterioAtivo)
+  function proximoCriterio() {
+    if (!isLast) setCriterioAtivo(CRITERIOS[criterioIdx + 1].key)
+  }
 
   return (
-    <div className="flex-1 flex overflow-hidden min-h-0">
+    <>
+      {/* ════════════════════════════════════════
+          MOBILE LAYOUT (< md)
+      ════════════════════════════════════════ */}
+      <div className="flex flex-col md:hidden flex-1 min-h-0">
 
-      {/* ── Painel esquerdo: lista de critérios ── */}
-      <aside className="w-52 lg:w-64 border-r border-gray-100 bg-gray-50 overflow-y-auto flex-shrink-0">
-        {GROUPS.map((group) => (
-          <div key={group}>
-            <p className="px-4 pt-4 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              {group}
-            </p>
-            {CRITERIOS.filter((c) => c.group === group).map((c) => {
-              const count = preenchidos(valores[c.key], alunos)
-              const done  = count === alunos.length && alunos.length > 0
-              const ativo = c.key === criterioAtivo
+        {/* Horizontal scrollable criteria tabs */}
+        <div ref={tabsRef} className="flex overflow-x-auto gap-1.5 px-4 py-3 bg-gray-50 border-b border-gray-100 scrollbar-hide flex-shrink-0">
+          {CRITERIOS.map((c) => {
+            const count = preenchidos(valores[c.key], alunos)
+            const done  = count === alunos.length && alunos.length > 0
+            const ativo = c.key === criterioAtivo
+            return (
+              <button
+                key={c.key}
+                data-active={ativo}
+                onClick={() => setCriterioAtivo(c.key)}
+                className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  ativo
+                    ? 'bg-sky-400 text-white'
+                    : done
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                    : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <span className="whitespace-nowrap">{c.label}</span>
+                <span className={`text-[10px] font-bold tabular-nums mt-0.5 ${ativo ? 'text-white/80' : done ? 'text-emerald-500' : 'text-gray-400'}`}>
+                  {count}/{alunos.length}
+                </span>
+              </button>
+            )
+          })}
+        </div>
 
-              return (
-                <button
-                  key={c.key}
-                  onClick={() => setCriterioAtivo(c.key)}
-                  className={`w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 text-sm transition-colors ${
-                    ativo
-                      ? 'bg-sky-400 text-white font-semibold'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="truncate">{c.label}</span>
-                  <span className={`flex-shrink-0 text-xs font-bold tabular-nums ${
-                    ativo ? 'text-white/80' : done ? 'text-emerald-500' : 'text-gray-400'
-                  }`}>
-                    {count}/{alunos.length}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        ))}
-      </aside>
-
-      {/* ── Painel direito: entrada ── */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-
-        {/* Cabeçalho do critério */}
-        <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between gap-4 bg-white">
-          <div>
-            <p className="font-bold text-navy-500">{criterio.label}</p>
+        {/* Criterion header */}
+        <div className="px-4 py-3 bg-white border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="min-w-0">
+            <p className="font-bold text-navy-500 truncate">{criterio.label}</p>
             <p className="text-xs text-gray-400">{criterio.unit} · {countAtivos}/{alunos.length} preenchidos</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {isSaved && (
               <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
                 <CheckCircle size={13} /> Salvo
@@ -162,25 +158,15 @@ export default function CriterioPanel({
               disabled={isPending}
               className="bg-sky-400 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
             >
-              {isPending ? 'Salvando...' : 'Salvar'}
-            </button>
-            <button
-              onClick={proximoCriterio}
-              disabled={criterioAtivo === CRITERIOS[CRITERIOS.length - 1].key}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-navy-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-2 py-2"
-              title="Próximo critério"
-            >
-              Próximo <ChevronRight size={15} />
+              {isPending ? '…' : 'Salvar'}
             </button>
           </div>
         </div>
 
-        {erro && (
-          <p className="mx-6 mt-2 text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>
-        )}
+        {erro && <p className="mx-4 mt-2 text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
 
-        {/* Lista de atletas */}
-        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
+        {/* Athlete list */}
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {alunos.length === 0 && (
             <p className="text-sm text-gray-400 py-8 text-center">Nenhum(a) atleta ativo(a) nesta turma.</p>
           )}
@@ -194,15 +180,11 @@ export default function CriterioPanel({
                   filled ? 'border-sky-100 bg-sky-50' : 'border-gray-200 bg-white'
                 }`}
               >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${
-                    filled ? 'bg-sky-400' : 'bg-gray-300'
-                  }`}
-                >
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${filled ? 'bg-sky-400' : 'bg-gray-300'}`}>
                   {aluno.nome.charAt(0).toUpperCase()}
                 </div>
-                <span className="flex-1 text-sm font-medium text-navy-500">{aluno.nome}</span>
-                <div className="flex items-center gap-2">
+                <span className="flex-1 text-sm font-medium text-navy-500 min-w-0 truncate">{aluno.nome}</span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <input
                     ref={idx === 0 ? firstInputRef : undefined}
                     type="number"
@@ -214,7 +196,6 @@ export default function CriterioPanel({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault()
-                        // move to next input
                         const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
                         const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
                         inputs[i + 1]?.focus()
@@ -222,29 +203,168 @@ export default function CriterioPanel({
                     }}
                     data-criterio-input
                     placeholder="—"
-                    className="w-24 text-right border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                    className="w-20 text-right border border-gray-200 rounded-lg px-2 py-2.5 text-base font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
                   />
-                  <span className="text-xs text-gray-400 w-8">{criterio.unit}</span>
+                  <span className="text-xs text-gray-400 w-7">{criterio.unit}</span>
                 </div>
               </div>
             )
           })}
         </div>
 
-        {/* Footer fixo */}
-        <div className="px-6 py-3 border-t border-gray-100 bg-white flex items-center justify-between">
-          <p className="text-xs text-gray-400">
-            Enter ou Tab para avançar entre atletas
-          </p>
+        {/* Fixed bottom navigation */}
+        <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 bg-white flex items-center gap-2">
+          <button
+            onClick={anteriorCriterio}
+            disabled={isFirst}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-navy-500 disabled:opacity-30 disabled:cursor-not-allowed px-3 py-2.5 rounded-xl border border-gray-200 transition-colors"
+          >
+            <ChevronLeft size={15} />
+          </button>
           <button
             onClick={handleSave}
             disabled={isPending}
-            className="bg-navy-500 hover:bg-navy-600 disabled:opacity-50 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-colors"
+            className="flex-1 bg-navy-500 hover:bg-navy-600 disabled:opacity-50 text-white font-bold text-sm py-2.5 rounded-xl transition-colors"
           >
             {isPending ? 'Salvando...' : `Salvar ${criterio.label}`}
           </button>
+          <button
+            onClick={proximoCriterio}
+            disabled={isLast}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-navy-500 disabled:opacity-30 disabled:cursor-not-allowed px-3 py-2.5 rounded-xl border border-gray-200 transition-colors"
+          >
+            <ChevronRight size={15} />
+          </button>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {/* ════════════════════════════════════════
+          DESKTOP LAYOUT (≥ md) — unchanged
+      ════════════════════════════════════════ */}
+      <div className="hidden md:flex flex-1 overflow-hidden min-h-0">
+
+        {/* Left panel: criteria list */}
+        <aside className="w-52 lg:w-64 border-r border-gray-100 bg-gray-50 overflow-y-auto flex-shrink-0">
+          {GROUPS.map((group) => (
+            <div key={group}>
+              <p className="px-4 pt-4 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                {group}
+              </p>
+              {CRITERIOS.filter((c) => c.group === group).map((c) => {
+                const count = preenchidos(valores[c.key], alunos)
+                const done  = count === alunos.length && alunos.length > 0
+                const ativo = c.key === criterioAtivo
+                return (
+                  <button
+                    key={c.key}
+                    onClick={() => setCriterioAtivo(c.key)}
+                    className={`w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 text-sm transition-colors ${
+                      ativo ? 'bg-sky-400 text-white font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="truncate">{c.label}</span>
+                    <span className={`flex-shrink-0 text-xs font-bold tabular-nums ${
+                      ativo ? 'text-white/80' : done ? 'text-emerald-500' : 'text-gray-400'
+                    }`}>
+                      {count}/{alunos.length}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </aside>
+
+        {/* Right panel: input */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between gap-4 bg-white">
+            <div>
+              <p className="font-bold text-navy-500">{criterio.label}</p>
+              <p className="text-xs text-gray-400">{criterio.unit} · {countAtivos}/{alunos.length} preenchidos</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isSaved && (
+                <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                  <CheckCircle size={13} /> Salvo
+                </span>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={isPending}
+                className="bg-sky-400 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
+              >
+                {isPending ? 'Salvando...' : 'Salvar'}
+              </button>
+              <button
+                onClick={proximoCriterio}
+                disabled={isLast}
+                className="flex items-center gap-1 text-sm text-gray-500 hover:text-navy-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-2 py-2"
+              >
+                Próximo <ChevronRight size={15} />
+              </button>
+            </div>
+          </div>
+
+          {erro && <p className="mx-6 mt-2 text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
+
+          <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
+            {alunos.length === 0 && (
+              <p className="text-sm text-gray-400 py-8 text-center">Nenhum(a) atleta ativo(a) nesta turma.</p>
+            )}
+            {alunos.map((aluno, idx) => {
+              const val = valoresAtivos[aluno.id] ?? ''
+              const filled = val !== ''
+              return (
+                <div
+                  key={aluno.id}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                    filled ? 'border-sky-100 bg-sky-50' : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${filled ? 'bg-sky-400' : 'bg-gray-300'}`}>
+                    {aluno.nome.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="flex-1 text-sm font-medium text-navy-500">{aluno.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={idx === 0 ? firstInputRef : undefined}
+                      type="number"
+                      inputMode="decimal"
+                      step={criterio.step}
+                      min="0"
+                      value={val}
+                      onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
+                          const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
+                          inputs[i + 1]?.focus()
+                        }
+                      }}
+                      data-criterio-input
+                      placeholder="—"
+                      className="w-24 text-right border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                    />
+                    <span className="text-xs text-gray-400 w-8">{criterio.unit}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="px-6 py-3 border-t border-gray-100 bg-white flex items-center justify-between">
+            <p className="text-xs text-gray-400">Enter ou Tab para avançar entre atletas</p>
+            <button
+              onClick={handleSave}
+              disabled={isPending}
+              className="bg-navy-500 hover:bg-navy-600 disabled:opacity-50 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-colors"
+            >
+              {isPending ? 'Salvando...' : `Salvar ${criterio.label}`}
+            </button>
+          </div>
+        </main>
+      </div>
+    </>
   )
 }
