@@ -40,6 +40,20 @@ export interface PagamentoRow {
   pago_em: string | null; status: PagamentoStatus; descricao: string | null
   mes_referencia: string | null; created_at: string
 }
+export interface AvaliacaoFisicaRow {
+  id: string; aluno_id: string; data: string
+  massa_corporal: number | null; estatura: number | null
+  perimetro_cintura: number | null; envergadura: number | null; estatura_sentado: number | null
+  altura_cm: number | null; altura_ao_quadrado: number | null
+  imc: number | null; rce: number | null
+  sentar_alcancar: number | null; resistencia_6min: number | null
+  forca_abdominal: number | null; arremesso_medicineball: number | null
+  agilidade: number | null; salto_horizontal: number | null
+  corrida_20m: number | null; natacao_12min: number | null
+  observacoes: string | null; avaliador_id: string | null
+  created_at: string; updated_at: string
+}
+
 export interface PresencaRow {
   id: string; turma_id: string; aluno_id: string; data: string
   presente: boolean; justificada: boolean; observacao: string | null

@@ -5,7 +5,7 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Badge, { statusAlunoVariant } from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import { Pencil, User, MapPin, Phone, Users2 } from 'lucide-react'
+import { Pencil, User, MapPin, Phone, Users2, ClipboardList } from 'lucide-react'
 import { formatDate, calcularIdade } from '@/lib/utils'
 import type { AlunoRow, ResponsavelRow } from '@/types/database'
 
@@ -35,9 +35,14 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
         title={a.nome}
         subtitle={a.turmas?.nome ?? ''}
         action={
-          <Link href={`/alunos/${id}/editar`}>
-            <Button variant="secondary"><Pencil size={15} />Editar</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href={`/alunos/${id}/avaliacoes`}>
+              <Button variant="secondary"><ClipboardList size={15} />Avaliações</Button>
+            </Link>
+            <Link href={`/alunos/${id}/editar`}>
+              <Button variant="secondary"><Pencil size={15} />Editar</Button>
+            </Link>
+          </div>
         }
       />
 
