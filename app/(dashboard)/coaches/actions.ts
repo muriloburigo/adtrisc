@@ -3,18 +3,23 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validatePassword } from '@/lib/password'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any
 
-export async function createCoach(formData: FormData) {
-  const admin = createAdminClient() as AnyClient
+export async function createCoach(
+  _prev: { error?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const admin    = createAdminClient() as AnyClient
+  const email    = (formData.get('email') as string).trim()
+  const fullName = (formData.get('full_name') as string).trim()
+  const password = formData.get('password') as string
 
-  const email     = formData.get('email') as string
-  const fullName  = formData.get('full_name') as string
-  const password  = formData.get('password') as string
+  const pwErr = validatePassword(password)
+  if (pwErr) return { error: pwErr }
 
-  // 1. Cria o usuário no Supabase Auth
   const { data: authUser, error: authError } = await admin.auth.admin.createUser({
     email,
     password,
@@ -22,17 +27,15 @@ export async function createCoach(formData: FormData) {
     user_metadata: { full_name: fullName },
   })
 
-  if (authError || !authUser.user) {
-    throw new Error(authError?.message ?? 'Erro ao criar usuário')
-  }
+  if (authError || !authUser.user)
+    return { error: authError?.message ?? 'Erro ao criar usuário.' }
 
-  // 2. Atualiza o perfil gerado pelo trigger
   const { error: profileError } = await admin
     .from('profiles')
     .update({ role: 'coach', full_name: fullName })
     .eq('id', authUser.user.id)
 
-  if (profileError) throw new Error(profileError.message)
+  if (profileError) return { error: profileError.message }
 
   revalidatePath('/coaches')
   redirect('/coaches')
@@ -72,12 +75,19 @@ export async function deleteCoach(id: string) {
   redirect('/coaches')
 }
 
-export async function resetPassword(id: string, formData: FormData) {
-  const admin = createAdminClient() as AnyClient
-  const newPassword = formData.get('password') as string
+export async function resetPassword(
+  id: string,
+  _prev: { error?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const admin    = createAdminClient() as AnyClient
+  const password = formData.get('password') as string
 
-  const { error } = await admin.auth.admin.updateUserById(id, { password: newPassword })
-  if (error) throw new Error(error.message)
+  const pwErr = validatePassword(password)
+  if (pwErr) return { error: pwErr }
+
+  const { error } = await admin.auth.admin.updateUserById(id, { password })
+  if (error) return { error: error.message }
 
   revalidatePath(`/coaches/${id}`)
   redirect(`/coaches/${id}`)

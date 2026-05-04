@@ -5,7 +5,8 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-import { updateCoach, resetPassword } from '../../actions'
+import ResetPasswordForm from './ResetPasswordForm'
+import { updateCoach } from '../../actions'
 import type { ProfileRow } from '@/types/database'
 
 export default async function EditarCoachPage({ params }: { params: Promise<{ id: string }> }) {
@@ -18,9 +19,8 @@ export default async function EditarCoachPage({ params }: { params: Promise<{ id
 
   if (!coachRaw) notFound()
 
-  const coach = coachRaw as ProfileRow
+  const coach  = coachRaw as ProfileRow
   const update = updateCoach.bind(null, id)
-  const reset  = resetPassword.bind(null, id)
 
   return (
     <div className="p-8 max-w-lg space-y-6">
@@ -56,16 +56,7 @@ export default async function EditarCoachPage({ params }: { params: Promise<{ id
       <Card>
         <h3 className="text-sm font-semibold text-navy-500 mb-1">Redefinir senha</h3>
         <p className="text-xs text-gray-400 mb-4">Define uma nova senha para o acesso do/da treinador(a)</p>
-        <form action={reset} className="space-y-4">
-          <Input
-            label="Nova senha"
-            name="password"
-            type="password"
-            placeholder="Mínimo 6 caracteres"
-            required
-          />
-          <Button type="submit" variant="secondary">Redefinir senha</Button>
-        </form>
+        <ResetPasswordForm coachId={id} />
       </Card>
     </div>
   )
