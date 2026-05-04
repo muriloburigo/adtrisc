@@ -52,7 +52,7 @@ export default function Sidebar({ user }: { user: Profile | null }) {
         </div>
         <div>
           <h1 className="text-white font-bold text-base leading-none">ADTRISC</h1>
-          <p className="text-sky-400 text-xs mt-0.5">Escolinha de Triathlon</p>
+          <p className="text-sky-400 text-xs mt-0.5 leading-tight">Associação Desportiva Triatlética<br />de Santa Catarina</p>
         </div>
       </div>
 
