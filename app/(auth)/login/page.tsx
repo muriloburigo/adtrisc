@@ -191,6 +191,16 @@ export default function LoginPage() {
           <p className="text-center text-xs text-gray-300 mt-10">
             © {new Date().getFullYear()} ADTRISC — Todos os direitos reservados
           </p>
+          <p className="text-center mt-2">
+            <a
+              href="/politica"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-400 hover:text-sky-400 underline underline-offset-2 transition-colors"
+            >
+              Política de Privacidade e LGPD
+            </a>
+          </p>
         </div>
       </div>
     </div>
