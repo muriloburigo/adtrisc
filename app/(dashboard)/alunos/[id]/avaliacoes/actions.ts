@@ -33,11 +33,11 @@ export async function createAvaliacaoFisica(
   const supabase = (await createClient()) as any
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { error } = await supabase.from('avaliacoes_fisicas').insert({
+  const { error } = await supabase.from('avaliacoes_fisicas').upsert({
     aluno_id: alunoId,
     avaliador_id: user?.id ?? null,
     ...payload,
-  })
+  }, { onConflict: 'aluno_id,data' })
 
   if (error) return { error: error.message }
 

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, UserCheck,
-  LogOut, Users2, Settings, ClipboardCheck,
+  LogOut, Users2, Settings, ClipboardCheck, Dumbbell,
 } from 'lucide-react'
 import { cn, formatRole } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -18,6 +18,7 @@ const nav = [
   { href: '/turmas',         label: 'Turmas',         icon: Users2,          roles: ['admin','coach'] as UserRole[] },
   { href: '/alunos',         label: 'Alunos',         icon: Users,           roles: ['admin','coach'] as UserRole[] },
   { href: '/presencas',      label: 'Presenças',      icon: ClipboardCheck,  roles: ['admin','coach'] as UserRole[] },
+  { href: '/avaliacoes',     label: 'Avaliações',     icon: Dumbbell,        roles: ['admin','coach'] as UserRole[] },
   { href: '/coaches',        label: 'Treinadores',    icon: UserCheck,       roles: ['admin'] as UserRole[] },
   { href: '/configuracoes',  label: 'Configurações',  icon: Settings,        roles: ['admin'] as UserRole[] },
 ]
