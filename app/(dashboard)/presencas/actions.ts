@@ -63,13 +63,14 @@ export async function deletePresencas(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
 
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from('presencas')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('turma_id', turmaId)
       .eq('data', data)
 
     if (error) return { error: error.message }
+    if (count === 0) return { error: 'Nenhum registro foi excluído. Verifique as permissões no banco (RLS).' }
 
     await logAudit({
       userId: actor.id, userName: actor.name,
