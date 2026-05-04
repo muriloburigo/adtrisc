@@ -73,14 +73,16 @@ export default function LoginPage() {
 
         {/* Conteúdo */}
         <div className="relative z-10 flex flex-col items-center text-center px-12">
-          <Image
-            src="/logo.png"
-            alt="ADTRISC"
-            width={180}
-            height={180}
-            className="object-contain drop-shadow-2xl mb-8"
-            priority
-          />
+          <div className="rounded-2xl overflow-hidden bg-white p-3 drop-shadow-2xl mb-8">
+            <Image
+              src="/logo-white.jpg"
+              alt="ADTRISC"
+              width={160}
+              height={160}
+              className="object-contain"
+              priority
+            />
+          </div>
           <h1 className="text-4xl font-black text-white tracking-wider mb-3">
             ADTRISC
           </h1>
@@ -94,14 +96,16 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center bg-white px-6 py-12">
         {/* Logo mobile (só aparece em telas pequenas) */}
         <div className="flex flex-col items-center mb-10 lg:hidden">
-          <Image
-            src="/logo.png"
-            alt="ADTRISC"
-            width={80}
-            height={80}
-            className="object-contain mb-3"
-            priority
-          />
+          <div className="rounded-xl overflow-hidden bg-white mb-3">
+            <Image
+              src="/logo-white.jpg"
+              alt="ADTRISC"
+              width={80}
+              height={80}
+              className="object-contain"
+              priority
+            />
+          </div>
           <h1 className="text-xl font-black tracking-wider" style={{ color: '#0C143D' }}>ADTRISC</h1>
           <p className="text-xs text-center mt-1" style={{ color: '#2AABE1' }}>
             Associação Desportiva Triatlética de Santa Catarina
@@ -110,7 +114,7 @@ export default function LoginPage() {
 
         <div className="w-full max-w-sm">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold" style={{ color: '#0C143D' }}>Bem-vindo</h2>
+            <h2 className="text-2xl font-bold" style={{ color: '#0C143D' }}>Bem-vindo(a)</h2>
             <p className="text-sm text-gray-400 mt-1">Acesse sua conta para continuar</p>
           </div>
 

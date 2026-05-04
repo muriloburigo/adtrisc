@@ -45,7 +45,7 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
         {[
           { label: 'Horário', value: `${formatarHorario(turma.horario_inicio)}–${formatarHorario(turma.horario_fim)}` },
           { label: 'Alunos / Cap.', value: `${alunos.length} / ${turma.capacidade}` },
-          { label: 'Coach', value: turma.coaches?.full_name ?? '—' },
+          { label: 'Treinador(a)', value: turma.coaches?.full_name ?? '—' },
         ].map((item) => (
           <Card key={item.label}>
             <p className="text-xs text-gray-400 mb-1">{item.label}</p>
@@ -60,15 +60,15 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
 
       {/* Alunos */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-navy-500">Alunos da turma</h2>
+        <h2 className="text-base font-semibold text-navy-500">Atletas da turma</h2>
         <Link href={`/alunos/novo?turma=${id}`}>
-          <Button size="sm"><Plus size={14} />Adicionar aluno</Button>
+          <Button size="sm"><Plus size={14} />Adicionar atleta</Button>
         </Link>
       </div>
 
       <Card padding={false}>
         {alunos.length === 0 ? (
-          <EmptyState icon={Users} title="Nenhum aluno nesta turma" />
+          <EmptyState icon={Users} title="Nenhum(a) atleta nesta turma" />
         ) : (
           <table className="w-full text-sm">
             <thead>

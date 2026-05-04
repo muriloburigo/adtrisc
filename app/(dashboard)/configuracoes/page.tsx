@@ -23,7 +23,7 @@ export default async function ConfiguracoesPage() {
   const users = (usersRaw ?? []) as ProfileRow[]
 
   const roleLabel: Record<UserRole, string> = {
-    admin: 'Admin', coach: 'Coach', aluno: 'Aluno', pai: 'Pai/Mãe',
+    admin: 'Administrador(a)', coach: 'Treinador(a)', aluno: 'Atleta', pai: 'Responsável',
   }
   const roleBadge: Record<UserRole, 'blue' | 'sky' | 'green' | 'gray'> = {
     admin: 'blue', coach: 'sky', aluno: 'green', pai: 'gray',

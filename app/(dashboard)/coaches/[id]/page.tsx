@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button'
 import Badge, { statusTurmaVariant } from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import { Pencil, Mail, Users2, Clock } from 'lucide-react'
-import { formatDate, formatarDiasSemana, formatarHorario } from '@/lib/utils'
+import { formatDate, formatarDiasSemana, formatarHorario, formatRole } from '@/lib/utils'
 import type { ProfileRow, TurmaRow, DiaSemana } from '@/types/database'
 import DeleteCoachButton from './DeleteCoachButton'
 
@@ -32,14 +32,14 @@ export default async function CoachDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="p-8">
       <PageHeader
-        title={coach.full_name ?? 'Coach'}
-        subtitle="Treinador"
+        title={coach.full_name ?? 'Treinador(a)'}
+        subtitle="Treinador(a)"
         action={
           <div className="flex gap-2">
             <Link href={`/coaches/${id}/editar`}>
               <Button variant="secondary"><Pencil size={15} />Editar</Button>
             </Link>
-            <DeleteCoachButton id={id} name={coach.full_name ?? 'este coach'} />
+            <DeleteCoachButton id={id} name={coach.full_name ?? 'este/a treinador(a)'} />
           </div>
         }
       />
@@ -55,7 +55,7 @@ export default async function CoachDetailPage({ params }: { params: Promise<{ id
               {coach.full_name?.charAt(0)?.toUpperCase() ?? '?'}
             </div>
             <p className="font-bold text-navy-500 text-lg">{coach.full_name}</p>
-            <p className="text-xs text-gray-400 mt-0.5 capitalize">{coach.role}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formatRole(coach.role)}</p>
           </div>
           <div className="mt-5 pt-4 border-t border-gray-100 space-y-3">
             <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -77,7 +77,7 @@ export default async function CoachDetailPage({ params }: { params: Promise<{ id
           <h2 className="text-base font-semibold text-navy-500 mb-3">Turmas</h2>
           {turmas.length === 0 ? (
             <Card>
-              <EmptyState icon={Users2} title="Nenhuma turma vinculada" description="Vincule este coach a uma turma" />
+              <EmptyState icon={Users2} title="Nenhuma turma vinculada" description="Vincule este/a treinador(a) a uma turma" />
             </Card>
           ) : (
             <div className="space-y-3">

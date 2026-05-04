@@ -34,11 +34,11 @@ export default async function CoachesPage() {
   return (
     <div className="p-8">
       <PageHeader
-        title="Coaches"
-        subtitle={`${coaches.length} coach${coaches.length !== 1 ? 'es' : ''} cadastrado${coaches.length !== 1 ? 's' : ''}`}
+        title="Treinadores"
+        subtitle={`${coaches.length} ${coaches.length === 1 ? 'treinador(a) cadastrado(a)' : 'treinadores cadastrados'}`}
         action={
           <Link href="/coaches/novo">
-            <Button><Plus size={16} />Novo Coach</Button>
+            <Button><Plus size={16} />Novo(a) Treinador(a)</Button>
           </Link>
         }
       />
@@ -47,9 +47,9 @@ export default async function CoachesPage() {
         <Card>
           <EmptyState
             icon={UserCheck}
-            title="Nenhum coach cadastrado"
-            description="Adicione o primeiro treinador"
-            action={<Link href="/coaches/novo"><Button><Plus size={16} />Novo Coach</Button></Link>}
+            title="Nenhum(a) treinador(a) cadastrado(a)"
+            description="Cadastre o/a primeiro(a) treinador(a)"
+            action={<Link href="/coaches/novo"><Button><Plus size={16} />Novo(a) Treinador(a)</Button></Link>}
           />
         </Card>
       ) : (

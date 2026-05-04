@@ -8,20 +8,20 @@ import { createCoach } from '../actions'
 export default function NovoCoachPage() {
   return (
     <div className="p-8 max-w-lg">
-      <PageHeader title="Novo Coach" subtitle="Cria um acesso no sistema para o treinador" />
+      <PageHeader title="Novo(a) Treinador(a)" subtitle="Cria um acesso no sistema para o/a treinador(a)" />
       <Card>
         <form action={createCoach} className="space-y-5">
           <Input
             label="Nome completo"
             name="full_name"
-            placeholder="Nome do coach"
+            placeholder="Nome do(a) treinador(a)"
             required
           />
           <Input
             label="E-mail"
             name="email"
             type="email"
-            placeholder="coach@email.com"
+            placeholder="treinador@email.com"
             required
           />
           <Input
@@ -30,10 +30,10 @@ export default function NovoCoachPage() {
             type="password"
             placeholder="Mínimo 6 caracteres"
             required
-            hint="O coach poderá alterar depois de entrar no sistema"
+            hint="O/A treinador(a) poderá alterar após o primeiro acesso"
           />
           <div className="flex gap-3 pt-2">
-            <Button type="submit">Criar Coach</Button>
+            <Button type="submit">Cadastrar Treinador(a)</Button>
             <Link href="/coaches">
               <Button type="button" variant="secondary">Cancelar</Button>
             </Link>

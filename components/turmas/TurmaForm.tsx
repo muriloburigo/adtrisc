@@ -68,7 +68,7 @@ export default function TurmaForm({
         />
 
         <Select
-          label="Coach responsável"
+          label="Treinador(a) responsável"
           name="coach_id"
           defaultValue={turma?.coach_id ?? ''}
           placeholder="Selecione..."

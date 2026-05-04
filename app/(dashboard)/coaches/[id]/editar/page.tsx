@@ -24,7 +24,7 @@ export default async function EditarCoachPage({ params }: { params: Promise<{ id
 
   return (
     <div className="p-8 max-w-lg space-y-6">
-      <PageHeader title="Editar Coach" subtitle={coach.full_name ?? ''} />
+      <PageHeader title="Editar Treinador(a)" subtitle={coach.full_name ?? ''} />
 
       {/* Dados principais */}
       <Card>
@@ -55,7 +55,7 @@ export default async function EditarCoachPage({ params }: { params: Promise<{ id
       {/* Redefinir senha */}
       <Card>
         <h3 className="text-sm font-semibold text-navy-500 mb-1">Redefinir senha</h3>
-        <p className="text-xs text-gray-400 mb-4">Define uma nova senha para o acesso do coach</p>
+        <p className="text-xs text-gray-400 mb-4">Define uma nova senha para o acesso do/da treinador(a)</p>
         <form action={reset} className="space-y-4">
           <Input
             label="Nova senha"

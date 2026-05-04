@@ -79,7 +79,7 @@ export default async function TurmasPage() {
 
                 {t.coaches?.full_name && (
                   <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
-                    Coach: {t.coaches.full_name}
+                    Treinador(a): {t.coaches.full_name}
                   </p>
                 )}
               </Card>

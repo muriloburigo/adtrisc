@@ -46,3 +46,13 @@ export function formatarHorario(time: string): string {
 export function formatarDiasSemana(dias: DiaSemana[]): string {
   return dias.map(formatarDiaSemana).join(', ')
 }
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'Administrador(a)',
+  coach: 'Treinador(a)',
+  aluno: 'Atleta',
+  pai: 'Responsável',
+}
+export function formatRole(role: string): string {
+  return ROLE_LABEL[role] ?? role
+}
