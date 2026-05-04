@@ -45,6 +45,10 @@ export async function submitInscricao(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createAdminClient() as any
 
+  const { data: turma } = await supabase
+    .from('turmas').select('captacao_aberta').eq('id', turma_id).single()
+  if (!turma?.captacao_aberta) return { error: 'Esta turma não está aceitando inscrições no momento.' }
+
   const { error } = await supabase.from('candidatos').insert({
     turma_id,
     status:                        'pendente',

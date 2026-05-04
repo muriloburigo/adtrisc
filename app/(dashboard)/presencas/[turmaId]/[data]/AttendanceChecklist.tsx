@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Check, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Check, X, AlertCircle } from 'lucide-react'
 import { savePresencas, type EntradaPresenca } from '../../actions'
+import DeletePresencaButton from '../../DeletePresencaButton'
 import type { AlunoRow, PresencaRow } from '@/types/database'
 
 type AlunoBasic = Pick<AlunoRow, 'id' | 'nome'>
@@ -29,25 +31,25 @@ export default function AttendanceChecklist({
   turmaId,
   data,
   turmaLabel,
+  turmaNome,
   alunos,
   presencasExistentes,
-  savedParam,
 }: {
   turmaId: string
   data: string
   turmaLabel: string
+  turmaNome: string
   alunos: AlunoBasic[]
   presencasExistentes: PresencaRow[]
-  savedParam: boolean
 }) {
+  const router = useRouter()
   const [estados, setEstados] = useState<Map<string, Estado>>(
     () => initEstados(alunos, presencasExistentes),
   )
-  const [saved, setSaved] = useState(savedParam)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function toggle(id: string) {
-    setSaved(false)
     setEstados((prev) => {
       const next = new Map(prev)
       const atual = prev.get(id) ?? 'presente'
@@ -57,7 +59,6 @@ export default function AttendanceChecklist({
   }
 
   function toggleJustificada(id: string) {
-    setSaved(false)
     setEstados((prev) => {
       const next = new Map(prev)
       const atual = prev.get(id)
@@ -68,6 +69,7 @@ export default function AttendanceChecklist({
   }
 
   function handleSave() {
+    setSaveError(null)
     const entries: EntradaPresenca[] = alunos.map((a) => {
       const e = estados.get(a.id) ?? 'presente'
       return {
@@ -77,8 +79,16 @@ export default function AttendanceChecklist({
       }
     })
     startTransition(async () => {
-      await savePresencas(turmaId, data, entries)
-      setSaved(true)
+      try {
+        const result = await savePresencas(turmaId, data, entries)
+        if (result?.error) {
+          setSaveError(result.error)
+        } else {
+          router.push('/presencas?saved=1')
+        }
+      } catch (e: unknown) {
+        setSaveError(e instanceof Error ? e.message : 'Erro ao salvar. Tente novamente.')
+      }
     })
   }
 
@@ -160,20 +170,36 @@ export default function AttendanceChecklist({
       </div>
 
       {/* Salvar */}
-      <div className="flex items-center gap-4 pt-2">
-        <button
-          onClick={handleSave}
-          disabled={isPending}
-          className="flex-1 sm:flex-none bg-sky-400 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors"
-        >
-          {isPending ? 'Salvando...' : 'Salvar presenças'}
-        </button>
-        {saved && (
-          <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
-            <CheckCircle size={15} /> Salvo
-          </span>
+      <div className="flex flex-col gap-2 pt-2">
+        {saveError && (
+          <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <AlertCircle size={15} className="flex-shrink-0" />
+            {saveError}
+          </div>
         )}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className="flex-1 sm:flex-none bg-sky-400 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors"
+          >
+            {isPending ? 'Salvando...' : 'Salvar presenças'}
+          </button>
+        </div>
       </div>
+
+      {/* Excluir lista — só mostra se já há registros */}
+      {presencasExistentes.length > 0 && (
+        <div className="pt-2 mt-2 border-t border-gray-100">
+          <DeletePresencaButton
+            turmaId={turmaId}
+            data={data}
+            turmaNome={turmaNome}
+            onSuccess={() => router.push('/presencas')}
+            variant="full"
+          />
+        </div>
+      )}
 
       {alunos.length === 0 && (
         <div className="flex items-center gap-2 text-sm text-gray-400 py-4">

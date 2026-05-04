@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
-const UPDATED = '04 de maio de 2026'
+const UPDATED = '04 de maio de 2026 (rev. 2)'
 
 export default function PoliticaPage() {
   return (
@@ -79,11 +79,31 @@ export default function PoliticaPage() {
               </ul>
             </SubSection>
 
+            <SubSection title="Candidatos ao processo seletivo">
+              <ul className="list-disc list-inside space-y-1">
+                <li>Nome completo, data de nascimento, sexo e CPF</li>
+                <li>Endereço completo</li>
+                <li>Escola, endereço escolar e série</li>
+                <li>E-mail, nome e telefone do responsável legal</li>
+                <li>
+                  <strong>Dados de saúde (dados sensíveis — Art. 11 LGPD):</strong>{' '}
+                  existência de condição médica, tratamento médico em curso e alergias,
+                  coletados exclusivamente para avaliação de aptidão e segurança na prática esportiva,
+                  com consentimento expresso do responsável legal no ato da inscrição
+                </li>
+                <li>Autorização médica para prática de atividade física</li>
+                <li>Histórico de prática esportiva e interesse em eventos</li>
+                <li>Como soube da ADTRISC, posse de bicicleta e tamanho de camiseta</li>
+                <li>Status no processo seletivo (pendente, sorteado, não sorteado, aprovado)</li>
+              </ul>
+            </SubSection>
+
             <SubSection title="Treinadores(as) e administradores(as)">
               <ul className="list-disc list-inside space-y-1">
                 <li>Nome completo e e-mail (utilizados para autenticação no Sistema)</li>
                 <li>Perfil de acesso (função no sistema)</li>
-                <li>Registros de atividades realizadas no Sistema (auditoria)</li>
+                <li>Registros de ações realizadas no Sistema (log de auditoria), incluindo data/hora,
+                  tipo de ação e identificação do registro afetado</li>
               </ul>
             </SubSection>
           </Section>
@@ -94,8 +114,11 @@ export default function PoliticaPage() {
             <ul className="list-disc list-inside space-y-1.5">
               <li>Gerenciar matrículas, turmas e frequência de atletas</li>
               <li>Acompanhar a evolução física e esportiva dos/das atletas</li>
+              <li>Gerir o processo seletivo de candidatos, incluindo a realização de sorteio auditável e rastreável</li>
+              <li>Avaliar aptidão e segurança para a prática esportiva, com base em informações de saúde fornecidas voluntariamente</li>
               <li>Comunicação com responsáveis legais sobre atividades e desempenho</li>
               <li>Controle de acesso ao Sistema por parte de treinadores(as) e administradores(as)</li>
+              <li>Registro de auditoria das ações administrativas, para garantia de integridade, rastreabilidade e segurança operacional</li>
               <li>Cumprimento de obrigações legais e regulatórias aplicáveis à entidade</li>
             </ul>
             <p className="mt-3">
@@ -120,12 +143,21 @@ export default function PoliticaPage() {
                 esportivo dos/das atletas e segurança do ambiente.
               </li>
               <li>
-                <strong>Consentimento (Art. 7º, I)</strong> — para coleta de dados sensíveis como
-                medidas corporais e avaliações físicas, obtido no ato da matrícula.
+                <strong>Consentimento (Art. 7º, I)</strong> — para coleta de dados como medidas
+                corporais e avaliações físicas, obtido no ato da matrícula.
               </li>
               <li>
                 <strong>Cumprimento de obrigação legal (Art. 7º, II)</strong> — para obrigações
                 contábeis, fiscais e regulatórias da associação.
+              </li>
+              <li>
+                <strong>Dados sensíveis de saúde — Consentimento específico e destacado (Art. 11, I)</strong>{' '}
+                — informações sobre condições médicas, tratamentos e alergias coletadas no formulário
+                de inscrição de candidatos são dados sensíveis nos termos do Art. 5º, II da LGPD.
+                Seu tratamento é realizado com base no consentimento expresso do responsável legal,
+                manifestado no ato do preenchimento do formulário, com a finalidade exclusiva de
+                garantir a segurança e aptidão do/da candidato(a) para a prática esportiva
+                (Art. 11, II, &quot;f&quot; c/c Art. 11, I).
               </li>
             </ul>
           </Section>
@@ -136,7 +168,13 @@ export default function PoliticaPage() {
               A ADTRISC trata dados de crianças e adolescentes com atenção redobrada, conforme
               o <strong>Art. 14 da LGPD</strong>. O tratamento de dados de menores de 18 anos
               ocorre com o consentimento expresso de pelo menos um/uma responsável legal,
-              formalizado na ficha de inscrição.
+              formalizado na ficha de inscrição ou matrícula.
+            </p>
+            <p className="mt-2">
+              Isso se aplica tanto a atletas matriculados(as) quanto a candidatos ao processo
+              seletivo — os dados de saúde coletados no formulário de inscrição (condição médica,
+              tratamento e alergias) são tratados com base no consentimento específico e destacado
+              do responsável legal, nos termos dos Arts. 11, I e 14, §1º da LGPD.
             </p>
             <p className="mt-2">
               Dados de menores de 12 anos são tratados exclusivamente com consentimento
@@ -180,9 +218,11 @@ export default function PoliticaPage() {
             </p>
             <ul className="list-disc list-inside space-y-1.5">
               <li>Autenticação segura com controle de acesso por perfil (admin, treinador/a, atleta, responsável)</li>
+              <li>Exigência de senha forte para contas de treinadores(as) e administradores(as) (mínimo 8 caracteres, com letras maiúsculas, minúsculas, números e caracteres especiais)</li>
               <li>Comunicação criptografada via HTTPS/TLS em todas as requisições</li>
               <li>Acesso ao banco de dados restrito por políticas de segurança em nível de linha (Row Level Security)</li>
               <li>Senhas armazenadas com hash seguro — nunca em texto claro</li>
+              <li>Registro automático de auditoria de todas as ações de criação, edição e exclusão de dados, identificando o usuário responsável, data/hora e o estado anterior e posterior do registro</li>
               <li>Backups automáticos gerenciados pela Supabase</li>
               <li>Acesso administrativo limitado ao pessoal autorizado</li>
             </ul>
@@ -207,6 +247,24 @@ export default function PoliticaPage() {
               <li>
                 <strong>Avaliações físicas</strong> — mantidas durante a vigência da matrícula
                 e por até 5 anos para fins de histórico esportivo.
+              </li>
+              <li>
+                <strong>Dados de candidatos ao processo seletivo</strong> — mantidos pelo prazo
+                de duração do processo seletivo e por até 2 anos após seu encerramento.
+                Dados de saúde (condição médica, tratamento e alergias) de candidatos
+                não selecionados são excluídos ao fim do processo seletivo, salvo manifestação
+                contrária do responsável legal.
+              </li>
+              <li>
+                <strong>Registros de sorteio</strong> — mantidos por prazo indeterminado para fins
+                de auditabilidade e transparência do processo seletivo, contendo apenas nome e
+                identificador interno dos candidatos participantes.
+              </li>
+              <li>
+                <strong>Logs de auditoria</strong> — mantidos por até 2 anos para fins de
+                rastreabilidade, segurança operacional e cumprimento de obrigações legais.
+                Os logs incluem snapshots de dados pessoais no momento das alterações e são
+                acessíveis apenas por administradores(as).
               </li>
             </ul>
             <p className="mt-2">

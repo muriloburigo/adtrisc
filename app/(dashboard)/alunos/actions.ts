@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { logAudit, getSessionUser } from '@/lib/audit'
+import { logAudit } from '@/lib/audit'
+import { requireStaff } from '@/lib/assert'
 import type { AlunoStatus, Parentesco, SexoEnum } from '@/types/database'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,7 +38,7 @@ async function upsertResponsavel(db: any, alunoId: string, formData: FormData, p
 export async function createAluno(formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
-  const actor = await getSessionUser()
+  const actor = await requireStaff()
 
   const payload = {
     turma_id:        formData.get('turma_id') as string,
@@ -76,7 +77,7 @@ export async function createAluno(formData: FormData) {
 export async function updateAluno(id: string, formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
-  const actor = await getSessionUser()
+  const actor = await requireStaff()
 
   const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
 
@@ -115,7 +116,7 @@ export async function updateAluno(id: string, formData: FormData) {
 export async function deleteAluno(id: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
-  const actor = await getSessionUser()
+  const actor = await requireStaff()
 
   const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
 

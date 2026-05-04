@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { logAudit, getSessionUser } from '@/lib/audit'
+import { logAudit } from '@/lib/audit'
+import { requireStaff, requireAdmin } from '@/lib/assert'
 import type { CandidatoStatus } from '@/types/database'
 
 // Mulberry32 PRNG — deterministic, given the same seed produces the same sequence
@@ -30,20 +31,13 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
   return result
 }
 
-async function assertStaff() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = (await createClient()) as any
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Não autenticado')
-  return supabase
-}
-
 export async function updateCandidatoStatus(
   id: string,
   status: CandidatoStatus,
 ): Promise<{ error?: string }> {
-  const supabase = await assertStaff()
-  const actor = await getSessionUser()
+  const actor = await requireStaff()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
 
   const { data: before } = await supabase
     .from('candidatos').select('nome, status, turma_id').eq('id', id).single()
@@ -68,13 +62,12 @@ export async function updateCandidatoStatus(
 export async function realizarSorteio(
   turmaId: string,
 ): Promise<{ sorteioId?: string; error?: string }> {
+  let actor: { id: string; name: string }
+  try { actor = await requireAdmin() }
+  catch { return { error: 'Apenas administradores podem realizar o sorteio.' } }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado.' }
-
-  const { data: pr } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single()
-  if (pr?.role !== 'admin') return { error: 'Apenas administradores podem realizar o sorteio.' }
 
   const { data: turma } = await supabase
     .from('turmas').select('capacidade, nome').eq('id', turmaId).single()
@@ -112,7 +105,7 @@ export async function realizarSorteio(
     .from('sorteios')
     .insert({
       turma_id: turmaId,
-      realizado_por: user.id,
+      realizado_por: actor.id,
       realizado_em: new Date().toISOString(),
       seed,
       vagas,
@@ -134,7 +127,7 @@ export async function realizarSorteio(
     await supabase.from('candidatos').update({ status: 'nao_sorteado' }).in('id', naoSorteadosIds)
 
   await logAudit({
-    userId: user.id, userName: pr?.full_name ?? 'Admin',
+    userId: actor.id, userName: actor.name,
     action: 'sorteio', resource: 'candidato',
     resourceId: sorteio.id,
     resourceLabel: turma.nome,
@@ -157,7 +150,9 @@ export async function saveObservacoesInternas(
   id: string,
   observacoes: string,
 ): Promise<{ error?: string }> {
-  const supabase = await assertStaff()
+  await requireStaff()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
   const { error } = await supabase
     .from('candidatos')
     .update({ observacoes_internas: observacoes || null })

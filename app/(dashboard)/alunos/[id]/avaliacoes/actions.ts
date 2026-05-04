@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { requireStaff } from '@/lib/assert'
 
 export type AvaliacaoPayload = {
   data: string
@@ -29,13 +30,13 @@ export async function createAvaliacaoFisica(
   alunoId: string,
   payload: AvaliacaoPayload,
 ): Promise<{ error?: string }> {
+  const actor = await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const { data: { user } } = await supabase.auth.getUser()
 
   const { error } = await supabase.from('avaliacoes_fisicas').upsert({
     aluno_id: alunoId,
-    avaliador_id: user?.id ?? null,
+    avaliador_id: actor.id,
     ...payload,
   }, { onConflict: 'aluno_id,data' })
 
@@ -49,6 +50,7 @@ export async function deleteAvaliacao(
   alunoId: string,
   avaliacaoId: string,
 ): Promise<{ error?: string }> {
+  await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
   const { error } = await supabase

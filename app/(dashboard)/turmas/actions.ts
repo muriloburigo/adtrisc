@@ -3,13 +3,14 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { logAudit, getSessionUser } from '@/lib/audit'
+import { logAudit } from '@/lib/audit'
+import { requireStaff } from '@/lib/assert'
 import type { DiaSemana, TurmaModalidade, TurmaStatus } from '@/types/database'
 
 export async function createTurma(formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const actor = await getSessionUser()
+  const actor = await requireStaff()
   const dias = formData.getAll('dias_semana') as DiaSemana[]
 
   const semestreRaw = formData.get('semestre') as string
@@ -51,7 +52,7 @@ export async function createTurma(formData: FormData) {
 export async function updateTurma(id: string, formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const actor = await getSessionUser()
+  const actor = await requireStaff()
   const dias = formData.getAll('dias_semana') as DiaSemana[]
 
   const semestreRaw = formData.get('semestre') as string
@@ -96,7 +97,7 @@ export async function updateTurma(id: string, formData: FormData) {
 export async function deleteTurma(id: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const actor = await getSessionUser()
+  const actor = await requireStaff()
 
   const { data: before } = await supabase.from('turmas').select('*').eq('id', id).single()
 

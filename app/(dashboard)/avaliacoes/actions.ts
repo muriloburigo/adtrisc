@@ -2,10 +2,18 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { requireStaff } from '@/lib/assert'
 
 export type EntradaCampo = { alunoId: string; value: number | null }
 
 const CAMPOS_DERIVADOS = ['altura_cm', 'altura_ao_quadrado', 'imc', 'rce'] as const
+
+const CAMPOS_PERMITIDOS = new Set([
+  'massa_corporal', 'estatura', 'perimetro_cintura', 'envergadura',
+  'estatura_sentado', 'sentar_alcancar', 'resistencia_6min',
+  'forca_abdominal', 'arremesso_medicineball', 'agilidade',
+  'salto_horizontal', 'corrida_20m', 'natacao_12min', 'observacoes',
+])
 
 async function recalcularDerived(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,16 +54,18 @@ export async function saveCampoParaTurma(
   campo: string,
   entries: EntradaCampo[],
 ): Promise<{ error?: string }> {
+  if (!CAMPOS_PERMITIDOS.has(campo)) return { error: 'Campo inválido.' }
+
+  const actor = await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const { data: { user } } = await supabase.auth.getUser()
 
   // Upsert one row per aluno with just this field
   const rows = entries.map((e) => ({
     aluno_id:      e.alunoId,
     data,
     [campo]:       e.value,
-    avaliador_id:  user?.id ?? null,
+    avaliador_id:  actor.id,
     updated_at:    new Date().toISOString(),
   }))
 

@@ -12,13 +12,10 @@ type AlunoBasic = Pick<AlunoRow, 'id' | 'nome'>
 
 export default async function PresencaChecklistPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ turmaId: string; data: string }>
-  searchParams: Promise<{ saved?: string }>
 }) {
   const { turmaId, data } = await params
-  const { saved } = await searchParams
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
@@ -37,6 +34,7 @@ export default async function PresencaChecklistPage({
 
   const dataFormatada = formatDate(data)
   const turmaLabel = `${turma.nome} · ${dataFormatada}`
+  const turmaNome = turma.nome
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl">
@@ -69,9 +67,9 @@ export default async function PresencaChecklistPage({
           turmaId={turmaId}
           data={data}
           turmaLabel={turmaLabel}
+          turmaNome={turmaNome}
           alunos={alunos}
           presencasExistentes={presencasExistentes}
-          savedParam={saved === '1'}
         />
       </Card>
     </div>
