@@ -74,7 +74,7 @@ export default function LoginPage() {
         {/* Conteúdo */}
         <div className="relative z-10 flex flex-col items-center text-center px-12">
           <Image
-            src="/logo.jpg"
+            src="/logo.png"
             alt="ADTRISC"
             width={180}
             height={180}
@@ -95,7 +95,7 @@ export default function LoginPage() {
         {/* Logo mobile (só aparece em telas pequenas) */}
         <div className="flex flex-col items-center mb-10 lg:hidden">
           <Image
-            src="/logo.jpg"
+            src="/logo.png"
             alt="ADTRISC"
             width={80}
             height={80}
