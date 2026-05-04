@@ -10,25 +10,28 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
 
-  /* ADTRISC Brand Colors */
-  --color-navy-50:  #eef0f8;
-  --color-navy-100: #d0d5ea;
-  --color-navy-500: #1A2557;
-  --color-navy-600: #161e4a;
-  --color-navy-700: #10183a;
-  --color-navy-800: #0b102a;
-  --color-navy-900: #060a1a;
+  /* ADTRISC Brand Colors — RGB exato da identidade visual */
+  /* Navy: R12 G20 B61 */
+  --color-navy-50:  #eeeef4;
+  --color-navy-100: #c5c7d9;
+  --color-navy-500: #0C143D;
+  --color-navy-600: #0a1133;
+  --color-navy-700: #080d28;
+  --color-navy-800: #05091c;
+  --color-navy-900: #03050f;
 
-  --color-sky-50:  #eaf7fd;
-  --color-sky-100: #c3eaf9;
-  --color-sky-400: #38B5E8;
-  --color-sky-500: #25a8de;
-  --color-sky-600: #1a90c2;
+  /* Sky blue: R42 G171 B225 */
+  --color-sky-50:  #e8f6fd;
+  --color-sky-100: #bae5f8;
+  --color-sky-400: #2AABE1;
+  --color-sky-500: #1f96cc;
+  --color-sky-600: #1680b0;
 
-  --color-brand-red-50:  #fef0f0;
-  --color-brand-red-100: #fdc9c9;
-  --color-brand-red-500: #E82B2B;
-  --color-brand-red-600: #cb2222;
+  /* Red: R235 G33 B39 */
+  --color-brand-red-50:  #fdedef;
+  --color-brand-red-100: #f9bbbf;
+  --color-brand-red-500: #EB2127;
+  --color-brand-red-600: #cc1a1f;
 }
 
 body {
