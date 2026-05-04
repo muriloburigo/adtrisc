@@ -18,6 +18,8 @@ export interface TurmaRow {
   id: string; nome: string; modalidade: TurmaModalidade
   dias_semana: DiaSemana[]; horario_inicio: string; horario_fim: string
   coach_id: string | null; capacidade: number; status: TurmaStatus
+  ano: number | null; semestre: 1 | 2 | null
+  idade_min: number | null; idade_max: number | null
   observacoes: string | null; created_at: string; updated_at: string
 }
 export interface AlunoRow {

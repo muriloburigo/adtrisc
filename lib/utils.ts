@@ -47,6 +47,19 @@ export function formatarDiasSemana(dias: DiaSemana[]): string {
   return dias.map(formatarDiaSemana).join(', ')
 }
 
+export function formatFaixaEtaria(min: number | null, max: number | null): string | null {
+  if (min != null && max != null) return `${min}–${max} anos`
+  if (min != null) return `a partir de ${min} anos`
+  if (max != null) return `até ${max} anos`
+  return null
+}
+
+export function formatSemestre(semestre: number | null): string | null {
+  if (semestre === 1) return '1º Semestre'
+  if (semestre === 2) return '2º Semestre'
+  return null
+}
+
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Administrador(a)',
   coach: 'Treinador(a)',

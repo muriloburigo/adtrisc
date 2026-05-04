@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button'
 import Badge, { statusTurmaVariant } from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import { Users2, Plus, Clock, Users } from 'lucide-react'
-import { formatarDiasSemana, formatarHorario } from '@/lib/utils'
+import { formatarDiasSemana, formatarHorario, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
 import type { DiaSemana } from '@/types/database'
 
 export default async function TurmasPage() {
@@ -21,6 +21,8 @@ export default async function TurmasPage() {
     id: string; nome: string; modalidade: string; status: string
     dias_semana: DiaSemana[]; horario_inicio: string; horario_fim: string
     capacidade: number; coaches: { full_name: string | null } | null
+    ano: number | null; semestre: number | null
+    idade_min: number | null; idade_max: number | null
   }
 
   const turmas = (data ?? []) as unknown as TurmaRow[]
@@ -76,6 +78,27 @@ export default async function TurmasPage() {
                     <span>Cap. {t.capacidade} alunos</span>
                   </div>
                 </div>
+
+                {/* Ano / Semestre / Faixa etária */}
+                {(t.ano || t.semestre || t.idade_min || t.idade_max) && (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {t.ano && (
+                      <span className="text-xs bg-navy-50 text-navy-500 font-medium px-2 py-0.5 rounded-full">
+                        {t.ano}
+                      </span>
+                    )}
+                    {formatSemestre(t.semestre) && (
+                      <span className="text-xs bg-sky-50 text-sky-500 font-medium px-2 py-0.5 rounded-full">
+                        {formatSemestre(t.semestre)}
+                      </span>
+                    )}
+                    {formatFaixaEtaria(t.idade_min, t.idade_max) && (
+                      <span className="text-xs bg-gray-100 text-gray-500 font-medium px-2 py-0.5 rounded-full">
+                        {formatFaixaEtaria(t.idade_min, t.idade_max)}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {t.coaches?.full_name && (
                   <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">

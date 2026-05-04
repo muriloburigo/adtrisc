@@ -10,6 +10,10 @@ export async function createTurma(formData: FormData) {
   const supabase = (await createClient()) as any
   const dias = formData.getAll('dias_semana') as DiaSemana[]
 
+  const semestreRaw = formData.get('semestre') as string
+  const idadeMinRaw = formData.get('idade_min') as string
+  const idadeMaxRaw = formData.get('idade_max') as string
+
   const { error } = await supabase.from('turmas').insert({
     nome:           formData.get('nome') as string,
     modalidade:     formData.get('modalidade') as TurmaModalidade,
@@ -18,6 +22,10 @@ export async function createTurma(formData: FormData) {
     horario_fim:    formData.get('horario_fim') as string,
     coach_id:       (formData.get('coach_id') as string) || null,
     capacidade:     Number(formData.get('capacidade')),
+    ano:            Number(formData.get('ano')) || null,
+    semestre:       semestreRaw ? (Number(semestreRaw) as 1 | 2) : null,
+    idade_min:      idadeMinRaw ? Number(idadeMinRaw) : null,
+    idade_max:      idadeMaxRaw ? Number(idadeMaxRaw) : null,
     observacoes:    (formData.get('observacoes') as string) || null,
     status:         'ativa' as TurmaStatus,
   })
@@ -32,6 +40,10 @@ export async function updateTurma(id: string, formData: FormData) {
   const supabase = (await createClient()) as any
   const dias = formData.getAll('dias_semana') as DiaSemana[]
 
+  const semestreRaw = formData.get('semestre') as string
+  const idadeMinRaw = formData.get('idade_min') as string
+  const idadeMaxRaw = formData.get('idade_max') as string
+
   const { error } = await supabase.from('turmas').update({
     nome:           formData.get('nome') as string,
     modalidade:     formData.get('modalidade') as TurmaModalidade,
@@ -41,6 +53,10 @@ export async function updateTurma(id: string, formData: FormData) {
     coach_id:       (formData.get('coach_id') as string) || null,
     capacidade:     Number(formData.get('capacidade')),
     status:         formData.get('status') as TurmaStatus,
+    ano:            Number(formData.get('ano')) || null,
+    semestre:       semestreRaw ? (Number(semestreRaw) as 1 | 2) : null,
+    idade_min:      idadeMinRaw ? Number(idadeMinRaw) : null,
+    idade_max:      idadeMaxRaw ? Number(idadeMaxRaw) : null,
     observacoes:    (formData.get('observacoes') as string) || null,
   }).eq('id', id)
 

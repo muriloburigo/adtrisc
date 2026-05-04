@@ -7,7 +7,7 @@ import Badge, { statusAlunoVariant, statusTurmaVariant } from '@/components/ui/B
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { Users, Pencil, Clock, Plus } from 'lucide-react'
-import { formatarDiasSemana, formatarHorario, calcularIdade } from '@/lib/utils'
+import { formatarDiasSemana, formatarHorario, calcularIdade, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
 import type { TurmaRow, DiaSemana } from '@/types/database'
 
 type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null } | null }
@@ -42,20 +42,44 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
 
       {/* Info */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: 'Horário', value: `${formatarHorario(turma.horario_inicio)}–${formatarHorario(turma.horario_fim)}` },
-          { label: 'Alunos / Cap.', value: `${alunos.length} / ${turma.capacidade}` },
-          { label: 'Treinador(a)', value: turma.coaches?.full_name ?? '—' },
-        ].map((item) => (
-          <Card key={item.label}>
-            <p className="text-xs text-gray-400 mb-1">{item.label}</p>
-            <p className="text-sm font-semibold text-navy-500">{item.value}</p>
-          </Card>
-        ))}
+        <Card>
+          <p className="text-xs text-gray-400 mb-1">Horário</p>
+          <p className="text-sm font-semibold text-navy-500">
+            {formatarHorario(turma.horario_inicio)}–{formatarHorario(turma.horario_fim)}
+          </p>
+        </Card>
+        <Card>
+          <p className="text-xs text-gray-400 mb-1">Atletas / Cap.</p>
+          <p className="text-sm font-semibold text-navy-500">{alunos.length} / {turma.capacidade}</p>
+        </Card>
+        <Card>
+          <p className="text-xs text-gray-400 mb-1">Treinador(a)</p>
+          <p className="text-sm font-semibold text-navy-500">{turma.coaches?.full_name ?? '—'}</p>
+        </Card>
         <Card>
           <p className="text-xs text-gray-400 mb-1">Status</p>
           <Badge variant={statusTurmaVariant(turma.status)}>{turma.status}</Badge>
         </Card>
+        {turma.ano && (
+          <Card>
+            <p className="text-xs text-gray-400 mb-1">Ano</p>
+            <p className="text-sm font-semibold text-navy-500">{turma.ano}</p>
+          </Card>
+        )}
+        {turma.semestre && (
+          <Card>
+            <p className="text-xs text-gray-400 mb-1">Semestre</p>
+            <p className="text-sm font-semibold text-navy-500">{formatSemestre(turma.semestre)}</p>
+          </Card>
+        )}
+        {(turma.idade_min != null || turma.idade_max != null) && (
+          <Card>
+            <p className="text-xs text-gray-400 mb-1">Faixa etária</p>
+            <p className="text-sm font-semibold text-navy-500">
+              {formatFaixaEtaria(turma.idade_min, turma.idade_max)}
+            </p>
+          </Card>
+        )}
       </div>
 
       {/* Alunos */}

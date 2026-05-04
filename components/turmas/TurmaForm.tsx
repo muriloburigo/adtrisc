@@ -92,12 +92,54 @@ export default function TurmaForm({
         />
 
         <Input
-          label="Capacidade (alunos)"
+          label="Capacidade (atletas)"
           name="capacidade"
           type="number"
           min="1"
           defaultValue={turma?.capacidade ?? 20}
           required
+        />
+
+        <Input
+          label="Ano"
+          name="ano"
+          type="number"
+          min="2020"
+          max="2100"
+          defaultValue={turma?.ano ?? new Date().getFullYear()}
+        />
+
+        <Select
+          label="Semestre"
+          name="semestre"
+          defaultValue={turma?.semestre?.toString() ?? ''}
+          placeholder="Selecione..."
+          options={[
+            { value: '1', label: '1º Semestre' },
+            { value: '2', label: '2º Semestre' },
+          ]}
+        />
+
+        <Input
+          label="Idade mínima"
+          name="idade_min"
+          type="number"
+          min="3"
+          max="99"
+          placeholder="Ex: 8"
+          defaultValue={turma?.idade_min ?? ''}
+          hint="anos"
+        />
+
+        <Input
+          label="Idade máxima"
+          name="idade_max"
+          type="number"
+          min="3"
+          max="99"
+          placeholder="Ex: 9"
+          defaultValue={turma?.idade_max ?? ''}
+          hint="anos"
         />
 
         {turma && (
