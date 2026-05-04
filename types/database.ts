@@ -40,6 +40,12 @@ export interface PagamentoRow {
   pago_em: string | null; status: PagamentoStatus; descricao: string | null
   mes_referencia: string | null; created_at: string
 }
+export interface PresencaRow {
+  id: string; turma_id: string; aluno_id: string; data: string
+  presente: boolean; justificada: boolean; observacao: string | null
+  registrado_por: string | null; created_at: string; updated_at: string
+}
+export type PresencaInsert = Omit<PresencaRow, 'id' | 'created_at' | 'updated_at'>
 
 // Insert types (what you send to DB)
 export type ProfileInsert = Omit<ProfileRow, 'created_at' | 'updated_at'>
@@ -48,6 +54,7 @@ export type AlunoInsert = Omit<AlunoRow, 'id' | 'created_at' | 'updated_at'>
 export type ResponsavelInsert = Omit<ResponsavelRow, 'id' | 'created_at' | 'updated_at'>
 export type AlunoResponsavelInsert = AlunoResponsavelRow
 export type PagamentoInsert = Omit<PagamentoRow, 'id' | 'created_at'>
+export type PresencaUpsert = Omit<PresencaRow, 'id' | 'created_at' | 'updated_at'>
 
 export interface Database {
   public: {
