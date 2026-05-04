@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getSessionUser } from '@/lib/audit'
 import type { AlunoStatus, Parentesco, SexoEnum } from '@/types/database'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,30 +37,37 @@ async function upsertResponsavel(db: any, alunoId: string, formData: FormData, p
 export async function createAluno(formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
+  const actor = await getSessionUser()
+
+  const payload = {
+    turma_id:        formData.get('turma_id') as string,
+    nome:            formData.get('nome') as string,
+    telefone:        (formData.get('telefone') as string) || null,
+    sexo:            (formData.get('sexo') as SexoEnum) || null,
+    data_nascimento: (formData.get('data_nascimento') as string) || null,
+    rua:             (formData.get('rua') as string) || null,
+    numero:          (formData.get('numero') as string) || null,
+    bairro:          (formData.get('bairro') as string) || null,
+    cep:             (formData.get('cep') as string) || null,
+    cidade:          (formData.get('cidade') as string) || null,
+    observacoes:     (formData.get('observacoes') as string) || null,
+    status:          'ativo' as AlunoStatus,
+  }
 
   const { data: aluno, error } = await db
-    .from('alunos')
-    .insert({
-      turma_id:        formData.get('turma_id') as string,
-      nome:            formData.get('nome') as string,
-      telefone:        (formData.get('telefone') as string) || null,
-      sexo:            (formData.get('sexo') as SexoEnum) || null,
-      data_nascimento: (formData.get('data_nascimento') as string) || null,
-      rua:             (formData.get('rua') as string) || null,
-      numero:          (formData.get('numero') as string) || null,
-      bairro:          (formData.get('bairro') as string) || null,
-      cep:             (formData.get('cep') as string) || null,
-      cidade:          (formData.get('cidade') as string) || null,
-      observacoes:     (formData.get('observacoes') as string) || null,
-      status:          'ativo' as AlunoStatus,
-    })
-    .select('id')
-    .single()
+    .from('alunos').insert(payload).select('id').single()
 
   if (error || !aluno) throw new Error(error?.message ?? 'Erro ao criar aluno')
 
   await upsertResponsavel(db, aluno.id, formData, 'mae')
   await upsertResponsavel(db, aluno.id, formData, 'pai')
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'criar', resource: 'atleta',
+    resourceId: aluno.id, resourceLabel: payload.nome,
+    after: payload as Record<string, unknown>,
+  })
 
   revalidatePath('/alunos')
   redirect('/alunos')
@@ -68,8 +76,11 @@ export async function createAluno(formData: FormData) {
 export async function updateAluno(id: string, formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
+  const actor = await getSessionUser()
 
-  const { error } = await db.from('alunos').update({
+  const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
+
+  const payload = {
     turma_id:        formData.get('turma_id') as string,
     nome:            formData.get('nome') as string,
     telefone:        (formData.get('telefone') as string) || null,
@@ -82,9 +93,20 @@ export async function updateAluno(id: string, formData: FormData) {
     cidade:          (formData.get('cidade') as string) || null,
     status:          formData.get('status') as AlunoStatus,
     observacoes:     (formData.get('observacoes') as string) || null,
-  }).eq('id', id)
+  }
+
+  const { error } = await db.from('alunos').update(payload).eq('id', id)
 
   if (error) throw new Error(error.message)
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'editar', resource: 'atleta',
+    resourceId: id, resourceLabel: payload.nome,
+    before: before as Record<string, unknown>,
+    after: payload as Record<string, unknown>,
+  })
+
   revalidatePath('/alunos')
   revalidatePath(`/alunos/${id}`)
   redirect(`/alunos/${id}`)
@@ -93,8 +115,20 @@ export async function updateAluno(id: string, formData: FormData) {
 export async function deleteAluno(id: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
+  const actor = await getSessionUser()
+
+  const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
+
   const { error } = await db.from('alunos').delete().eq('id', id)
   if (error) throw new Error(error.message)
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'atleta',
+    resourceId: id, resourceLabel: before?.nome ?? null,
+    before: before as Record<string, unknown>,
+  })
+
   revalidatePath('/alunos')
   redirect('/alunos')
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { logAudit, getSessionUser } from '@/lib/audit'
 import type { CandidatoStatus } from '@/types/database'
 
 // Mulberry32 PRNG — deterministic, given the same seed produces the same sequence
@@ -42,11 +43,23 @@ export async function updateCandidatoStatus(
   status: CandidatoStatus,
 ): Promise<{ error?: string }> {
   const supabase = await assertStaff()
+  const actor = await getSessionUser()
+
+  const { data: before } = await supabase
+    .from('candidatos').select('nome, status, turma_id').eq('id', id).single()
+
   const { error } = await supabase
-    .from('candidatos')
-    .update({ status })
-    .eq('id', id)
+    .from('candidatos').update({ status }).eq('id', id)
   if (error) return { error: error.message }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'status', resource: 'candidato',
+    resourceId: id, resourceLabel: before?.nome ?? null,
+    before: { status: before?.status },
+    after:  { status },
+  })
+
   revalidatePath('/candidatos')
   revalidatePath(`/candidatos/${id}`)
   return {}
@@ -60,14 +73,13 @@ export async function realizarSorteio(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autenticado.' }
 
-  const { data: pr } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: pr } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single()
   if (pr?.role !== 'admin') return { error: 'Apenas administradores podem realizar o sorteio.' }
 
   const { data: turma } = await supabase
-    .from('turmas').select('capacidade').eq('id', turmaId).single()
+    .from('turmas').select('capacidade, nome').eq('id', turmaId).single()
   if (!turma) return { error: 'Turma não encontrada.' }
 
-  // Snapshot: candidatos pendentes na ordem de inscrição (created_at)
   const { data: pendentes } = await supabase
     .from('candidatos')
     .select('id, nome')
@@ -113,13 +125,29 @@ export async function realizarSorteio(
 
   if (insertErr) return { error: insertErr.message }
 
-  const sorteadosIds   = resultado.filter(r => r.sorteado).map(r => r.candidato_id)
+  const sorteadosIds    = resultado.filter(r => r.sorteado).map(r => r.candidato_id)
   const naoSorteadosIds = resultado.filter(r => !r.sorteado).map(r => r.candidato_id)
 
   if (sorteadosIds.length > 0)
     await supabase.from('candidatos').update({ status: 'sorteado' }).in('id', sorteadosIds)
   if (naoSorteadosIds.length > 0)
     await supabase.from('candidatos').update({ status: 'nao_sorteado' }).in('id', naoSorteadosIds)
+
+  await logAudit({
+    userId: user.id, userName: pr?.full_name ?? 'Admin',
+    action: 'sorteio', resource: 'candidato',
+    resourceId: sorteio.id,
+    resourceLabel: turma.nome,
+    metadata: {
+      turma_id: turmaId,
+      turma_nome: turma.nome,
+      total_candidatos: pendentes.length,
+      vagas,
+      sorteados: sorteadosIds.length,
+      nao_sorteados: naoSorteadosIds.length,
+      sorteio_id: sorteio.id,
+    },
+  })
 
   revalidatePath('/candidatos')
   return { sorteioId: sorteio.id as string }
