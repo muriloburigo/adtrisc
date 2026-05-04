@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Trash2, AlertTriangle } from 'lucide-react'
 import { deletePresencas } from './actions'
 
@@ -19,6 +20,7 @@ export default function DeletePresencaButton({
   onSuccess,
   variant = 'full',
 }: Props) {
+  const router = useRouter()
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -31,8 +33,11 @@ export default function DeletePresencaButton({
         if (result?.error) {
           setError(result.error)
           setConfirming(false)
+        } else if (onSuccess) {
+          onSuccess()
         } else {
-          onSuccess?.()
+          router.refresh()
+          setConfirming(false)
         }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Erro ao excluir')
@@ -44,21 +49,26 @@ export default function DeletePresencaButton({
   if (variant === 'icon') {
     if (confirming) {
       return (
-        <span className="inline-flex items-center gap-1">
-          <button
-            onClick={handleDelete}
-            disabled={isPending}
-            className="text-xs text-red-600 font-semibold hover:text-red-700 disabled:opacity-50"
-          >
-            {isPending ? 'Excluindo…' : 'Confirmar'}
-          </button>
-          <span className="text-gray-300">·</span>
-          <button
-            onClick={() => setConfirming(false)}
-            className="text-xs text-gray-400 hover:text-gray-600"
-          >
-            Cancelar
-          </button>
+        <span className="inline-flex flex-col items-end gap-0.5">
+          {error && (
+            <span className="text-xs text-red-500 whitespace-nowrap">{error}</span>
+          )}
+          <span className="inline-flex items-center gap-1">
+            <button
+              onClick={handleDelete}
+              disabled={isPending}
+              className="text-xs text-red-600 font-semibold hover:text-red-700 disabled:opacity-50"
+            >
+              {isPending ? 'Excluindo…' : 'Confirmar'}
+            </button>
+            <span className="text-gray-300">·</span>
+            <button
+              onClick={() => { setConfirming(false); setError(null) }}
+              className="text-xs text-gray-400 hover:text-gray-600"
+            >
+              Cancelar
+            </button>
+          </span>
         </span>
       )
     }
@@ -82,7 +92,7 @@ export default function DeletePresencaButton({
         </p>
       )}
       {confirming ? (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-gray-600">Excluir todos os registros desta sessão?</span>
           <button
             onClick={handleDelete}
@@ -92,7 +102,7 @@ export default function DeletePresencaButton({
             {isPending ? 'Excluindo…' : 'Sim, excluir'}
           </button>
           <button
-            onClick={() => setConfirming(false)}
+            onClick={() => { setConfirming(false); setError(null) }}
             className="text-sm text-gray-400 hover:text-gray-600"
           >
             Cancelar
