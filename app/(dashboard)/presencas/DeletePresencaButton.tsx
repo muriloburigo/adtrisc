@@ -36,8 +36,7 @@ export default function DeletePresencaButton({
         } else if (onSuccess) {
           onSuccess()
         } else {
-          router.refresh()
-          setConfirming(false)
+          router.push('/presencas')
         }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Erro ao excluir')
