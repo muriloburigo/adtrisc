@@ -1,6 +1,40 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type SexoEnum = 'M' | 'F' | 'outro'
+export type CandidatoStatus = 'pendente' | 'sorteado' | 'nao_sorteado' | 'convertido'
+
+export interface CandidatoRow {
+  id: string
+  turma_id: string | null
+  status: CandidatoStatus
+  email_responsavel: string | null
+  aceite_termos: boolean
+  nome: string
+  data_nascimento: string | null
+  sexo: string | null
+  cpf: string | null
+  endereco_completo: string | null
+  escola_nome_endereco: string | null
+  serie_escolar: string | null
+  condicao_medica: boolean | null
+  condicao_medica_descricao: string | null
+  tratamento_medico: boolean | null
+  tratamento_medico_descricao: string | null
+  alergia: boolean | null
+  alergia_descricao: string | null
+  autorizacao_medica: boolean | null
+  praticou_modalidade: boolean | null
+  interesse_eventos: boolean | null
+  como_soube: string | null
+  responsavel_nome: string | null
+  responsavel_telefone: string | null
+  responsavel_email: string | null
+  tem_bicicleta: boolean | null
+  tamanho_camiseta: string | null
+  observacoes_internas: string | null
+  created_at: string
+  updated_at: string
+}
 export type TurmaModalidade = 'natacao' | 'ciclismo' | 'corrida' | 'triathlon'
 export type TurmaStatus = 'ativa' | 'inativa' | 'suspensa'
 export type DiaSemana = 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab' | 'dom'
@@ -20,7 +54,7 @@ export interface TurmaRow {
   coach_id: string | null; capacidade: number; status: TurmaStatus
   ano: number | null; semestre: 1 | 2 | null
   idade_min: number | null; idade_max: number | null
-  observacoes: string | null; created_at: string; updated_at: string
+  observacoes: string | null; captacao_aberta: boolean; created_at: string; updated_at: string
 }
 export interface AlunoRow {
   id: string; profile_id: string | null; turma_id: string; nome: string
@@ -104,6 +138,11 @@ export interface Database {
         Row: PagamentoRow
         Insert: PagamentoInsert
         Update: Partial<PagamentoInsert>
+      }
+      candidatos: {
+        Row: CandidatoRow
+        Insert: Omit<CandidatoRow, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<CandidatoRow, 'id' | 'created_at' | 'updated_at'>>
       }
     }
     Views: Record<string, never>

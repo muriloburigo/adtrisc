@@ -192,6 +192,23 @@ export default function TurmaForm({
         />
       </div>
 
+      {/* Captação */}
+      <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl bg-gray-50">
+        <input
+          type="checkbox"
+          id="captacao_aberta"
+          name="captacao_aberta"
+          value="true"
+          defaultChecked={turma?.captacao_aberta ?? false}
+          className="mt-0.5 w-4 h-4 accent-sky-400"
+        />
+        <label htmlFor="captacao_aberta" className="text-sm text-gray-700">
+          <span className="font-medium">Abrir para captação de atletas</span>
+          <br />
+          <span className="text-xs text-gray-400">Quando marcado, esta turma aparecerá no formulário público de inscrição para sorteio.</span>
+        </label>
+      </div>
+
       <div className="flex gap-3">
         <Button type="submit">{submitLabel}</Button>
         <Button type="button" variant="secondary" onClick={() => history.back()}>

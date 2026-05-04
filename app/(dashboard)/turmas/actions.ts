@@ -27,6 +27,7 @@ export async function createTurma(formData: FormData) {
     idade_min:      idadeMinRaw ? Number(idadeMinRaw) : null,
     idade_max:      idadeMaxRaw ? Number(idadeMaxRaw) : null,
     observacoes:    (formData.get('observacoes') as string) || null,
+    captacao_aberta: formData.get('captacao_aberta') === 'true',
     status:         'ativa' as TurmaStatus,
   })
 
@@ -58,6 +59,7 @@ export async function updateTurma(id: string, formData: FormData) {
     idade_min:      idadeMinRaw ? Number(idadeMinRaw) : null,
     idade_max:      idadeMaxRaw ? Number(idadeMaxRaw) : null,
     observacoes:    (formData.get('observacoes') as string) || null,
+    captacao_aberta: formData.get('captacao_aberta') === 'true',
   }).eq('id', id)
 
   if (error) throw new Error(error.message)
