@@ -8,8 +8,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "ADTRISC — Escolinha de Triathlon",
-  description: "Sistema de gestão da escolinha de triathlon ADTRISC",
+  title: "ADTRISC — Associação Desportiva Triatlética de Santa Catarina",
+  description: "Sistema de gestão da Associação Desportiva Triatlética de Santa Catarina",
 };
 
 export default function RootLayout({
