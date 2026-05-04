@@ -35,21 +35,41 @@ export default function LoginPage() {
       {/* Painel esquerdo — identidade visual */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
-        style={{ background: 'linear-gradient(145deg, #0C143D 0%, #1a2660 60%, #0C143D 100%)' }}
+        style={{ background: '#0C143D' }}
       >
-        {/* Círculos decorativos */}
+        {/* Bloco azul claro — topo esquerdo (referência ao escudo) */}
         <div
-          className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-10"
-          style={{ background: '#2AABE1' }}
+          className="absolute inset-0"
+          style={{
+            background: '#2AABE1',
+            clipPath: 'polygon(0 0, 62% 0, 28% 100%, 0 100%)',
+          }}
         />
+        {/* Bloco vermelho — base direita */}
         <div
-          className="absolute -bottom-40 -right-24 w-[28rem] h-[28rem] rounded-full opacity-10"
-          style={{ background: '#EB2127' }}
+          className="absolute inset-0"
+          style={{
+            background: '#EB2127',
+            clipPath: 'polygon(100% 42%, 100% 100%, 38% 100%)',
+          }}
         />
+        {/* Faixa navy diagonal central (como no escudo) */}
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5"
-          style={{ background: '#2AABE1' }}
+          className="absolute inset-0"
+          style={{
+            background: '#0C143D',
+            clipPath: 'polygon(55% 0, 100% 0, 100% 42%, 38% 100%, 28% 100%, 62% 0)',
+          }}
         />
+        {/* Linhas brancas de separação (como no escudo) */}
+        <div className="absolute inset-0 pointer-events-none">
+          <svg width="100%" height="100%" viewBox="0 0 400 600" preserveAspectRatio="none">
+            <line x1="248" y1="0" x2="112" y2="600" stroke="white" strokeWidth="3" strokeOpacity="0.25" />
+            <line x1="220" y1="0" x2="88" y2="600" stroke="white" strokeWidth="1" strokeOpacity="0.12" />
+            <line x1="400" y1="252" x2="152" y2="600" stroke="white" strokeWidth="3" strokeOpacity="0.25" />
+            <line x1="400" y1="224" x2="124" y2="600" stroke="white" strokeWidth="1" strokeOpacity="0.12" />
+          </svg>
+        </div>
 
         {/* Conteúdo */}
         <div className="relative z-10 flex flex-col items-center text-center px-12">
@@ -64,12 +84,8 @@ export default function LoginPage() {
           <h1 className="text-4xl font-black text-white tracking-wider mb-3">
             ADTRISC
           </h1>
-          <p className="text-sm font-medium leading-relaxed" style={{ color: '#2AABE1' }}>
+          <p className="text-sm font-medium leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
             Associação Desportiva Triatlética<br />de Santa Catarina
-          </p>
-          <div className="mt-10 w-16 h-0.5 rounded-full" style={{ background: '#EB2127' }} />
-          <p className="mt-6 text-xs text-white/40 leading-relaxed max-w-xs">
-            Sistema de gestão da escolinha de triathlon
           </p>
         </div>
       </div>
