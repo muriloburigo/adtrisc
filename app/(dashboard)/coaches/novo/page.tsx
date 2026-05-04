@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
@@ -33,9 +34,9 @@ export default function NovoCoachPage() {
           />
           <div className="flex gap-3 pt-2">
             <Button type="submit">Criar Coach</Button>
-            <Button type="button" variant="secondary" onClick={() => history.back()}>
-              Cancelar
-            </Button>
+            <Link href="/coaches">
+              <Button type="button" variant="secondary">Cancelar</Button>
+            </Link>
           </div>
         </form>
       </Card>

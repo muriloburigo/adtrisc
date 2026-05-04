@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
@@ -44,9 +45,9 @@ export default async function EditarCoachPage({ params }: { params: Promise<{ id
           />
           <div className="flex gap-3 pt-1">
             <Button type="submit">Salvar alterações</Button>
-            <Button type="button" variant="secondary" onClick={() => history.back()}>
-              Cancelar
-            </Button>
+            <Link href={`/coaches/${id}`}>
+              <Button type="button" variant="secondary">Cancelar</Button>
+            </Link>
           </div>
         </form>
       </Card>
