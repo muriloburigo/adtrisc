@@ -9,18 +9,31 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* ADTRISC Brand Colors */
+  --color-navy-50:  #eef0f8;
+  --color-navy-100: #d0d5ea;
+  --color-navy-500: #1A2557;
+  --color-navy-600: #161e4a;
+  --color-navy-700: #10183a;
+  --color-navy-800: #0b102a;
+  --color-navy-900: #060a1a;
+
+  --color-sky-50:  #eaf7fd;
+  --color-sky-100: #c3eaf9;
+  --color-sky-400: #38B5E8;
+  --color-sky-500: #25a8de;
+  --color-sky-600: #1a90c2;
+
+  --color-brand-red-50:  #fef0f0;
+  --color-brand-red-100: #fdc9c9;
+  --color-brand-red-500: #E82B2B;
+  --color-brand-red-600: #cb2222;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
