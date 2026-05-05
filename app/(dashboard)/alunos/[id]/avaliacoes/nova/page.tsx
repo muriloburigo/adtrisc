@@ -19,7 +19,7 @@ export default async function NovaAvaliacaoPage({ params }: { params: Promise<{ 
   const aluno = alunoRaw as Pick<AlunoRow, 'id' | 'nome'>
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 sm:p-8 max-w-3xl">
       <div className="mb-4">
         <Link
           href={`/alunos/${id}/avaliacoes`}

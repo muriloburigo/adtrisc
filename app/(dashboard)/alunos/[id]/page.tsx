@@ -5,6 +5,7 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Badge, { statusAlunoVariant } from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
+import AlunoTimeline from './AlunoTimeline'
 import { Pencil, User, MapPin, Phone, Users2, ClipboardList } from 'lucide-react'
 import { formatDate, calcularIdade } from '@/lib/utils'
 import type { AlunoRow, ResponsavelRow } from '@/types/database'
@@ -46,7 +47,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Info principal */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
@@ -114,34 +115,40 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
 
-        {/* Responsáveis */}
-        <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <Users2 size={16} className="text-sky-400" />
-            <h2 className="text-sm font-semibold text-navy-500">Responsáveis</h2>
-          </div>
-          {resps.length === 0 ? (
-            <p className="text-sm text-gray-400">Nenhum responsável cadastrado.</p>
-          ) : (
-            <div className="space-y-4">
-              {resps.map((r) => (
-                <div key={r.id} className="text-sm">
-                  <p className="font-medium text-navy-500 capitalize">
-                    {r.parentesco === 'mae' ? 'Mãe' : r.parentesco === 'pai' ? 'Pai' : 'Responsável'}
-                  </p>
-                  <p className="text-gray-700 mt-0.5">{r.nome}</p>
-                  {r.telefone && (
-                    <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1">
-                      <Phone size={11} />{r.telefone}
-                    </p>
-                  )}
-                  {r.email && <p className="text-gray-400 text-xs">{r.email}</p>}
-                  {r.cpf && <p className="text-gray-400 text-xs">CPF: {r.cpf}</p>}
-                </div>
-              ))}
+        {/* Coluna direita: Responsáveis + Histórico */}
+        <div className="space-y-6">
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <Users2 size={16} className="text-sky-400" />
+              <h2 className="text-sm font-semibold text-navy-500">Responsáveis</h2>
             </div>
-          )}
-        </Card>
+            {resps.length === 0 ? (
+              <p className="text-sm text-gray-400">Nenhum responsável cadastrado.</p>
+            ) : (
+              <div className="space-y-4">
+                {resps.map((r) => (
+                  <div key={r.id} className="text-sm">
+                    <p className="font-medium text-navy-500 capitalize">
+                      {r.parentesco === 'mae' ? 'Mãe' : r.parentesco === 'pai' ? 'Pai' : 'Responsável'}
+                    </p>
+                    <p className="text-gray-700 mt-0.5">{r.nome}</p>
+                    {r.telefone && (
+                      <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1">
+                        <Phone size={11} />{r.telefone}
+                      </p>
+                    )}
+                    {r.email && <p className="text-gray-400 text-xs">{r.email}</p>}
+                    {r.cpf && <p className="text-gray-400 text-xs">CPF: {r.cpf}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <AlunoTimeline alunoId={id} turmaId={a.turma_id ?? null} />
+          </Card>
+        </div>
       </div>
     </div>
   )

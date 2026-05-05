@@ -23,7 +23,7 @@ export default async function EditarCoachPage({ params }: { params: Promise<{ id
   const update = updateCoach.bind(null, id)
 
   return (
-    <div className="p-8 max-w-lg space-y-6">
+    <div className="p-4 sm:p-8 max-w-lg space-y-6">
       <PageHeader title="Editar Treinador(a)" subtitle={coach.full_name ?? ''} />
 
       {/* Dados principais */}

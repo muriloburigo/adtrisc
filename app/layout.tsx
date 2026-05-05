@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 
@@ -10,6 +10,12 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "ADTRISC — Associação Desportiva Triatlética de Santa Catarina",
   description: "Sistema de gestão da Associação Desportiva Triatlética de Santa Catarina",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

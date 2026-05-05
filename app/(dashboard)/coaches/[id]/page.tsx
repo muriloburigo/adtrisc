@@ -30,7 +30,7 @@ export default async function CoachDetailPage({ params }: { params: Promise<{ id
   const turmas = (turmasRaw ?? []) as TurmaBasic[]
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader
         title={coach.full_name ?? 'Treinador(a)'}
         subtitle="Treinador(a)"

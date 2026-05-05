@@ -92,19 +92,25 @@ export default function AttendanceChecklist({
     })
   }
 
-  const presentes = [...estados.values()].filter((e) => e === 'presente').length
-  const faltas    = [...estados.values()].filter((e) => e !== 'presente').length
+  const presentes    = [...estados.values()].filter((e) => e === 'presente').length
+  const faltas       = [...estados.values()].filter((e) => e === 'falta').length
+  const justificadas = [...estados.values()].filter((e) => e === 'justificada').length
 
   return (
     <div className="space-y-4">
       {/* Resumo */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
           <Check size={15} /> {presentes} presente{presentes !== 1 ? 's' : ''}
         </span>
         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-500">
           <X size={15} /> {faltas} falta{faltas !== 1 ? 's' : ''}
         </span>
+        {justificadas > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-500">
+            <Check size={15} /> {justificadas} justificada{justificadas !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       {/* Lista */}

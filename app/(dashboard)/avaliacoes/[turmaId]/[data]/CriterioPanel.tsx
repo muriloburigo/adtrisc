@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useTransition, useRef, useEffect } from 'react'
-import { CheckCircle, ChevronRight, ChevronLeft } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Check, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { saveCampoParaTurma, type EntradaCampo } from '../../actions'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 
@@ -24,6 +24,8 @@ const CRITERIOS = [
 ] as const
 
 type CampoKey = typeof CRITERIOS[number]['key']
+type FieldStatus = 'saving' | 'saved' | 'error'
+
 const GROUPS = ['Medidas Corporais', 'Testes Físicos'] as const
 
 function initValores(
@@ -58,44 +60,62 @@ export default function CriterioPanel({
 }) {
   const [valores, setValores] = useState(() => initValores(alunos, avaliacaoMap))
   const [criterioAtivo, setCriterioAtivo] = useState<CampoKey>(CRITERIOS[0].key)
-  const [savedCampos, setSavedCampos] = useState<Set<CampoKey>>(new Set())
+  const [fieldStatuses, setFieldStatuses] = useState<Map<string, FieldStatus>>(new Map())
   const [erro, setErro] = useState('')
-  const [isPending, startTransition] = useTransition()
   const firstInputRef = useRef<HTMLInputElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
+  // Tracks value at focus time to detect whether a change occurred
+  const focusInfoRef = useRef<{ alunoId: string; value: string } | null>(null)
 
   const criterio = CRITERIOS.find((c) => c.key === criterioAtivo)!
   const valoresAtivos = valores[criterioAtivo]
   const countAtivos = preenchidos(valoresAtivos, alunos)
-  const isSaved = savedCampos.has(criterioAtivo)
   const criterioIdx = CRITERIOS.findIndex((c) => c.key === criterioAtivo)
   const isFirst = criterioIdx === 0
   const isLast = criterioIdx === CRITERIOS.length - 1
 
   useEffect(() => {
     firstInputRef.current?.focus()
-    // scroll active tab into view on mobile
     const activeTab = tabsRef.current?.querySelector('[data-active="true"]')
     activeTab?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
   }, [criterioAtivo])
 
   function setValor(campo: CampoKey, alunoId: string, v: string) {
-    setSavedCampos((prev) => { const n = new Set(prev); n.delete(campo); return n })
     setValores((prev) => ({ ...prev, [campo]: { ...prev[campo], [alunoId]: v } }))
   }
 
-  function handleSave() {
+  function handleFocus(alunoId: string) {
+    focusInfoRef.current = { alunoId, value: valoresAtivos[alunoId] ?? '' }
+  }
+
+  function handleBlur(alunoId: string) {
+    const current = valoresAtivos[alunoId] ?? ''
+    // Skip if value didn't change since focus
+    if (focusInfoRef.current?.value === current) {
+      focusInfoRef.current = null
+      return
+    }
+    focusInfoRef.current = null
+
+    const key = `${criterioAtivo}__${alunoId}`
+    const n = parseFloat(current.replace(',', '.'))
+    const value: EntradaCampo['value'] = current === '' ? null : isNaN(n) ? null : n
+
+    setFieldStatuses((prev) => new Map(prev).set(key, 'saving'))
     setErro('')
-    const entries: EntradaCampo[] = alunos.map((a) => {
-      const raw = valoresAtivos[a.id]
-      const n = parseFloat(raw.replace(',', '.'))
-      return { alunoId: a.id, value: isNaN(n) ? null : n }
-    })
-    startTransition(async () => {
-      const result = await saveCampoParaTurma(turmaId, data, criterioAtivo, entries)
-      if (result.error) { setErro(result.error); return }
-      setSavedCampos((prev) => new Set(prev).add(criterioAtivo))
-    })
+
+    saveCampoParaTurma(turmaId, data, criterioAtivo, [{ alunoId, value }])
+      .then((result) => {
+        if (result.error) {
+          setFieldStatuses((prev) => new Map(prev).set(key, 'error'))
+          setErro(result.error)
+        } else {
+          setFieldStatuses((prev) => new Map(prev).set(key, 'saved'))
+        }
+      })
+      .catch(() => {
+        setFieldStatuses((prev) => new Map(prev).set(key, 'error'))
+      })
   }
 
   function anteriorCriterio() {
@@ -104,6 +124,18 @@ export default function CriterioPanel({
 
   function proximoCriterio() {
     if (!isLast) setCriterioAtivo(CRITERIOS[criterioIdx + 1].key)
+  }
+
+  function renderFieldStatus(alunoId: string) {
+    const status = fieldStatuses.get(`${criterioAtivo}__${alunoId}`)
+    if (status === 'saving') return (
+      <span className="w-4 h-4 flex items-center justify-center">
+        <span className="w-3 h-3 rounded-full border-2 border-gray-300 border-t-sky-400 animate-spin inline-block" />
+      </span>
+    )
+    if (status === 'saved') return <Check size={14} className="text-emerald-500 flex-shrink-0" />
+    if (status === 'error') return <AlertCircle size={14} className="text-red-400 flex-shrink-0" />
+    return <span className="w-4" />
   }
 
   return (
@@ -147,20 +179,7 @@ export default function CriterioPanel({
             <p className="font-bold text-navy-500 truncate">{criterio.label}</p>
             <p className="text-xs text-gray-400">{criterio.unit} · {countAtivos}/{alunos.length} preenchidos</p>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {isSaved && (
-              <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                <CheckCircle size={13} /> Salvo
-              </span>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={isPending}
-              className="bg-sky-400 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
-            >
-              {isPending ? '…' : 'Salvar'}
-            </button>
-          </div>
+          <span className="text-xs text-gray-300 flex-shrink-0">autosave</span>
         </div>
 
         {erro && <p className="mx-4 mt-2 text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
@@ -193,6 +212,8 @@ export default function CriterioPanel({
                     min="0"
                     value={val}
                     onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
+                    onFocus={() => handleFocus(aluno.id)}
+                    onBlur={() => handleBlur(aluno.id)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault()
@@ -206,13 +227,14 @@ export default function CriterioPanel({
                     className="w-20 text-right border border-gray-200 rounded-lg px-2 py-2.5 text-base font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
                   />
                   <span className="text-xs text-gray-400 w-7">{criterio.unit}</span>
+                  {renderFieldStatus(aluno.id)}
                 </div>
               </div>
             )
           })}
         </div>
 
-        {/* Fixed bottom navigation */}
+        {/* Fixed bottom navigation — prev / next only */}
         <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 bg-white flex items-center gap-2">
           <button
             onClick={anteriorCriterio}
@@ -221,13 +243,10 @@ export default function CriterioPanel({
           >
             <ChevronLeft size={15} />
           </button>
-          <button
-            onClick={handleSave}
-            disabled={isPending}
-            className="flex-1 bg-navy-500 hover:bg-navy-600 disabled:opacity-50 text-white font-bold text-sm py-2.5 rounded-xl transition-colors"
-          >
-            {isPending ? 'Salvando...' : `Salvar ${criterio.label}`}
-          </button>
+          <div className="flex-1 text-center">
+            <p className="text-xs font-semibold text-navy-500 truncate px-2">{criterio.label}</p>
+            <p className="text-[10px] text-gray-400">{criterioIdx + 1} / {CRITERIOS.length}</p>
+          </div>
           <button
             onClick={proximoCriterio}
             disabled={isLast}
@@ -239,7 +258,7 @@ export default function CriterioPanel({
       </div>
 
       {/* ════════════════════════════════════════
-          DESKTOP LAYOUT (≥ md) — unchanged
+          DESKTOP LAYOUT (≥ md)
       ════════════════════════════════════════ */}
       <div className="hidden md:flex flex-1 overflow-hidden min-h-0">
 
@@ -282,19 +301,8 @@ export default function CriterioPanel({
               <p className="font-bold text-navy-500">{criterio.label}</p>
               <p className="text-xs text-gray-400">{criterio.unit} · {countAtivos}/{alunos.length} preenchidos</p>
             </div>
-            <div className="flex items-center gap-2">
-              {isSaved && (
-                <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                  <CheckCircle size={13} /> Salvo
-                </span>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={isPending}
-                className="bg-sky-400 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
-              >
-                {isPending ? 'Salvando...' : 'Salvar'}
-              </button>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-300">autosave</span>
               <button
                 onClick={proximoCriterio}
                 disabled={isLast}
@@ -334,6 +342,8 @@ export default function CriterioPanel({
                       min="0"
                       value={val}
                       onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
+                      onFocus={() => handleFocus(aluno.id)}
+                      onBlur={() => handleBlur(aluno.id)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()
@@ -347,21 +357,15 @@ export default function CriterioPanel({
                       className="w-24 text-right border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
                     />
                     <span className="text-xs text-gray-400 w-8">{criterio.unit}</span>
+                    {renderFieldStatus(aluno.id)}
                   </div>
                 </div>
               )
             })}
           </div>
 
-          <div className="px-6 py-3 border-t border-gray-100 bg-white flex items-center justify-between">
-            <p className="text-xs text-gray-400">Enter ou Tab para avançar entre atletas</p>
-            <button
-              onClick={handleSave}
-              disabled={isPending}
-              className="bg-navy-500 hover:bg-navy-600 disabled:opacity-50 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-colors"
-            >
-              {isPending ? 'Salvando...' : `Salvar ${criterio.label}`}
-            </button>
+          <div className="px-6 py-3 border-t border-gray-100 bg-white">
+            <p className="text-xs text-gray-400">Enter ou Tab para avançar · valores salvos automaticamente</p>
           </div>
         </main>
       </div>

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
+import { logAudit } from '@/lib/audit'
 
 export type EntradaCampo = { alunoId: string; value: number | null }
 
@@ -81,5 +82,45 @@ export async function saveCampoParaTurma(
   }
 
   revalidatePath(`/avaliacoes/${turmaId}/${data}`)
+  revalidatePath('/avaliacoes')
   return {}
+}
+
+export async function deleteAvaliacoes(
+  turmaId: string,
+  data: string,
+  turmaNome: string,
+): Promise<{ error?: string }> {
+  try {
+    const actor = await requireStaff()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = (await createClient()) as any
+
+    const { data: alunos } = await supabase
+      .from('alunos').select('id').eq('turma_id', turmaId)
+    const alunoIds = (alunos ?? []).map((a: { id: string }) => a.id)
+
+    if (alunoIds.length === 0) return {}
+
+    const { error, count } = await supabase
+      .from('avaliacoes_fisicas')
+      .delete({ count: 'exact' })
+      .in('aluno_id', alunoIds)
+      .eq('data', data)
+
+    if (error) return { error: error.message }
+    if (count === 0) return { error: 'Nenhum registro foi excluído. Verifique as permissões no banco (RLS).' }
+
+    await logAudit({
+      userId: actor.id, userName: actor.name,
+      action: 'excluir', resource: 'avaliacao' as never,
+      resourceId: `${turmaId}__${data}`,
+      resourceLabel: `${turmaNome} — ${data}`,
+    })
+
+    revalidatePath('/avaliacoes')
+    return {}
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'Erro ao excluir avaliação' }
+  }
 }

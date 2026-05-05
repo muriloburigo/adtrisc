@@ -6,7 +6,7 @@ import FilterBar from '@/components/ui/FilterBar'
 import EmptyState from '@/components/ui/EmptyState'
 import PresencaSelector from './PresencaSelector'
 import DeletePresencaButton from './DeletePresencaButton'
-import { ClipboardCheck, CheckCircle } from 'lucide-react'
+import { ClipboardCheck, CheckCircle, FileDown } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { TurmaRow } from '@/types/database'
 
@@ -23,16 +23,24 @@ type Sessao = {
   justificadas: number
 }
 
-function gerarMeses(n: number) {
-  const result: { value: string; label: string }[] = []
-  const now = new Date()
-  for (let i = 0; i < n; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const value = d.toLocaleDateString('en-CA').slice(0, 7)
-    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-    result.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) })
-  }
-  return result
+const MESES_OPTIONS = [
+  { value: '1',  label: 'Janeiro'   },
+  { value: '2',  label: 'Fevereiro' },
+  { value: '3',  label: 'Março'     },
+  { value: '4',  label: 'Abril'     },
+  { value: '5',  label: 'Maio'      },
+  { value: '6',  label: 'Junho'     },
+  { value: '7',  label: 'Julho'     },
+  { value: '8',  label: 'Agosto'    },
+  { value: '9',  label: 'Setembro'  },
+  { value: '10', label: 'Outubro'   },
+  { value: '11', label: 'Novembro'  },
+  { value: '12', label: 'Dezembro'  },
+]
+
+function gerarAnosOptions() {
+  const ano = new Date().getFullYear()
+  return [ano, ano - 1, ano - 2, ano - 3].map((a) => ({ value: String(a), label: String(a) }))
 }
 
 export default async function PresencasPage({
@@ -48,6 +56,7 @@ export default async function PresencasPage({
 
   const filters = await searchParams
   const turmaFilter = filters.turma ?? ''
+  const anoFilter   = filters.ano   ?? ''
   const mesFilter   = filters.mes   ?? ''
   const saved       = filters.saved === '1'
 
@@ -68,12 +77,10 @@ export default async function PresencasPage({
 
   if (turmaFilter) histQuery = histQuery.eq('turma_id', turmaFilter)
 
-  if (mesFilter) {
-    const [ano, mes] = mesFilter.split('-').map(Number)
-    const lastDay = new Date(ano, mes, 0).getDate()
+  if (anoFilter) {
     histQuery = histQuery
-      .gte('data', `${mesFilter}-01`)
-      .lte('data', `${mesFilter}-${String(lastDay).padStart(2, '0')}`)
+      .gte('data', `${anoFilter}-01-01`)
+      .lte('data', `${anoFilter}-12-31`)
   }
 
   // Para coaches: restringir ao histórico das suas turmas
@@ -102,24 +109,43 @@ export default async function PresencasPage({
     else if (row.justificada) s.justificadas++
   }
 
-  const sessoes = [...sessaoMap.values()].sort((a, b) => b.data.localeCompare(a.data))
+  let sessoes = [...sessaoMap.values()].sort((a, b) => b.data.localeCompare(a.data))
+
+  if (mesFilter) {
+    sessoes = sessoes.filter((s) => String(Number(s.data.slice(5, 7))) === mesFilter)
+  }
 
   // Filtros
-  const meses = gerarMeses(12)
   const filterFields = [
     {
       type: 'select' as const, key: 'turma', placeholder: 'Todas as turmas',
       options: turmas.map((t) => ({ value: t.id, label: t.nome })),
     },
     {
+      type: 'select' as const, key: 'ano', placeholder: 'Todos os anos',
+      options: gerarAnosOptions(),
+    },
+    {
       type: 'select' as const, key: 'mes', placeholder: 'Todos os meses',
-      options: meses,
+      options: MESES_OPTIONS,
     },
   ]
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl space-y-6">
-      <PageHeader title="Presenças" subtitle="Registre e consulte a frequência das aulas" />
+      <PageHeader
+        title="Presenças"
+        subtitle="Registre e consulte a frequência das aulas"
+        action={
+          <Link
+            href="/presencas/exportar"
+            className="flex items-center gap-2 text-sm font-semibold text-navy-500 border border-gray-200 hover:border-sky-400 hover:text-sky-500 px-4 py-2 rounded-xl transition-colors"
+          >
+            <FileDown size={15} />
+            Exportar PDF
+          </Link>
+        }
+      />
 
       {/* Banner de sucesso */}
       {saved && (
@@ -150,14 +176,14 @@ export default async function PresencasPage({
           )}
         </h2>
 
-        <FilterBar fields={filterFields} initialValues={{ turma: turmaFilter, mes: mesFilter }} />
+        <FilterBar fields={filterFields} initialValues={{ turma: turmaFilter, ano: anoFilter, mes: mesFilter }} />
 
         <Card padding={false}>
           {sessoes.length === 0 ? (
             <EmptyState
               icon={ClipboardCheck}
               title="Nenhuma sessão encontrada"
-              description={turmaFilter || mesFilter ? 'Tente ajustar os filtros.' : 'As listas de presença salvas aparecerão aqui.'}
+              description={turmaFilter || anoFilter || mesFilter ? 'Tente ajustar os filtros.' : 'As listas de presença salvas aparecerão aqui.'}
             />
           ) : (
             <>
@@ -169,13 +195,14 @@ export default async function PresencasPage({
                     <th className="text-left px-5 py-3 text-gray-500 font-medium">Turma</th>
                     <th className="text-center px-4 py-3 text-gray-500 font-medium">Presentes</th>
                     <th className="text-center px-4 py-3 text-gray-500 font-medium">Faltas</th>
+                    <th className="text-center px-4 py-3 text-gray-500 font-medium">Justif.</th>
                     <th className="text-center px-4 py-3 text-gray-500 font-medium">% Presença</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {sessoes.map((s) => {
-                    const faltas = s.total - s.presentes
+                    const faltas = s.total - s.presentes - s.justificadas
                     const pct = s.total > 0 ? Math.round((s.presentes / s.total) * 100) : 0
                     const pctColor = pct >= 75 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-500' : 'text-red-500'
                     return (
@@ -192,6 +219,11 @@ export default async function PresencasPage({
                         <td className="px-4 py-3.5 text-center">
                           <span className={`inline-flex items-center justify-center w-8 h-6 rounded-md text-xs font-semibold ${faltas > 0 ? 'bg-red-50 text-red-600' : 'text-gray-300'}`}>
                             {faltas}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`inline-flex items-center justify-center w-8 h-6 rounded-md text-xs font-semibold ${s.justificadas > 0 ? 'bg-amber-50 text-amber-600' : 'text-gray-300'}`}>
+                            {s.justificadas}
                           </span>
                         </td>
                         <td className={`px-4 py-3.5 text-center font-bold text-sm ${pctColor}`}>
@@ -222,7 +254,7 @@ export default async function PresencasPage({
               {/* Mobile */}
               <div className="md:hidden divide-y divide-gray-100">
                 {sessoes.map((s) => {
-                  const faltas = s.total - s.presentes
+                  const faltas = s.total - s.presentes - s.justificadas
                   const pct = s.total > 0 ? Math.round((s.presentes / s.total) * 100) : 0
                   const pctColor = pct >= 75 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-500' : 'text-red-500'
                   return (
@@ -234,10 +266,13 @@ export default async function PresencasPage({
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-navy-500 truncate">{s.turma_nome}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{formatDate(s.data)}</p>
-                          <div className="flex items-center gap-3 mt-1.5">
+                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                             <span className="text-xs text-emerald-600 font-medium">{s.presentes} presentes</span>
                             {faltas > 0 && (
                               <span className="text-xs text-red-500 font-medium">{faltas} falta{faltas !== 1 ? 's' : ''}</span>
+                            )}
+                            {s.justificadas > 0 && (
+                              <span className="text-xs text-amber-500 font-medium">{s.justificadas} justif.</span>
                             )}
                           </div>
                         </div>

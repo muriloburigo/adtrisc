@@ -40,9 +40,9 @@ export default function Sidebar({ user }: { user: Profile | null }) {
   const visibleNav = nav.filter((item) => item.roles.includes(role))
 
   return (
-    <aside className="hidden md:flex w-60 bg-navy-500 flex-col h-full flex-shrink-0">
+    <aside className="hidden md:flex print:hidden w-60 bg-navy-500 flex-col h-full flex-shrink-0">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-navy-600 flex items-center gap-3">
+      <Link href="/dashboard" className="px-5 py-5 border-b border-navy-600 flex items-center gap-3 hover:bg-navy-600 transition-colors">
         <div className="w-9 h-9 flex-shrink-0 bg-white rounded-lg overflow-hidden flex items-center justify-center">
           <Image
             src="/logo-white.jpg"
@@ -56,7 +56,7 @@ export default function Sidebar({ user }: { user: Profile | null }) {
           <h1 className="text-white font-bold text-base leading-none">ADTRISC</h1>
           <p className="text-sky-400 text-xs mt-0.5 leading-tight">Associação Desportiva Triatlética<br />de Santa Catarina</p>
         </div>
-      </div>
+      </Link>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">

@@ -40,13 +40,13 @@ export default function MobileHeader({ user }: { user: Profile | null }) {
   return (
     <>
       {/* Top bar — mobile only */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-navy-500 h-14 flex items-center justify-between px-4 shadow-md">
-        <div className="flex items-center gap-2.5">
+      <header className="md:hidden print:hidden fixed top-0 left-0 right-0 z-40 bg-navy-500 h-14 flex items-center justify-between px-4 shadow-md">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
           <div className="w-7 h-7 bg-white rounded-md overflow-hidden flex items-center justify-center flex-shrink-0">
             <Image src="/logo-white.jpg" alt="ADTRISC" width={28} height={28} className="object-contain" />
           </div>
           <span className="text-white font-bold text-sm tracking-wide">ADTRISC</span>
-        </div>
+        </Link>
         <button
           onClick={() => setOpen(true)}
           className="text-white p-2 -mr-1 rounded-lg hover:bg-navy-600 transition-colors"
@@ -66,12 +66,12 @@ export default function MobileHeader({ user }: { user: Profile | null }) {
 
       {/* Drawer */}
       <div className={cn(
-        'md:hidden fixed top-0 left-0 bottom-0 z-50 w-72 bg-navy-500 flex flex-col shadow-2xl transition-transform duration-300',
+        'md:hidden fixed top-0 left-0 bottom-0 z-50 w-4/5 max-w-72 bg-navy-500 flex flex-col shadow-2xl transition-transform duration-300',
         open ? 'translate-x-0' : '-translate-x-full'
       )}>
         {/* Drawer header */}
         <div className="px-5 py-5 border-b border-navy-600 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link href="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-3">
             <div className="w-9 h-9 flex-shrink-0 bg-white rounded-lg overflow-hidden flex items-center justify-center">
               <Image src="/logo-white.jpg" alt="ADTRISC" width={36} height={36} className="object-contain" />
             </div>
@@ -81,7 +81,7 @@ export default function MobileHeader({ user }: { user: Profile | null }) {
                 Associação Desportiva Triatlética<br />de Santa Catarina
               </p>
             </div>
-          </div>
+          </Link>
           <button
             onClick={() => setOpen(false)}
             className="text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-navy-600 transition-colors"

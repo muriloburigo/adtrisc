@@ -116,6 +116,14 @@ export interface AvaliacaoFisicaRow {
   created_at: string; updated_at: string
 }
 
+export type HistoricoTipo = 'matricula' | 'mudanca_turma' | 'desligamento' | 'reativacao'
+export interface HistoricoAtletaRow {
+  id: string; aluno_id: string; tipo: HistoricoTipo; data: string
+  turma_id: string | null; turma_nome: string | null
+  turma_anterior_id: string | null; turma_anterior_nome: string | null
+  created_at: string
+}
+
 export interface PresencaRow {
   id: string; turma_id: string; aluno_id: string; data: string
   presente: boolean; justificada: boolean; observacao: string | null

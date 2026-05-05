@@ -63,6 +63,20 @@ export async function createAluno(formData: FormData) {
   await upsertResponsavel(db, aluno.id, formData, 'mae')
   await upsertResponsavel(db, aluno.id, formData, 'pai')
 
+  // Registrar matrícula no histórico
+  let turmaNomeInicial: string | null = null
+  if (payload.turma_id) {
+    const { data: t } = await db.from('turmas').select('nome').eq('id', payload.turma_id).single()
+    turmaNomeInicial = t?.nome ?? null
+  }
+  await db.from('historico_atleta').insert({
+    aluno_id: aluno.id,
+    tipo: 'matricula',
+    data: new Date().toISOString().slice(0, 10),
+    turma_id: payload.turma_id || null,
+    turma_nome: turmaNomeInicial,
+  })
+
   await logAudit({
     userId: actor.id, userName: actor.name,
     action: 'criar', resource: 'atleta',
@@ -99,6 +113,35 @@ export async function updateAluno(id: string, formData: FormData) {
   const { error } = await db.from('alunos').update(payload).eq('id', id)
 
   if (error) throw new Error(error.message)
+
+  const hoje = new Date().toISOString().slice(0, 10)
+
+  // Registrar mudança de turma
+  if (before?.turma_id !== payload.turma_id) {
+    const [{ data: turmaNova }, { data: turmaAnterior }] = await Promise.all([
+      payload.turma_id
+        ? db.from('turmas').select('nome').eq('id', payload.turma_id).single()
+        : Promise.resolve({ data: null }),
+      before?.turma_id
+        ? db.from('turmas').select('nome').eq('id', before.turma_id).single()
+        : Promise.resolve({ data: null }),
+    ])
+    await db.from('historico_atleta').insert({
+      aluno_id: id,
+      tipo: 'mudanca_turma',
+      data: hoje,
+      turma_id: payload.turma_id || null,
+      turma_nome: turmaNova?.nome ?? null,
+      turma_anterior_id: before?.turma_id ?? null,
+      turma_anterior_nome: turmaAnterior?.nome ?? null,
+    })
+  }
+
+  // Registrar mudança de status
+  if (before?.status !== payload.status) {
+    const tipo = payload.status !== 'ativo' ? 'desligamento' : 'reativacao'
+    await db.from('historico_atleta').insert({ aluno_id: id, tipo, data: hoje })
+  }
 
   await logAudit({
     userId: actor.id, userName: actor.name,
