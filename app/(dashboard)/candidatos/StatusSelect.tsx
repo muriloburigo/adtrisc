@@ -7,7 +7,7 @@ import type { CandidatoStatus } from '@/types/database'
 const STATUS_OPTIONS: { value: CandidatoStatus; label: string; color: string }[] = [
   { value: 'pendente',      label: 'Pendente',       color: 'bg-amber-100 text-amber-700 border-amber-300' },
   { value: 'sorteado',      label: 'Sorteado(a)',     color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-  { value: 'nao_sorteado',  label: 'Não sorteado(a)', color: 'bg-gray-100 text-gray-600 border-gray-300' },
+  { value: 'nao_sorteado',  label: 'Lista de Espera', color: 'bg-indigo-50 text-indigo-700 border-indigo-300' },
   { value: 'convertido',    label: 'Convertido(a)',   color: 'bg-blue-100 text-blue-700 border-blue-300' },
 ]
 

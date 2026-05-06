@@ -82,11 +82,11 @@ export default async function SorteioAuditoriaPage({
             <dd className="font-medium text-navy-500 mt-0.5">{s.total_candidatos}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-400">Sorteados / Não sorteados</dt>
+            <dt className="text-xs text-gray-400">Sorteados / Lista de Espera</dt>
             <dd className="font-medium text-navy-500 mt-0.5">
               <span className="text-emerald-600">{sorteados.length} sorteados</span>
               {naoSorteados.length > 0 && (
-                <span className="text-gray-400"> · {naoSorteados.length} não sorteados</span>
+                <span className="text-indigo-500"> · {naoSorteados.length} lista de espera</span>
               )}
             </dd>
           </div>

@@ -73,25 +73,26 @@ export async function realizarSorteio(
     .from('turmas').select('capacidade, nome').eq('id', turmaId).single()
   if (!turma) return { error: 'Turma não encontrada.' }
 
-  const { data: pendentes } = await supabase
+  // Pool = novos candidatos (pendente) + lista de espera (nao_sorteado de sorteios anteriores)
+  const { data: todos } = await supabase
     .from('candidatos')
-    .select('id, nome')
+    .select('id, nome, status')
     .eq('turma_id', turmaId)
-    .eq('status', 'pendente')
+    .in('status', ['pendente', 'nao_sorteado'])
     .order('created_at', { ascending: true })
 
-  if (!pendentes || pendentes.length === 0)
-    return { error: 'Não há candidatos pendentes para sortear.' }
+  if (!todos || todos.length === 0)
+    return { error: 'Não há candidatos para sortear (nem pendentes nem lista de espera).' }
 
-  type C = { id: string; nome: string }
-  const snapshot = (pendentes as C[]).map((c, i) => ({
+  type C = { id: string; nome: string; status: string }
+  const snapshot = (todos as C[]).map((c, i) => ({
     posicao_inscricao: i + 1,
     candidato_id: c.id,
     nome: c.nome,
   }))
 
   const seed = crypto.randomUUID()
-  const shuffled = seededShuffle(pendentes as C[], seed)
+  const shuffled = seededShuffle(todos as C[], seed)
   const vagas = turma.capacidade as number
 
   const resultado = shuffled.map((c, i) => ({
@@ -109,7 +110,7 @@ export async function realizarSorteio(
       realizado_em: new Date().toISOString(),
       seed,
       vagas,
-      total_candidatos: pendentes.length,
+      total_candidatos: todos.length,
       candidatos_snapshot: snapshot,
       resultado,
     })
@@ -119,12 +120,16 @@ export async function realizarSorteio(
   if (insertErr) return { error: insertErr.message }
 
   const sorteadosIds    = resultado.filter(r => r.sorteado).map(r => r.candidato_id)
-  const naoSorteadosIds = resultado.filter(r => !r.sorteado).map(r => r.candidato_id)
+  const listaEsperaIds  = resultado.filter(r => !r.sorteado).map(r => r.candidato_id)
 
   if (sorteadosIds.length > 0)
     await supabase.from('candidatos').update({ status: 'sorteado' }).in('id', sorteadosIds)
-  if (naoSorteadosIds.length > 0)
-    await supabase.from('candidatos').update({ status: 'nao_sorteado' }).in('id', naoSorteadosIds)
+  // Não sorteados voltam/permanecem na lista de espera
+  if (listaEsperaIds.length > 0)
+    await supabase.from('candidatos').update({ status: 'nao_sorteado' }).in('id', listaEsperaIds)
+
+  const pendentesCount   = (todos as C[]).filter(c => c.status === 'pendente').length
+  const listaEsperaCount = (todos as C[]).filter(c => c.status === 'nao_sorteado').length
 
   await logAudit({
     userId: actor.id, userName: actor.name,
@@ -134,10 +139,12 @@ export async function realizarSorteio(
     metadata: {
       turma_id: turmaId,
       turma_nome: turma.nome,
-      total_candidatos: pendentes.length,
+      total_candidatos: todos.length,
+      pendentes: pendentesCount,
+      lista_espera: listaEsperaCount,
       vagas,
       sorteados: sorteadosIds.length,
-      nao_sorteados: naoSorteadosIds.length,
+      nao_sorteados: listaEsperaIds.length,
       sorteio_id: sorteio.id,
     },
   })

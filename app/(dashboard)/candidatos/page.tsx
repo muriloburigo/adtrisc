@@ -37,24 +37,28 @@ export default async function CandidatosPage({
   // Sorteio data — only when a turma filter is active
   let turmaSelecionada: { id: string; nome: string; capacidade: number } | null = null
   let pendentesCount = 0
+  let listaEsperaCount = 0
   let sorteiosAnteriores: (SorteioRow & { realizador: { full_name: string | null } | null })[] = []
 
   if (turmaId) {
     const { data: td } = await supabase.from('turmas').select('id, nome, capacidade').eq('id', turmaId).single()
     turmaSelecionada = td ?? null
 
-    const { count } = await supabase
-      .from('candidatos')
-      .select('id', { count: 'exact', head: true })
-      .eq('turma_id', turmaId)
-      .eq('status', 'pendente')
-    pendentesCount = count ?? 0
-
-    const { data: sa } = await supabase
-      .from('sorteios')
-      .select('id, realizado_em, vagas, total_candidatos, realizador:realizado_por(full_name)')
-      .eq('turma_id', turmaId)
-      .order('realizado_em', { ascending: false })
+    const [{ count: pCount }, { count: leCount }, { data: sa }] = await Promise.all([
+      supabase
+        .from('candidatos').select('id', { count: 'exact', head: true })
+        .eq('turma_id', turmaId).eq('status', 'pendente'),
+      supabase
+        .from('candidatos').select('id', { count: 'exact', head: true })
+        .eq('turma_id', turmaId).eq('status', 'nao_sorteado'),
+      supabase
+        .from('sorteios')
+        .select('id, realizado_em, vagas, total_candidatos, realizador:realizado_por(full_name)')
+        .eq('turma_id', turmaId)
+        .order('realizado_em', { ascending: false }),
+    ])
+    pendentesCount   = pCount  ?? 0
+    listaEsperaCount = leCount ?? 0
     sorteiosAnteriores = sa ?? []
   }
 
@@ -89,7 +93,7 @@ export default async function CandidatosPage({
       options: [
         { value: 'pendente',     label: 'Pendente'         },
         { value: 'sorteado',     label: 'Sorteado(a)'      },
-        { value: 'nao_sorteado', label: 'Não sorteado(a)'  },
+        { value: 'nao_sorteado', label: 'Lista de Espera'   },
         { value: 'convertido',   label: 'Convertido(a)'    },
       ],
     },
@@ -134,7 +138,7 @@ export default async function CandidatosPage({
         {[
           { label: 'Pendentes',       value: counts.pendente,     color: 'bg-amber-100 text-amber-700' },
           { label: 'Sorteados',       value: counts.sorteado,     color: 'bg-emerald-100 text-emerald-700' },
-          { label: 'Não sorteados',   value: counts.nao_sorteado, color: 'bg-gray-100 text-gray-600' },
+          { label: 'Lista de Espera',  value: counts.nao_sorteado, color: 'bg-indigo-50 text-indigo-700' },
           { label: 'Convertidos',     value: counts.convertido,   color: 'bg-blue-100 text-blue-700' },
         ].map(({ label, value, color }) => (
           <div key={label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${color}`}>
@@ -151,13 +155,14 @@ export default async function CandidatosPage({
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-violet-700">{turmaSelecionada.nome}</p>
             <p className="text-xs text-violet-500 mt-0.5">
-              {pendentesCount} pendente{pendentesCount !== 1 ? 's' : ''} · {turmaSelecionada.capacidade} vagas
+              {pendentesCount} novo{pendentesCount !== 1 ? 's' : ''} · {listaEsperaCount} em espera · {turmaSelecionada.capacidade} vagas
             </p>
           </div>
           <SorteioButton
             turmaId={turmaSelecionada.id}
             turmaNome={turmaSelecionada.nome}
             totalPendentes={pendentesCount}
+            listaEsperaCount={listaEsperaCount}
             vagas={turmaSelecionada.capacidade}
             totalSorteiosAnteriores={sorteiosAnteriores.length}
           />

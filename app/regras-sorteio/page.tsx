@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, Shuffle, ShieldCheck, ListOrdered, CheckCircle2, HelpCircle, Clock } from 'lucide-react'
 
-const UPDATED = '04 de maio de 2026'
+const UPDATED = '06 de maio de 2026'
 
 export default function RegrasSorteioPage() {
   return (
@@ -60,13 +60,12 @@ export default function RegrasSorteioPage() {
               Qualquer pessoa pode se inscrever para participar do sorteio de uma turma, desde que:
             </p>
             <ul className="list-disc list-inside space-y-1.5 pl-2">
-              <li>A turma pretendida esteja com <strong>captação aberta</strong>.</li>
               <li>O formulário de inscrição seja preenchido de forma <strong>completa e verídica</strong>.</li>
               <li>O responsável legal aceite os <strong>termos de participação</strong> ao final do formulário.</li>
-              <li>A inscrição seja realizada <strong>dentro do prazo</strong> de captação divulgado pela ADTRISC.</li>
             </ul>
             <Callout type="info">
-              Cada atleta pode ser inscrito(a) em <strong>uma única turma por captação</strong>.
+              O formulário de inscrição é <strong>permanentemente público</strong> — não há prazo de encerramento.
+              Novos candidatos podem se inscrever a qualquer momento e participarão do próximo sorteio.
               Inscrições duplicadas para a mesma turma serão desconsideradas.
             </Callout>
           </Section>
@@ -77,33 +76,33 @@ export default function RegrasSorteioPage() {
               {[
                 {
                   n: '01',
-                  title: 'Abertura da captação',
-                  desc: 'A ADTRISC abre as inscrições para turmas selecionadas. O formulário público fica disponível em adtrisc.vercel.app/inscricao.',
+                  title: 'Formulário sempre aberto',
+                  desc: 'O formulário público está permanentemente disponível em adtrisc.vercel.app/inscricao. Qualquer família pode se inscrever a qualquer momento para uma turma com vagas.',
                 },
                 {
                   n: '02',
-                  title: 'Período de inscrições',
-                  desc: 'As famílias preenchem o formulário com os dados do atleta e do responsável legal. Todas as inscrições recebem o status "Pendente" e ficam na fila para o sorteio.',
+                  title: 'Fila de candidatos',
+                  desc: 'Todas as novas inscrições recebem o status "Pendente". Candidatos que participaram de sorteios anteriores e não foram contemplados permanecem na "Lista de Espera". Ambos os grupos concorrem juntos no próximo sorteio.',
                 },
                 {
                   n: '03',
-                  title: 'Encerramento das inscrições',
-                  desc: 'Após o prazo divulgado, a captação é encerrada. Novas inscrições não são mais aceitas para aquela turma.',
+                  title: 'Realização do sorteio',
+                  desc: 'Quando a ADTRISC decide realizar um sorteio, o sistema reúne automaticamente todos os candidatos Pendentes e em Lista de Espera para aquela turma. O processo é automático, imparcial e registrado para auditoria.',
                 },
                 {
                   n: '04',
-                  title: 'Realização do sorteio',
-                  desc: 'Um administrador da ADTRISC realiza o sorteio pelo sistema. O processo é automático, imparcial e registrado com todos os dados necessários para auditoria.',
+                  title: 'Divulgação do resultado',
+                  desc: 'Os responsáveis são comunicados. Os sorteados recebem orientações para efetivar a matrícula. Os não contemplados passam automaticamente para a Lista de Espera e participarão do próximo sorteio sem precisar se inscrever novamente.',
                 },
                 {
                   n: '05',
-                  title: 'Divulgação do resultado',
-                  desc: 'Os responsáveis são comunicados sobre o resultado. Os sorteados recebem as orientações para efetivar a matrícula. Os não sorteados são notificados e poderão participar de captações futuras.',
+                  title: 'Lista de espera contínua',
+                  desc: 'Candidatos em lista de espera são automaticamente incluídos em todos os sorteios seguintes para a mesma turma. Novas inscrições de outros candidatos também são incluídas. O ciclo se repete conforme novos sorteios são realizados.',
                 },
                 {
                   n: '06',
                   title: 'Efetivação da matrícula',
-                  desc: 'Os sorteados têm um prazo para confirmar a matrícula. Vagas não confirmadas dentro do prazo podem ser ofertadas aos próximos da lista.',
+                  desc: 'Os sorteados têm um prazo para confirmar a matrícula. Vagas não confirmadas dentro do prazo podem ser ofertadas aos próximos da lista de espera.',
                 },
               ].map(({ n, title, desc }) => (
                 <li key={n} className="flex gap-4">
@@ -131,8 +130,9 @@ export default function RegrasSorteioPage() {
             </p>
             <ol className="list-decimal list-inside space-y-2 pl-2">
               <li>
-                O sistema coleta todos os candidatos com status <em>Pendente</em> para aquela
-                turma, na ordem de inscrição (por data/hora de cadastro).
+                O sistema coleta todos os candidatos com status <em>Pendente</em> (novas inscrições)
+                e <em>Lista de Espera</em> (não contemplados em sorteios anteriores) para aquela
+                turma, em ordem de inscrição (por data/hora de cadastro).
               </li>
               <li>
                 Uma <strong>semente aleatória</strong> (seed) é gerada no momento exato do
@@ -202,12 +202,13 @@ export default function RegrasSorteioPage() {
                   <li>A vaga é confirmada somente após a entrega da documentação exigida e a conclusão do processo de matrícula.</li>
                 </ul>
               </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <p className="font-semibold text-gray-700 mb-1">Se o(a) atleta não for sorteado(a)</p>
-                <ul className="list-disc list-inside space-y-1 text-gray-600 text-sm">
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                <p className="font-semibold text-indigo-700 mb-1">Se o(a) atleta não for sorteado(a) — Lista de Espera</p>
+                <ul className="list-disc list-inside space-y-1 text-indigo-800 text-sm">
                   <li>O responsável é comunicado sobre o resultado.</li>
-                  <li>Vagas que não forem confirmadas pelos sorteados dentro do prazo poderão ser oferecidas aos próximos da lista de não sorteados, por ordem de posição.</li>
-                  <li>O(a) atleta poderá se inscrever novamente nas próximas captações.</li>
+                  <li>O(a) atleta passa automaticamente para a <strong>Lista de Espera</strong> da turma.</li>
+                  <li>Não é necessário se inscrever novamente — a candidatura é mantida e incluída automaticamente em todos os sorteios futuros da mesma turma.</li>
+                  <li>Vagas que não forem confirmadas pelos sorteados dentro do prazo serão oferecidas aos próximos da lista de espera, por ordem de posição do sorteio.</li>
                 </ul>
               </div>
             </div>
@@ -219,11 +220,19 @@ export default function RegrasSorteioPage() {
               {[
                 {
                   q: 'A ordem de inscrição influencia o resultado do sorteio?',
-                  a: 'Não. A inscrição mais antiga e a mais recente têm exatamente a mesma chance de ser sorteadas. A data de inscrição é usada apenas para registrar o snapshot dos candidatos, não para definir prioridade.',
+                  a: 'Não. Tanto novos candidatos quanto os que estão na lista de espera têm exatamente a mesma chance de ser sorteados. A data de inscrição é usada apenas para registrar o snapshot, não para definir prioridade.',
+                },
+                {
+                  q: 'Preciso me inscrever novamente se não fui sorteado(a)?',
+                  a: 'Não. Candidatos não contemplados passam automaticamente para a Lista de Espera e participam de todos os sorteios seguintes para a mesma turma sem nenhuma ação adicional. A inscrição é mantida até que o(a) atleta seja sorteado(a) ou solicite a remoção.',
+                },
+                {
+                  q: 'Candidatos novos e da lista de espera concorrem em igualdade?',
+                  a: 'Sim. No momento do sorteio, todos os candidatos — novos (status Pendente) e em espera (status Lista de Espera) — são reunidos em um único pool e embaralhados com o mesmo algoritmo. Não há prioridade para quem está esperando há mais tempo.',
                 },
                 {
                   q: 'Posso inscrever meu filho(a) em mais de uma turma?',
-                  a: 'Cada formulário de inscrição é vinculado a uma turma específica. É possível submeter inscrições separadas para turmas diferentes, desde que estejam com captação aberta.',
+                  a: 'Cada formulário de inscrição é vinculado a uma turma específica. É possível submeter inscrições separadas para turmas diferentes.',
                 },
                 {
                   q: 'O que acontece se eu preencher os dados de forma errada?',
