@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card'
 import Badge, { statusAlunoVariant, statusTurmaVariant } from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
-import { Users, Pencil, Clock, Plus } from 'lucide-react'
+import { Users, Pencil, Clock, Plus, FileDown } from 'lucide-react'
 import { formatarDiasSemana, formatarHorario, calcularIdade, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
 import type { TurmaRow, DiaSemana } from '@/types/database'
 
@@ -34,9 +34,18 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
         title={turma.nome}
         subtitle={`${turma.modalidade} · ${formatarDiasSemana(turma.dias_semana)}`}
         action={
-          <Link href={`/turmas/${id}/editar`}>
-            <Button variant="secondary"><Pencil size={15} />Editar</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/turmas/${id}/relatorio`}
+              className="flex items-center gap-2 text-sm font-semibold text-navy-500 border border-gray-200 hover:border-sky-400 hover:text-sky-500 px-4 py-2 rounded-xl transition-colors"
+            >
+              <FileDown size={15} />
+              Relatório
+            </Link>
+            <Link href={`/turmas/${id}/editar`}>
+              <Button variant="secondary"><Pencil size={15} />Editar</Button>
+            </Link>
+          </div>
         }
       />
 
