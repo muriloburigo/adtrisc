@@ -20,9 +20,13 @@ export default function DeleteFotoButton({
 
   function handleDelete() {
     startTransition(async () => {
-      await deleteTurmaFoto(fotoId, storagePath, turmaId)
-      setConfirm(false)
-      router.refresh()
+      try {
+        await deleteTurmaFoto(fotoId, storagePath, turmaId)
+        setConfirm(false)
+        router.push(`/turmas/${turmaId}`)
+      } catch {
+        setConfirm(false)
+      }
     })
   }
 

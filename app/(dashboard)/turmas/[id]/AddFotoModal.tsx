@@ -75,19 +75,25 @@ export default function AddFotoModal({ turmaId }: { turmaId: string }) {
 
     setUploading(true)
     setError('')
-    const fd = new FormData()
-    fd.set('file', compressedBlob, 'foto.jpg')
-    fd.set('titulo', titulo.trim())
-    fd.set('data', data)
 
-    const result = await addTurmaFoto(turmaId, fd)
-    setUploading(false)
+    try {
+      const fd = new FormData()
+      fd.set('file', compressedBlob, 'foto.jpg')
+      fd.set('titulo', titulo.trim())
+      fd.set('data', data)
 
-    if (result.error) {
-      setError(result.error)
-    } else {
-      handleClose()
-      router.refresh()
+      const result = await addTurmaFoto(turmaId, fd)
+
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        handleClose()
+        router.push(`/turmas/${turmaId}`)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao publicar foto. Tente novamente.')
+    } finally {
+      setUploading(false)
     }
   }
 
