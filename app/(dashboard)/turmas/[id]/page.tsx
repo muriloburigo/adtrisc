@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Badge, { statusAlunoVariant, statusTurmaVariant } from '@/components/ui/Badge'
@@ -21,10 +22,13 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const adminDb = createAdminClient() as any
+
   const [{ data: turmaRaw }, { data: alunosRaw }, { data: fotosRaw }] = await Promise.all([
     supabase.from('turmas').select('*, coaches:coach_id ( full_name )').eq('id', id).single(),
     supabase.from('alunos').select('id, nome, sexo, data_nascimento, status').eq('turma_id', id).order('nome'),
-    supabase.from('turma_fotos').select('*').eq('turma_id', id).order('data', { ascending: false }),
+    adminDb.from('turma_fotos').select('*').eq('turma_id', id).order('data', { ascending: false }),
   ])
 
   if (!turmaRaw) notFound()

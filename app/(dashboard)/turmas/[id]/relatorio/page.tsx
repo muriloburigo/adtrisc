@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Card from '@/components/ui/Card'
 import { ArrowLeft } from 'lucide-react'
 import {
@@ -58,6 +59,8 @@ export default async function RelatorioTurmaPage({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const adminDb = createAdminClient() as any
 
   const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`
   const dataFim    = ultimoDiaMes(ano, mes)
@@ -81,7 +84,7 @@ export default async function RelatorioTurmaPage({
       .gte('data', dataInicio)
       .lte('data', dataFim)
       .order('data'),
-    supabase
+    adminDb
       .from('turma_fotos')
       .select('*')
       .eq('turma_id', id)
