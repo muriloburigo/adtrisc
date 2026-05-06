@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import { ImagePlus, X, Loader2, Upload } from 'lucide-react'
 import { addTurmaFoto } from './galeria/actions'
 
+async function hashFile(file: File): Promise<string> {
+  const buf = await file.arrayBuffer()
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf)
+  return Array.from(new Uint8Array(hashBuf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 function compressImage(file: File, maxPx = 1200): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new globalThis.Image()
@@ -37,6 +45,7 @@ export default function AddFotoModal({ turmaId }: { turmaId: string }) {
   const [open, setOpen] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [compressedBlob, setCompressedBlob] = useState<Blob | null>(null)
+  const [fileHash, setFileHash] = useState<string | null>(null)
   const [titulo, setTitulo] = useState('')
   const [data, setData] = useState(new Date().toLocaleDateString('en-CA'))
   const [uploading, setUploading] = useState(false)
@@ -46,6 +55,7 @@ export default function AddFotoModal({ turmaId }: { turmaId: string }) {
     setOpen(false)
     setPreview(null)
     setCompressedBlob(null)
+    setFileHash(null)
     setTitulo('')
     setData(new Date().toLocaleDateString('en-CA'))
     setError('')
@@ -56,8 +66,9 @@ export default function AddFotoModal({ turmaId }: { turmaId: string }) {
     if (!file) return
     setError('')
     try {
-      const blob = await compressImage(file)
+      const [blob, hash] = await Promise.all([compressImage(file), hashFile(file)])
       setCompressedBlob(blob)
+      setFileHash(hash)
       const url = URL.createObjectURL(blob)
       if (preview) URL.revokeObjectURL(preview)
       setPreview(url)
@@ -81,6 +92,7 @@ export default function AddFotoModal({ turmaId }: { turmaId: string }) {
       fd.set('file', compressedBlob, 'foto.jpg')
       fd.set('titulo', titulo.trim())
       fd.set('data', data)
+      if (fileHash) fd.set('file_hash', fileHash)
 
       const result = await addTurmaFoto(turmaId, fd)
 

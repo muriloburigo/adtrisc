@@ -14,20 +14,32 @@ export async function addTurmaFoto(
   try { actor = await requireStaff() }
   catch { return { error: 'Sem permissão.' } }
 
-  const file   = formData.get('file') as File | null
-  const titulo = (formData.get('titulo') as string | null)?.trim()
-  const data   = (formData.get('data') as string | null)
+  const file     = formData.get('file') as File | null
+  const titulo   = (formData.get('titulo') as string | null)?.trim()
+  const data     = (formData.get('data') as string | null)
+  const fileHash = (formData.get('file_hash') as string | null) || null
 
   if (!file || file.size === 0) return { error: 'Selecione uma imagem.' }
   if (!titulo) return { error: 'Informe um título.' }
   if (!data) return { error: 'Informe a data.' }
   if (file.size > 15 * 1024 * 1024) return { error: 'Imagem muito grande (máx 15 MB).' }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createAdminClient() as any
+
+  if (fileHash) {
+    const { data: existing } = await admin
+      .from('turma_fotos')
+      .select('id')
+      .eq('turma_id', turmaId)
+      .eq('file_hash', fileHash)
+      .maybeSingle()
+    if (existing) return { error: 'Esta foto já foi publicada nesta turma.' }
+  }
+
   const ext = file.type === 'image/png' ? 'png' : 'jpg'
   const storagePath = `turmas/${crypto.randomUUID()}.${ext}`
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const admin = createAdminClient() as any
   const buffer = Buffer.from(await file.arrayBuffer())
 
   const { error: uploadErr } = await admin.storage
@@ -49,6 +61,7 @@ export async function addTurmaFoto(
     titulo,
     data,
     uploaded_by: actor.id,
+    file_hash: fileHash,
   })
 
   if (insertErr) {
