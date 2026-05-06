@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Check, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react'
 import { saveCampoParaTurma, type EntradaCampo } from '../../actions'
 import type { AvaliacaoFisicaRow } from '@/types/database'
+import { mmssToSeconds, secondsToMmss } from '@/lib/utils'
 
 type AlunoBasic = { id: string; nome: string }
 
@@ -21,16 +22,22 @@ const CRITERIOS = [
   { key: 'salto_horizontal',       label: 'Salto Horizontal',     unit: 'm',   step: '0.01', group: 'Testes Físicos' },
   { key: 'corrida_20m',            label: 'Corrida de 20m',       unit: 's',   step: '0.01', group: 'Testes Físicos' },
   { key: 'natacao_12min',          label: "12' Natação",          unit: 'm',   step: '1',    group: 'Testes Físicos' },
-  { key: 'natacao_50m_livre',      label: '50m Livre',            unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_100m_livre',     label: '100m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_200m_livre',     label: '200m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_400m_livre',     label: '400m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_800m_livre',     label: '800m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_1500m_livre',    label: '1500m Livre',          unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_50m_estilo',     label: '50m Melhor Estilo',    unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_100m_estilo',    label: '100m Melhor Estilo',   unit: 's',   step: '0.01', group: 'Natação' },
-  { key: 'natacao_200m_estilo',    label: '200m Melhor Estilo',   unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_50m_livre',      label: '50m Livre',            unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_100m_livre',     label: '100m Livre',           unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_200m_livre',     label: '200m Livre',           unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_400m_livre',     label: '400m Livre',           unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_800m_livre',     label: '800m Livre',           unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_1500m_livre',    label: '1500m Livre',          unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_50m_estilo',     label: '50m Melhor Estilo',    unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_100m_estilo',    label: '100m Melhor Estilo',   unit: 'mm:ss', step: '0.01', group: 'Natação' },
+  { key: 'natacao_200m_estilo',    label: '200m Melhor Estilo',   unit: 'mm:ss', step: '0.01', group: 'Natação' },
 ] as const
+
+const CAMPOS_MMSS = new Set([
+  'natacao_50m_livre', 'natacao_100m_livre', 'natacao_200m_livre',
+  'natacao_400m_livre', 'natacao_800m_livre', 'natacao_1500m_livre',
+  'natacao_50m_estilo', 'natacao_100m_estilo', 'natacao_200m_estilo',
+])
 
 type CampoKey = typeof CRITERIOS[number]['key']
 type FieldStatus = 'saving' | 'saved' | 'error'
@@ -46,7 +53,9 @@ function initValores(
     result[c.key] = {}
     for (const a of alunos) {
       const val = avaliacaoMap[a.id]?.[c.key as keyof AvaliacaoFisicaRow]
-      result[c.key][a.id] = val != null ? String(val) : ''
+      result[c.key][a.id] = val != null
+        ? (CAMPOS_MMSS.has(c.key) ? secondsToMmss(val as number) : String(val))
+        : ''
     }
   }
   return result
@@ -107,8 +116,12 @@ export default function CriterioPanel({
     focusInfoRef.current = null
 
     const key = `${criterioAtivo}__${alunoId}`
-    const n = parseFloat(current.replace(',', '.'))
-    const value: EntradaCampo['value'] = current === '' ? null : isNaN(n) ? null : n
+    const value: EntradaCampo['value'] = current === ''
+      ? null
+      : CAMPOS_MMSS.has(criterioAtivo)
+        ? mmssToSeconds(current)
+        : (() => { const n = parseFloat(current.replace(',', '.')); return isNaN(n) ? null : n })()
+
 
     setFieldStatuses((prev) => new Map(prev).set(key, 'saving'))
     setErro('')
@@ -213,28 +226,51 @@ export default function CriterioPanel({
                 </div>
                 <span className="flex-1 text-sm font-medium text-navy-500 min-w-0 truncate">{aluno.nome}</span>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <input
-                    ref={idx === 0 ? firstInputRef : undefined}
-                    type="number"
-                    inputMode="decimal"
-                    step={criterio.step}
-                    min="0"
-                    value={val}
-                    onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
-                    onFocus={() => handleFocus(aluno.id)}
-                    onBlur={() => handleBlur(aluno.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
-                        const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
-                        inputs[i + 1]?.focus()
-                      }
-                    }}
-                    data-criterio-input
-                    placeholder="—"
-                    className="w-20 text-right border border-gray-200 rounded-lg px-2 py-2.5 text-base font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
-                  />
+                  {CAMPOS_MMSS.has(criterioAtivo) ? (
+                    <input
+                      ref={idx === 0 ? firstInputRef : undefined}
+                      type="text"
+                      inputMode="numeric"
+                      value={val}
+                      onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
+                      onFocus={() => handleFocus(aluno.id)}
+                      onBlur={() => handleBlur(aluno.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
+                          const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
+                          inputs[i + 1]?.focus()
+                        }
+                      }}
+                      data-criterio-input
+                      placeholder="00:00"
+                      className="w-20 text-right border border-gray-200 rounded-lg px-2 py-2.5 text-base font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                    />
+                  ) : (
+                    <input
+                      ref={idx === 0 ? firstInputRef : undefined}
+                      type="number"
+                      inputMode="decimal"
+                      step={criterio.step}
+                      min="0"
+                      value={val}
+                      onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
+                      onFocus={() => handleFocus(aluno.id)}
+                      onBlur={() => handleBlur(aluno.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
+                          const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
+                          inputs[i + 1]?.focus()
+                        }
+                      }}
+                      data-criterio-input
+                      placeholder="—"
+                      className="w-20 text-right border border-gray-200 rounded-lg px-2 py-2.5 text-base font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                    />
+                  )}
                   <span className="text-xs text-gray-400 w-7">{criterio.unit}</span>
                   {renderFieldStatus(aluno.id)}
                 </div>
@@ -343,28 +379,51 @@ export default function CriterioPanel({
                   </div>
                   <span className="flex-1 text-sm font-medium text-navy-500">{aluno.nome}</span>
                   <div className="flex items-center gap-2">
-                    <input
-                      ref={idx === 0 ? firstInputRef : undefined}
-                      type="number"
-                      inputMode="decimal"
-                      step={criterio.step}
-                      min="0"
-                      value={val}
-                      onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
-                      onFocus={() => handleFocus(aluno.id)}
-                      onBlur={() => handleBlur(aluno.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
-                          const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
-                          inputs[i + 1]?.focus()
-                        }
-                      }}
-                      data-criterio-input
-                      placeholder="—"
-                      className="w-24 text-right border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
-                    />
+                    {CAMPOS_MMSS.has(criterioAtivo) ? (
+                      <input
+                        ref={idx === 0 ? firstInputRef : undefined}
+                        type="text"
+                        inputMode="numeric"
+                        value={val}
+                        onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
+                        onFocus={() => handleFocus(aluno.id)}
+                        onBlur={() => handleBlur(aluno.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
+                            const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
+                            inputs[i + 1]?.focus()
+                          }
+                        }}
+                        data-criterio-input
+                        placeholder="00:00"
+                        className="w-24 text-right border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                      />
+                    ) : (
+                      <input
+                        ref={idx === 0 ? firstInputRef : undefined}
+                        type="number"
+                        inputMode="decimal"
+                        step={criterio.step}
+                        min="0"
+                        value={val}
+                        onChange={(e) => setValor(criterioAtivo, aluno.id, e.target.value)}
+                        onFocus={() => handleFocus(aluno.id)}
+                        onBlur={() => handleBlur(aluno.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            const inputs = document.querySelectorAll<HTMLInputElement>('[data-criterio-input]')
+                            const i = Array.from(inputs).findIndex((el) => el === e.currentTarget)
+                            inputs[i + 1]?.focus()
+                          }
+                        }}
+                        data-criterio-input
+                        placeholder="—"
+                        className="w-24 text-right border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+                      />
+                    )}
                     <span className="text-xs text-gray-400 w-8">{criterio.unit}</span>
                     {renderFieldStatus(aluno.id)}
                   </div>

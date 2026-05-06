@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAvaliacaoFisica, type AvaliacaoPayload } from '../actions'
+import { mmssToSeconds } from '@/lib/utils'
 
 function num(v: string): number | null {
   const n = parseFloat(v.replace(',', '.'))
@@ -35,15 +36,15 @@ const CAMPO_TESTES: Field[] = [
 ]
 
 const CAMPO_NATACAO: Field[] = [
-  { label: '50m Livre',          unit: 's',  key: 'natacao_50m_livre',      step: '0.01' },
-  { label: '100m Livre',         unit: 's',  key: 'natacao_100m_livre',     step: '0.01' },
-  { label: '200m Livre',         unit: 's',  key: 'natacao_200m_livre',     step: '0.01' },
-  { label: '400m Livre',         unit: 's',  key: 'natacao_400m_livre',     step: '0.01' },
-  { label: '800m Livre',         unit: 's',  key: 'natacao_800m_livre',     step: '0.01' },
-  { label: '1500m Livre',        unit: 's',  key: 'natacao_1500m_livre',    step: '0.01' },
-  { label: '50m Melhor Estilo',  unit: 's',  key: 'natacao_50m_estilo',     step: '0.01' },
-  { label: '100m Melhor Estilo', unit: 's',  key: 'natacao_100m_estilo',    step: '0.01' },
-  { label: '200m Melhor Estilo', unit: 's',  key: 'natacao_200m_estilo',    step: '0.01' },
+  { label: '50m Livre',          unit: 'mm:ss', key: 'natacao_50m_livre'   },
+  { label: '100m Livre',         unit: 'mm:ss', key: 'natacao_100m_livre'  },
+  { label: '200m Livre',         unit: 'mm:ss', key: 'natacao_200m_livre'  },
+  { label: '400m Livre',         unit: 'mm:ss', key: 'natacao_400m_livre'  },
+  { label: '800m Livre',         unit: 'mm:ss', key: 'natacao_800m_livre'  },
+  { label: '1500m Livre',        unit: 'mm:ss', key: 'natacao_1500m_livre' },
+  { label: '50m Melhor Estilo',  unit: 'mm:ss', key: 'natacao_50m_estilo'  },
+  { label: '100m Melhor Estilo', unit: 'mm:ss', key: 'natacao_100m_estilo' },
+  { label: '200m Melhor Estilo', unit: 'mm:ss', key: 'natacao_200m_estilo' },
 ]
 
 function imcClass(imc: number): string {
@@ -106,15 +107,15 @@ export default function AvaliacaoForm({ alunoId, alunoNome }: { alunoId: string;
       salto_horizontal: num(v('salto_horizontal')),
       corrida_20m: num(v('corrida_20m')),
       natacao_12min: num(v('natacao_12min')),
-      natacao_50m_livre: num(v('natacao_50m_livre')),
-      natacao_100m_livre: num(v('natacao_100m_livre')),
-      natacao_200m_livre: num(v('natacao_200m_livre')),
-      natacao_400m_livre: num(v('natacao_400m_livre')),
-      natacao_800m_livre: num(v('natacao_800m_livre')),
-      natacao_1500m_livre: num(v('natacao_1500m_livre')),
-      natacao_50m_estilo: num(v('natacao_50m_estilo')),
-      natacao_100m_estilo: num(v('natacao_100m_estilo')),
-      natacao_200m_estilo: num(v('natacao_200m_estilo')),
+      natacao_50m_livre: mmssToSeconds(v('natacao_50m_livre')),
+      natacao_100m_livre: mmssToSeconds(v('natacao_100m_livre')),
+      natacao_200m_livre: mmssToSeconds(v('natacao_200m_livre')),
+      natacao_400m_livre: mmssToSeconds(v('natacao_400m_livre')),
+      natacao_800m_livre: mmssToSeconds(v('natacao_800m_livre')),
+      natacao_1500m_livre: mmssToSeconds(v('natacao_1500m_livre')),
+      natacao_50m_estilo: mmssToSeconds(v('natacao_50m_estilo')),
+      natacao_100m_estilo: mmssToSeconds(v('natacao_100m_estilo')),
+      natacao_200m_estilo: mmssToSeconds(v('natacao_200m_estilo')),
       observacoes: observacoes.trim() || null,
     }
 
@@ -220,19 +221,18 @@ export default function AvaliacaoForm({ alunoId, alunoNome }: { alunoId: string;
           Provas de Natação
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {CAMPO_NATACAO.map(({ label, unit, key, step }) => (
+          {CAMPO_NATACAO.map(({ label, unit, key }) => (
             <div key={key}>
               <label className="block text-xs font-medium text-gray-500 mb-1">
                 {label} <span className="text-gray-300">({unit})</span>
               </label>
               <input
-                type="number"
-                step={step}
-                min="0"
+                type="text"
+                inputMode="numeric"
                 value={v(key)}
                 onChange={set(key)}
-                placeholder="—"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-gray-300"
+                placeholder="00:00"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 placeholder:text-gray-300"
               />
             </div>
           ))}

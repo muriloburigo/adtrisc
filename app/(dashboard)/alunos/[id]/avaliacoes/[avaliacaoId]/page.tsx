@@ -4,15 +4,25 @@ import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import { ChevronLeft, Calendar } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { formatDate, secondsToMmss } from '@/lib/utils'
 import type { AlunoRow, AvaliacaoFisicaRow } from '@/types/database'
 
-function Valor({ label, value, unit }: { label: string; value: number | null | undefined; unit?: string }) {
+function Valor({ label, value, unit, format }: {
+  label: string
+  value: number | null | undefined
+  unit?: string
+  format?: 'mmss'
+}) {
+  const display = value != null
+    ? format === 'mmss'
+      ? secondsToMmss(value)
+      : `${value}${unit ? ' ' + unit : ''}`
+    : null
   return (
     <div className="py-2 border-b border-gray-50 last:border-0 flex justify-between items-baseline gap-4">
       <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-semibold text-navy-500 tabular-nums">
-        {value != null ? `${value}${unit ? ' ' + unit : ''}` : <span className="text-gray-300 font-normal">—</span>}
+      <span className="text-sm font-semibold text-navy-500 tabular-nums font-mono">
+        {display ?? <span className="text-gray-300 font-normal font-sans">—</span>}
       </span>
     </div>
   )
@@ -146,19 +156,19 @@ export default async function AvaliacaoDetailPage({
           <h3 className="text-sm font-semibold text-navy-500 mb-3">Provas de Natação</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8">
             <div>
-              <Valor label="50m Livre"          value={av.natacao_50m_livre}   unit="s" />
-              <Valor label="100m Livre"         value={av.natacao_100m_livre}  unit="s" />
-              <Valor label="200m Livre"         value={av.natacao_200m_livre}  unit="s" />
+              <Valor label="50m Livre"          value={av.natacao_50m_livre}   format="mmss" />
+              <Valor label="100m Livre"         value={av.natacao_100m_livre}  format="mmss" />
+              <Valor label="200m Livre"         value={av.natacao_200m_livre}  format="mmss" />
             </div>
             <div>
-              <Valor label="400m Livre"         value={av.natacao_400m_livre}  unit="s" />
-              <Valor label="800m Livre"         value={av.natacao_800m_livre}  unit="s" />
-              <Valor label="1500m Livre"        value={av.natacao_1500m_livre} unit="s" />
+              <Valor label="400m Livre"         value={av.natacao_400m_livre}  format="mmss" />
+              <Valor label="800m Livre"         value={av.natacao_800m_livre}  format="mmss" />
+              <Valor label="1500m Livre"        value={av.natacao_1500m_livre} format="mmss" />
             </div>
             <div>
-              <Valor label="50m Melhor Estilo"  value={av.natacao_50m_estilo}  unit="s" />
-              <Valor label="100m Melhor Estilo" value={av.natacao_100m_estilo} unit="s" />
-              <Valor label="200m Melhor Estilo" value={av.natacao_200m_estilo} unit="s" />
+              <Valor label="50m Melhor Estilo"  value={av.natacao_50m_estilo}  format="mmss" />
+              <Valor label="100m Melhor Estilo" value={av.natacao_100m_estilo} format="mmss" />
+              <Valor label="200m Melhor Estilo" value={av.natacao_200m_estilo} format="mmss" />
             </div>
           </div>
         </Card>

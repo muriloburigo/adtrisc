@@ -60,6 +60,24 @@ export function formatSemestre(semestre: number | null): string | null {
   return null
 }
 
+export function mmssToSeconds(value: string): number | null {
+  const match = value.trim().match(/^(\d{1,3}):([0-5]\d)(?:\.(\d{1,2}))?$/)
+  if (!match) return null
+  const min = parseInt(match[1], 10)
+  const sec = parseInt(match[2], 10)
+  const cs  = match[3] ? parseInt(match[3].padEnd(2, '0'), 10) : 0
+  return min * 60 + sec + cs / 100
+}
+
+export function secondsToMmss(total: number): string {
+  const floored = Math.floor(total)
+  const cs  = Math.round((total - floored) * 100)
+  const min = Math.floor(floored / 60)
+  const sec = floored % 60
+  const base = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+  return cs > 0 ? `${base}.${String(cs).padStart(2, '0')}` : base
+}
+
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Administrador(a)',
   coach: 'Treinador(a)',
