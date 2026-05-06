@@ -130,6 +130,17 @@ export interface HistoricoAtletaRow {
   created_at: string
 }
 
+export interface TurmaFotoRow {
+  id: string
+  turma_id: string
+  url: string
+  storage_path: string
+  titulo: string
+  data: string
+  uploaded_by: string | null
+  created_at: string
+}
+
 export interface PresencaRow {
   id: string; turma_id: string; aluno_id: string; data: string
   presente: boolean; justificada: boolean; observacao: string | null

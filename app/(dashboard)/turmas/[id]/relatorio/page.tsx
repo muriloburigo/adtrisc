@@ -7,8 +7,9 @@ import {
   formatarDiasSemana,
   formatarHorario,
   calcularIdade,
+  formatDate,
 } from '@/lib/utils'
-import type { TurmaRow, DiaSemana } from '@/types/database'
+import type { TurmaRow, TurmaFotoRow, DiaSemana } from '@/types/database'
 import RelatorioForm from './RelatorioForm'
 
 export const dynamic = 'force-dynamic'
@@ -61,7 +62,7 @@ export default async function RelatorioTurmaPage({
   const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`
   const dataFim    = ultimoDiaMes(ano, mes)
 
-  const [{ data: turmaRaw }, { data: alunosRaw }, { data: presencasRaw }] = await Promise.all([
+  const [{ data: turmaRaw }, { data: alunosRaw }, { data: presencasRaw }, { data: fotosRaw }] = await Promise.all([
     supabase
       .from('turmas')
       .select('*, coaches:coach_id ( full_name )')
@@ -80,6 +81,13 @@ export default async function RelatorioTurmaPage({
       .gte('data', dataInicio)
       .lte('data', dataFim)
       .order('data'),
+    supabase
+      .from('turma_fotos')
+      .select('*')
+      .eq('turma_id', id)
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
+      .order('data', { ascending: true }),
   ])
 
   if (!turmaRaw) notFound()
@@ -87,6 +95,7 @@ export default async function RelatorioTurmaPage({
   const turma   = turmaRaw as TurmaWithCoach & { dias_semana: DiaSemana[] }
   const alunos  = (alunosRaw  ?? []) as AlunoBasic[]
   const presencas = (presencasRaw ?? []) as PresencaEntry[]
+  const fotos   = (fotosRaw ?? []) as TurmaFotoRow[]
 
   // Unique session dates sorted ascending
   const datasSet = new Set<string>()
@@ -194,6 +203,7 @@ export default async function RelatorioTurmaPage({
               ano={ano}
               geradoEm={geradoEm}
               dateColW={dateColW}
+              fotos={fotos}
             />
           </div>
         )}
@@ -217,7 +227,7 @@ function Relatorio({
   alunoStats, dataStats,
   overallPresentes, overallTotal, overallPct,
   alunos75, alunosBaixo,
-  mes, ano, geradoEm, dateColW,
+  mes, ano, geradoEm, dateColW, fotos,
 }: {
   turma: TurmaWithCoach & { dias_semana: DiaSemana[] }
   alunos: AlunoBasic[]
@@ -234,6 +244,7 @@ function Relatorio({
   ano: number
   geradoEm: string
   dateColW: number
+  fotos: TurmaFotoRow[]
 }) {
   const hasSessions = datas.length > 0
 
@@ -405,6 +416,39 @@ function Relatorio({
         <div className="print:hidden text-xs text-gray-400 flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-red-400 inline-block" />
           {alunosBaixo} atleta{alunosBaixo !== 1 ? 's' : ''} com frequência abaixo de 75%
+        </div>
+      )}
+
+      {/* ── Galeria de fotos do período ── */}
+      {fotos.length > 0 && (
+        <div className="pt-2">
+          <div className="border-t border-gray-200 pt-5 mb-4">
+            <h3 className="text-sm font-bold text-navy-500">
+              Fotos do período
+              <span className="ml-2 text-xs font-normal text-gray-400">({fotos.length} foto{fotos.length !== 1 ? 's' : ''})</span>
+            </h3>
+          </div>
+          <div className="grid grid-cols-3 gap-4 print:gap-3">
+            {fotos.map((foto) => (
+              <div key={foto.id} className="rounded-xl overflow-hidden border border-gray-200 break-inside-avoid">
+                <div
+                  className="relative bg-gray-100"
+                  style={{ paddingBottom: '62.5%' /* 16:10 ratio */ }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={foto.url}
+                    alt={foto.titulo}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+                <div className="px-3 py-2 bg-white">
+                  <p className="text-xs font-semibold text-navy-500 truncate">{foto.titulo}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(foto.data)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

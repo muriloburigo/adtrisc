@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
-const UPDATED = '04 de maio de 2026 (rev. 2)'
+const UPDATED = '06 de maio de 2026 (rev. 3)'
 
 export default function PoliticaPage() {
   return (
@@ -66,8 +66,13 @@ export default function PoliticaPage() {
                 <li>Turma e status de matrícula</li>
                 <li>Registros de presença nas aulas</li>
                 <li>Medidas corporais e resultados de avaliações físicas (massa corporal, estatura,
-                  IMC, RCE, testes de aptidão física) utilizados para acompanhamento do
-                  desenvolvimento esportivo</li>
+                  IMC, RCE, testes de aptidão física e tempos em provas de natação) utilizados para
+                  acompanhamento do desenvolvimento esportivo</li>
+                <li>
+                  <strong>Foto de perfil</strong> — imagem fornecida voluntariamente por staff
+                  autorizado para identificação visual no Sistema; não é obrigatória e pode ser
+                  removida a qualquer momento
+                </li>
               </ul>
             </SubSection>
 
@@ -94,16 +99,51 @@ export default function PoliticaPage() {
                 <li>Autorização médica para prática de atividade física</li>
                 <li>Histórico de prática esportiva e interesse em eventos</li>
                 <li>Como soube da ADTRISC, posse de bicicleta e tamanho de camiseta</li>
-                <li>Status no processo seletivo (pendente, sorteado, não sorteado, aprovado)</li>
+                <li>
+                  Status no processo seletivo: <em>Pendente</em> (aguardando sorteio),{' '}
+                  <em>Sorteado(a)</em> (contemplado no sorteio), <em>Lista de Espera</em> (não
+                  contemplado no sorteio mais recente, mas mantido automaticamente para participar
+                  de sorteios futuros) ou <em>Convertido(a)</em> (matrícula efetivada)
+                </li>
               </ul>
+              <p className="mt-2 text-xs text-gray-500">
+                <strong>Nota sobre lista de espera:</strong> o formulário de inscrição é permanentemente
+                público e candidatos não contemplados em um sorteio são automaticamente incluídos na
+                lista de espera para sorteios futuros, sem necessidade de nova inscrição. Seus dados
+                permanecem no Sistema enquanto houver interesse ativo na vaga (ver Seção 8).
+              </p>
             </SubSection>
 
             <SubSection title="Treinadores(as) e administradores(as)">
               <ul className="list-disc list-inside space-y-1">
                 <li>Nome completo e e-mail (utilizados para autenticação no Sistema)</li>
                 <li>Perfil de acesso (função no sistema)</li>
+                <li>
+                  <strong>Foto de perfil</strong> — imagem fornecida voluntariamente para
+                  identificação visual no Sistema; não é obrigatória e pode ser removida a qualquer
+                  momento pelo próprio usuário ou por um administrador
+                </li>
                 <li>Registros de ações realizadas no Sistema (log de auditoria), incluindo data/hora,
                   tipo de ação e identificação do registro afetado</li>
+              </ul>
+            </SubSection>
+
+            <SubSection title="Galeria de fotos das turmas">
+              <p className="text-sm text-gray-700">
+                O Sistema permite que treinadores(as) e administradores(as) publiquem fotos das
+                atividades das turmas, associadas a um título e uma data. Essas imagens:
+              </p>
+              <ul className="list-disc list-inside space-y-1 mt-2">
+                <li>São carregadas voluntariamente por staff autorizado</li>
+                <li>Ficam armazenadas no serviço Supabase Storage e acessíveis internamente no Sistema</li>
+                <li>
+                  <strong>Podem conter imagens de menores de idade</strong> — a publicação de
+                  qualquer foto que identifique crianças ou adolescentes pressupõe que a ADTRISC
+                  possui autorização prévia dos respectivos responsáveis legais para uso da imagem
+                  em contexto interno de gestão da escolinha (ver Seção 5)
+                </li>
+                <li>Incluem apenas metadados de título e data de publicação; nenhum dado biométrico
+                  é extraído ou processado automaticamente a partir das imagens</li>
               </ul>
             </SubSection>
           </Section>
@@ -113,12 +153,20 @@ export default function PoliticaPage() {
             <p className="mb-3">Seus dados são utilizados exclusivamente para:</p>
             <ul className="list-disc list-inside space-y-1.5">
               <li>Gerenciar matrículas, turmas e frequência de atletas</li>
-              <li>Acompanhar a evolução física e esportiva dos/das atletas</li>
-              <li>Gerir o processo seletivo de candidatos, incluindo a realização de sorteio auditável e rastreável</li>
-              <li>Avaliar aptidão e segurança para a prática esportiva, com base em informações de saúde fornecidas voluntariamente</li>
+              <li>Acompanhar a evolução física e esportiva dos/das atletas, incluindo resultados
+                de avaliações físicas e tempos em provas de natação</li>
+              <li>Gerir o processo seletivo de candidatos, incluindo a manutenção da lista de
+                espera e a realização de sorteios auditáveis e rastreáveis</li>
+              <li>Avaliar aptidão e segurança para a prática esportiva, com base em informações
+                de saúde fornecidas voluntariamente</li>
+              <li>Identificação visual interna de atletas e treinadores(as) por meio de foto de
+                perfil, para facilitar a gestão e o reconhecimento no Sistema</li>
+              <li>Registro fotográfico das atividades das turmas na galeria interna, como memória
+                institucional e instrumento de acompanhamento das atividades esportivas</li>
               <li>Comunicação com responsáveis legais sobre atividades e desempenho</li>
               <li>Controle de acesso ao Sistema por parte de treinadores(as) e administradores(as)</li>
-              <li>Registro de auditoria das ações administrativas, para garantia de integridade, rastreabilidade e segurança operacional</li>
+              <li>Registro de auditoria das ações administrativas, para garantia de integridade,
+                rastreabilidade e segurança operacional</li>
               <li>Cumprimento de obrigações legais e regulatórias aplicáveis à entidade</li>
             </ul>
             <p className="mt-3">
@@ -139,12 +187,14 @@ export default function PoliticaPage() {
                 prestação das atividades esportivas contratadas.
               </li>
               <li>
-                <strong>Legítimo interesse (Art. 7º, IX)</strong> — para acompanhamento pedagógico e
-                esportivo dos/das atletas e segurança do ambiente.
+                <strong>Legítimo interesse (Art. 7º, IX)</strong> — para acompanhamento pedagógico
+                e esportivo dos/das atletas, segurança do ambiente e manutenção de lista de espera
+                do processo seletivo.
               </li>
               <li>
                 <strong>Consentimento (Art. 7º, I)</strong> — para coleta de dados como medidas
-                corporais e avaliações físicas, obtido no ato da matrícula.
+                corporais, avaliações físicas, fotos de perfil e publicação de imagens na galeria
+                de turmas, obtido no ato da matrícula ou no momento do envio.
               </li>
               <li>
                 <strong>Cumprimento de obrigação legal (Art. 7º, II)</strong> — para obrigações
@@ -158,6 +208,12 @@ export default function PoliticaPage() {
                 manifestado no ato do preenchimento do formulário, com a finalidade exclusiva de
                 garantir a segurança e aptidão do/da candidato(a) para a prática esportiva
                 (Art. 11, II, &quot;f&quot; c/c Art. 11, I).
+              </li>
+              <li>
+                <strong>Imagens de menores na galeria — Consentimento específico do responsável
+                legal (Arts. 7º, I e 14, §1º)</strong> — a publicação de fotos que identifiquem
+                crianças ou adolescentes na galeria de turmas requer autorização prévia e específica
+                dos respectivos responsáveis legais para uso da imagem neste contexto.
               </li>
             </ul>
           </Section>
@@ -181,6 +237,14 @@ export default function PoliticaPage() {
               específico e destacado dos responsáveis legais, em conformidade com o
               Estatuto da Criança e do Adolescente (ECA).
             </p>
+            <p className="mt-2">
+              <strong>Imagens na galeria:</strong> a publicação de fotografias que identifiquem
+              menores de 18 anos na galeria de turmas pressupõe que a ADTRISC possui autorização
+              expressa e específica dos respectivos responsáveis legais para o uso da imagem da
+              criança ou adolescente em contexto interno de registro das atividades esportivas.
+              O responsável legal pode solicitar a remoção de qualquer imagem a qualquer tempo,
+              mediante contato com a ADTRISC (ver Seção 11).
+            </p>
           </Section>
 
           {/* 6 */}
@@ -191,10 +255,12 @@ export default function PoliticaPage() {
             </p>
             <ul className="list-disc list-inside space-y-1.5 mt-2">
               <li>
-                <strong>Supabase Inc.</strong> — plataforma de banco de dados utilizada para
-                armazenar os dados, com servidores localizados nos Estados Unidos. O acesso é
-                restrito por credenciais seguras e políticas de controle de acesso por perfil
-                (Row Level Security).
+                <strong>Supabase Inc.</strong> — plataforma de banco de dados e armazenamento de
+                arquivos utilizada para armazenar os dados estruturados e as imagens (fotos de
+                perfil e galeria de turmas), com servidores localizados nos Estados Unidos. O
+                acesso é restrito por credenciais seguras e políticas de controle de acesso por
+                perfil (Row Level Security). As imagens são armazenadas no serviço Supabase
+                Storage com URLs de acesso controlado.
               </li>
               <li>
                 <strong>Vercel Inc.</strong> — plataforma de hospedagem da aplicação, sujeita
@@ -223,6 +289,14 @@ export default function PoliticaPage() {
               <li>Acesso ao banco de dados restrito por políticas de segurança em nível de linha (Row Level Security)</li>
               <li>Senhas armazenadas com hash seguro — nunca em texto claro</li>
               <li>Registro automático de auditoria de todas as ações de criação, edição e exclusão de dados, identificando o usuário responsável, data/hora e o estado anterior e posterior do registro</li>
+              <li>
+                Imagens (fotos de perfil de atletas e treinadores, fotos da galeria de turmas)
+                armazenadas no Supabase Storage com cache imutável de longa duração; o acesso
+                às imagens é feito por URLs que ficam dentro do ambiente da plataforma; operações
+                de exclusão removem permanentemente o arquivo do bucket
+              </li>
+              <li>Compressão e redimensionamento de imagens realizados no lado do cliente antes
+                do envio, limitando o tamanho e a resolução máximos armazenados</li>
               <li>Backups automáticos gerenciados pela Supabase</li>
               <li>Acesso administrativo limitado ao pessoal autorizado</li>
             </ul>
@@ -241,6 +315,12 @@ export default function PoliticaPage() {
                 e cumprimento de obrigações fiscais.
               </li>
               <li>
+                <strong>Fotos de perfil de atletas e treinadores(as)</strong> — mantidas enquanto
+                o cadastro estiver ativo; removidas automaticamente do armazenamento quando o
+                usuário ou um administrador solicitar a exclusão ou substituição da imagem.
+                A remoção é permanente e imediata.
+              </li>
+              <li>
                 <strong>Dados de acesso (treinadores/as e administradores/as)</strong> — mantidos
                 enquanto o acesso estiver ativo e por 1 ano após o encerramento.
               </li>
@@ -249,16 +329,24 @@ export default function PoliticaPage() {
                 e por até 5 anos para fins de histórico esportivo.
               </li>
               <li>
-                <strong>Dados de candidatos ao processo seletivo</strong> — mantidos pelo prazo
-                de duração do processo seletivo e por até 2 anos após seu encerramento.
-                Dados de saúde (condição médica, tratamento e alergias) de candidatos
-                não selecionados são excluídos ao fim do processo seletivo, salvo manifestação
-                contrária do responsável legal.
+                <strong>Dados de candidatos ao processo seletivo — lista de espera</strong> — o
+                formulário de inscrição é permanentemente público e candidatos não contemplados
+                em um sorteio permanecem automaticamente na lista de espera para sorteios futuros.
+                Seus dados são mantidos enquanto houver interesse ativo na vaga, podendo o
+                responsável legal solicitar a exclusão a qualquer tempo (ver Seção 9).
+                Dados de saúde (condição médica, tratamento e alergias) de candidatos que
+                solicitem exclusão da lista de espera são removidos imediatamente.
               </li>
               <li>
                 <strong>Registros de sorteio</strong> — mantidos por prazo indeterminado para fins
                 de auditabilidade e transparência do processo seletivo, contendo apenas nome e
                 identificador interno dos candidatos participantes.
+              </li>
+              <li>
+                <strong>Galeria de fotos das turmas</strong> — imagens mantidas enquanto a turma
+                estiver ativa no Sistema e por até 2 anos após o encerramento das atividades da
+                turma; podem ser removidas individualmente por treinadores(as) ou administradores(as)
+                a qualquer tempo, com exclusão permanente e imediata do armazenamento.
               </li>
               <li>
                 <strong>Logs de auditoria</strong> — mantidos por até 2 anos para fins de
@@ -284,7 +372,7 @@ export default function PoliticaPage() {
                 ['Correção', 'Solicitar a correção de dados incompletos, inexatos ou desatualizados.'],
                 ['Anonimização, bloqueio ou eliminação', 'Requerer a anonimização ou eliminação de dados desnecessários ou excessivos.'],
                 ['Portabilidade', 'Receber seus dados em formato estruturado para transferência a outra entidade.'],
-                ['Eliminação', 'Solicitar a exclusão dos dados tratados com base em consentimento, ressalvadas as obrigações legais.'],
+                ['Eliminação', 'Solicitar a exclusão dos dados tratados com base em consentimento, incluindo remoção da lista de espera do processo seletivo e exclusão de fotos de perfil ou imagens da galeria, ressalvadas as obrigações legais.'],
                 ['Informação sobre compartilhamento', 'Saber com quais entidades compartilhamos seus dados.'],
                 ['Revogação do consentimento', 'Retirar o consentimento dado anteriormente, sem prejuízo da licitude do tratamento realizado até então.'],
                 ['Oposição', 'Opor-se ao tratamento realizado com fundamento em outras hipóteses legais, em caso de descumprimento da LGPD.'],
@@ -309,9 +397,10 @@ export default function PoliticaPage() {
           {/* 11 */}
           <Section title="11. Como exercer seus direitos e nos contatar">
             <p>
-              Para exercer qualquer direito previsto nesta política ou esclarecer dúvidas sobre
-              o tratamento de seus dados, entre em contato com o encarregado pelo tratamento
-              de dados (DPO) da ADTRISC:
+              Para exercer qualquer direito previsto nesta política — incluindo exclusão da
+              lista de espera do processo seletivo, remoção de foto de perfil ou exclusão de
+              imagem da galeria de turmas — ou para esclarecer dúvidas sobre o tratamento de
+              seus dados, entre em contato com o encarregado pelo tratamento de dados (DPO) da ADTRISC:
             </p>
             <div className="mt-3 p-4 bg-gray-100 rounded-lg">
               <p className="font-semibold text-gray-800">ADTRISC — Encarregado de Dados</p>
