@@ -14,6 +14,9 @@ const CAMPOS_PERMITIDOS = new Set([
   'estatura_sentado', 'sentar_alcancar', 'resistencia_6min',
   'forca_abdominal', 'arremesso_medicineball', 'agilidade',
   'salto_horizontal', 'corrida_20m', 'natacao_12min', 'observacoes',
+  'natacao_50m_livre', 'natacao_100m_livre', 'natacao_200m_livre',
+  'natacao_400m_livre', 'natacao_800m_livre', 'natacao_1500m_livre',
+  'natacao_50m_estilo', 'natacao_100m_estilo', 'natacao_200m_estilo',
 ])
 
 async function recalcularDerived(

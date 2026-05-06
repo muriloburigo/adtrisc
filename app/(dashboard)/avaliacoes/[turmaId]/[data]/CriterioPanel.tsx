@@ -21,12 +21,21 @@ const CRITERIOS = [
   { key: 'salto_horizontal',       label: 'Salto Horizontal',     unit: 'm',   step: '0.01', group: 'Testes Físicos' },
   { key: 'corrida_20m',            label: 'Corrida de 20m',       unit: 's',   step: '0.01', group: 'Testes Físicos' },
   { key: 'natacao_12min',          label: "12' Natação",          unit: 'm',   step: '1',    group: 'Testes Físicos' },
+  { key: 'natacao_50m_livre',      label: '50m Livre',            unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_100m_livre',     label: '100m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_200m_livre',     label: '200m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_400m_livre',     label: '400m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_800m_livre',     label: '800m Livre',           unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_1500m_livre',    label: '1500m Livre',          unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_50m_estilo',     label: '50m Melhor Estilo',    unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_100m_estilo',    label: '100m Melhor Estilo',   unit: 's',   step: '0.01', group: 'Natação' },
+  { key: 'natacao_200m_estilo',    label: '200m Melhor Estilo',   unit: 's',   step: '0.01', group: 'Natação' },
 ] as const
 
 type CampoKey = typeof CRITERIOS[number]['key']
 type FieldStatus = 'saving' | 'saved' | 'error'
 
-const GROUPS = ['Medidas Corporais', 'Testes Físicos'] as const
+const GROUPS = ['Medidas Corporais', 'Testes Físicos', 'Natação'] as const
 
 function initValores(
   alunos: AlunoBasic[],

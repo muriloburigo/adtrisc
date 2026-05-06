@@ -141,6 +141,28 @@ export default async function AvaliacaoDetailPage({
           </div>
         </Card>
 
+        {/* Provas de Natação */}
+        <Card className="lg:col-span-2">
+          <h3 className="text-sm font-semibold text-navy-500 mb-3">Provas de Natação</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8">
+            <div>
+              <Valor label="50m Livre"          value={av.natacao_50m_livre}   unit="s" />
+              <Valor label="100m Livre"         value={av.natacao_100m_livre}  unit="s" />
+              <Valor label="200m Livre"         value={av.natacao_200m_livre}  unit="s" />
+            </div>
+            <div>
+              <Valor label="400m Livre"         value={av.natacao_400m_livre}  unit="s" />
+              <Valor label="800m Livre"         value={av.natacao_800m_livre}  unit="s" />
+              <Valor label="1500m Livre"        value={av.natacao_1500m_livre} unit="s" />
+            </div>
+            <div>
+              <Valor label="50m Melhor Estilo"  value={av.natacao_50m_estilo}  unit="s" />
+              <Valor label="100m Melhor Estilo" value={av.natacao_100m_estilo} unit="s" />
+              <Valor label="200m Melhor Estilo" value={av.natacao_200m_estilo} unit="s" />
+            </div>
+          </div>
+        </Card>
+
         {/* Observações */}
         {av.observacoes && (
           <Card className="lg:col-span-2">

@@ -112,6 +112,11 @@ export interface AvaliacaoFisicaRow {
   forca_abdominal: number | null; arremesso_medicineball: number | null
   agilidade: number | null; salto_horizontal: number | null
   corrida_20m: number | null; natacao_12min: number | null
+  natacao_50m_livre: number | null; natacao_100m_livre: number | null
+  natacao_200m_livre: number | null; natacao_400m_livre: number | null
+  natacao_800m_livre: number | null; natacao_1500m_livre: number | null
+  natacao_50m_estilo: number | null; natacao_100m_estilo: number | null
+  natacao_200m_estilo: number | null
   observacoes: string | null; avaliador_id: string | null
   created_at: string; updated_at: string
 }
