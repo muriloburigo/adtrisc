@@ -5,6 +5,7 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Badge, { statusAlunoVariant } from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
+import Avatar from '@/components/ui/Avatar'
 import AlunoTimeline from './AlunoTimeline'
 import { Pencil, User, MapPin, Phone, Users2, ClipboardList } from 'lucide-react'
 import { formatDate, calcularIdade } from '@/lib/utils'
@@ -51,9 +52,14 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
         {/* Info principal */}
         <div className="lg:col-span-2 space-y-4">
           <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <User size={16} className="text-sky-400" />
-              <h2 className="text-sm font-semibold text-navy-500">Dados Pessoais</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar name={a.nome} url={a.foto_url} size={48} />
+              <div>
+                <div className="flex items-center gap-2">
+                  <User size={14} className="text-sky-400" />
+                  <h2 className="text-sm font-semibold text-navy-500">Dados Pessoais</h2>
+                </div>
+              </div>
             </div>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
               <div>

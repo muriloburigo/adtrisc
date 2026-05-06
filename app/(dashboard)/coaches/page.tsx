@@ -5,6 +5,7 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
+import Avatar from '@/components/ui/Avatar'
 import { UserCheck, Plus, Users2 } from 'lucide-react'
 import type { ProfileRow } from '@/types/database'
 
@@ -21,7 +22,7 @@ export default async function CoachesPage({
 
   let query = supabase
     .from('profiles')
-    .select('id, full_name, email, created_at')
+    .select('id, full_name, email, avatar_url, created_at')
     .eq('role', 'coach')
     .order('full_name')
 
@@ -88,12 +89,7 @@ export default async function CoachesPage({
               <Link key={coach.id} href={`/coaches/${coach.id}`}>
                 <Card className="hover:border-sky-400 hover:shadow-sm transition-all cursor-pointer h-full">
                   <div className="flex items-center gap-3 mb-4">
-                    <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-base flex-shrink-0"
-                      style={{ background: '#2AABE1' }}
-                    >
-                      {coach.full_name?.charAt(0)?.toUpperCase() ?? '?'}
-                    </div>
+                    <Avatar name={coach.full_name ?? '?'} url={coach.avatar_url} size={44} />
                     <div className="min-w-0">
                       <p className="font-semibold text-navy-500 truncate">{coach.full_name ?? '—'}</p>
                       <p className="text-xs text-gray-400 truncate">{coach.email}</p>

@@ -52,6 +52,7 @@ export async function createAluno(formData: FormData) {
     cep:             (formData.get('cep') as string) || null,
     cidade:          (formData.get('cidade') as string) || null,
     observacoes:     (formData.get('observacoes') as string) || null,
+    foto_url:        (formData.get('foto_url') as string) || null,
     status:          'ativo' as AlunoStatus,
   }
 
@@ -108,6 +109,7 @@ export async function updateAluno(id: string, formData: FormData) {
     cidade:          (formData.get('cidade') as string) || null,
     status:          formData.get('status') as AlunoStatus,
     observacoes:     (formData.get('observacoes') as string) || null,
+    foto_url:        (formData.get('foto_url') as string) || null,
   }
 
   const { error } = await db.from('alunos').update(payload).eq('id', id)

@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import ResetPasswordForm from './ResetPasswordForm'
+import CoachAvatarCard from './CoachAvatarCard'
 import { updateCoach } from '../../actions'
 import type { ProfileRow } from '@/types/database'
 
@@ -25,6 +26,13 @@ export default async function EditarCoachPage({ params }: { params: Promise<{ id
   return (
     <div className="p-4 sm:p-8 max-w-lg space-y-6">
       <PageHeader title="Editar Treinador(a)" subtitle={coach.full_name ?? ''} />
+
+      {/* Foto */}
+      <CoachAvatarCard
+        coachId={id}
+        currentUrl={coach.avatar_url}
+        name={coach.full_name ?? 'T'}
+      />
 
       {/* Dados principais */}
       <Card>

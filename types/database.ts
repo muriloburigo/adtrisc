@@ -87,6 +87,7 @@ export interface AlunoRow {
   telefone: string | null; sexo: SexoEnum | null; data_nascimento: string | null
   rua: string | null; numero: string | null; bairro: string | null
   cep: string | null; cidade: string | null; status: AlunoStatus
+  foto_url: string | null
   observacoes: string | null; created_at: string; updated_at: string
 }
 export interface ResponsavelRow {

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import Button from '@/components/ui/Button'
+import AvatarUpload from '@/components/ui/AvatarUpload'
 import type { Database, AlunoStatus } from '@/types/database'
 
 type Aluno = Database['public']['Tables']['alunos']['Row']
@@ -65,6 +66,7 @@ export default function AlunoForm({
   pai?: Responsavel
   submitLabel?: string
 }) {
+  const [fotoUrl, setFotoUrl] = useState(aluno?.foto_url ?? '')
   const [cep, setCep] = useState(aluno?.cep ?? '')
   const [rua, setRua] = useState(aluno?.rua ?? '')
   const [bairro, setBairro] = useState(aluno?.bairro ?? '')
@@ -85,6 +87,19 @@ export default function AlunoForm({
 
   return (
     <form action={action} className="space-y-8">
+      <input type="hidden" name="foto_url" value={fotoUrl} />
+
+      {/* Foto */}
+      <div className="border border-gray-200 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-navy-500 uppercase tracking-wide mb-4">Foto</h3>
+        <AvatarUpload
+          folder="alunos"
+          currentUrl={aluno?.foto_url}
+          name={aluno?.nome ?? 'A'}
+          onUpload={(url) => setFotoUrl(url)}
+        />
+      </div>
+
       {/* Dados pessoais */}
       <div className="border border-gray-200 rounded-xl p-5 space-y-4">
         <h3 className="text-sm font-semibold text-navy-500 uppercase tracking-wide">Dados do Participante</h3>

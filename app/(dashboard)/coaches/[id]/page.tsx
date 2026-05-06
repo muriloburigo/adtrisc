@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Badge, { statusTurmaVariant } from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
+import Avatar from '@/components/ui/Avatar'
 import { Pencil, Mail, Users2, Clock } from 'lucide-react'
 import { formatDate, formatarDiasSemana, formatarHorario, formatRole } from '@/lib/utils'
 import type { ProfileRow, TurmaRow, DiaSemana } from '@/types/database'
@@ -48,12 +49,7 @@ export default async function CoachDetailPage({ params }: { params: Promise<{ id
         {/* Dados */}
         <Card>
           <div className="flex flex-col items-center text-center py-2">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center font-black text-white text-2xl mb-4"
-              style={{ background: '#2AABE1' }}
-            >
-              {coach.full_name?.charAt(0)?.toUpperCase() ?? '?'}
-            </div>
+            <Avatar name={coach.full_name ?? '?'} url={coach.avatar_url} size={64} className="mb-4" />
             <p className="font-bold text-navy-500 text-lg">{coach.full_name}</p>
             <p className="text-xs text-gray-400 mt-0.5">{formatRole(coach.role)}</p>
           </div>
