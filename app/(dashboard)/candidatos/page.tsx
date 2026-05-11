@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
-import { UserPlus } from 'lucide-react'
+import { UserPlus, ExternalLink, BookOpen } from 'lucide-react'
 import { calcularIdade, formatDate, formatTelefone } from '@/lib/utils'
 import type { CandidatoRow, UserRole } from '@/types/database'
 
@@ -101,6 +101,26 @@ export default async function CandidatosPage({
       <PageHeader
         title="Candidatos"
         subtitle={`${candidatos.length} candidato${candidatos.length !== 1 ? 's' : ''} encontrado${candidatos.length !== 1 ? 's' : ''}`}
+        action={
+          <div className="flex items-center gap-2">
+            <a
+              href="/regras-sorteio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors font-medium"
+            >
+              <BookOpen size={13} /> Regras
+            </a>
+            <a
+              href="/inscricao"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-sky-500 border border-sky-200 hover:bg-sky-50 px-3 py-2 rounded-lg transition-colors font-medium"
+            >
+              <ExternalLink size={13} /> Link público
+            </a>
+          </div>
+        }
       />
 
       <FilterBar fields={filterFields} initialValues={{ q, status, turma }} />
