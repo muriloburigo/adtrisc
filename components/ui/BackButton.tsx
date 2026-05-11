@@ -17,7 +17,7 @@ export default function BackButton({ fallback = '/dashboard' }: { fallback?: str
   return (
     <button
       onClick={handleBack}
-      className="flex items-center gap-1 text-sm text-gray-400 hover:text-sky-500 transition-colors mb-4 -ml-1"
+      className="flex items-center gap-1 text-sm text-gray-400 hover:text-sky-500 transition-colors mb-4 -ml-1 cursor-pointer"
     >
       <ChevronLeft size={16} />
       Voltar
