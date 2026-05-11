@@ -6,7 +6,7 @@ import FilterBar from '@/components/ui/FilterBar'
 import EmptyState from '@/components/ui/EmptyState'
 import PresencaSelector from './PresencaSelector'
 import DeletePresencaButton from './DeletePresencaButton'
-import { ClipboardCheck, CheckCircle, FileDown } from 'lucide-react'
+import { ClipboardCheck, CheckCircle } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { TurmaRow } from '@/types/database'
 
@@ -72,6 +72,7 @@ export default async function PresencasPage({
   let histQuery: any = supabase
     .from('presencas')
     .select('turma_id, data, presente, justificada, turmas!inner(nome)')
+    .is('deleted_at', null)
     .order('data', { ascending: false })
     .limit(500)
 
@@ -136,15 +137,6 @@ export default async function PresencasPage({
       <PageHeader
         title="Presenças"
         subtitle="Registre e consulte a frequência das aulas"
-        action={
-          <Link
-            href="/presencas/exportar"
-            className="flex items-center gap-2 text-sm font-semibold text-navy-500 border border-gray-200 hover:border-sky-400 hover:text-sky-500 px-4 py-2 rounded-xl transition-colors"
-          >
-            <FileDown size={15} />
-            Exportar PDF
-          </Link>
-        }
       />
 
       {/* Banner de sucesso */}

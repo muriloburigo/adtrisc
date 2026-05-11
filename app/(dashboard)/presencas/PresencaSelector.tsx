@@ -10,7 +10,7 @@ type TurmaBasic = Pick<TurmaRow, 'id' | 'nome' | 'modalidade'>
 export default function PresencaSelector({ turmas }: { turmas: TurmaBasic[] }) {
   const router = useRouter()
   const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD no fuso local
-  const [turmaId, setTurmaId] = useState(turmas[0]?.id ?? '')
+  const [turmaId, setTurmaId] = useState('')
   const [data, setData] = useState(today)
 
   function abrir() {
@@ -32,6 +32,7 @@ export default function PresencaSelector({ turmas }: { turmas: TurmaBasic[] }) {
             onChange={(e) => setTurmaId(e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
           >
+            <option value="" disabled>Selecione uma turma</option>
             {turmas.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.nome} · {t.modalidade}

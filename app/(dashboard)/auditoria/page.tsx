@@ -21,17 +21,19 @@ const ACTION_LABEL: Record<string, { label: string; color: string }> = {
 }
 
 const RESOURCE_LABEL: Record<string, string> = {
-  turma:       'Turma',
-  atleta:      'Atleta',
-  treinador:   'Treinador(a)',
-  candidato:   'Candidato(a)',
-  usuario:     'Usuário',
+  turma:     'Turma',
+  atleta:    'Atleta',
+  treinador: 'Treinador(a)',
+  candidato: 'Candidato(a)',
+  usuario:   'Usuário',
+  presenca:  'Presença',
 }
 
 function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
   }).format(new Date(iso))
 }
 

@@ -87,3 +87,13 @@ const ROLE_LABEL: Record<string, string> = {
 export function formatRole(role: string): string {
   return ROLE_LABEL[role] ?? role
 }
+
+export function formatTelefone(raw: string | null | undefined): string {
+  if (!raw) return '—'
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 11) return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`
+  if (digits.length === 10) return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`
+  if (digits.length === 9)  return `${digits.slice(0,5)}-${digits.slice(5)}`
+  if (digits.length === 8)  return `${digits.slice(0,4)}-${digits.slice(4)}`
+  return raw
+}

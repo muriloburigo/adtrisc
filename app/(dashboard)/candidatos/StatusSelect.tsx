@@ -2,52 +2,47 @@
 
 import { useTransition } from 'react'
 import { updateCandidatoStatus } from './actions'
-import type { CandidatoStatus } from '@/types/database'
 
-const STATUS_OPTIONS: { value: CandidatoStatus; label: string; color: string }[] = [
-  { value: 'pendente',      label: 'Pendente',       color: 'bg-amber-100 text-amber-700 border-amber-300' },
-  { value: 'sorteado',      label: 'Sorteado(a)',     color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-  { value: 'nao_sorteado',  label: 'Lista de Espera', color: 'bg-indigo-50 text-indigo-700 border-indigo-300' },
-  { value: 'convertido',    label: 'Convertido(a)',   color: 'bg-blue-100 text-blue-700 border-blue-300' },
+const STATUS_OPTIONS = [
+  { value: 'inscrito',        label: 'Inscrito',         color: 'bg-gray-100 text-gray-700' },
+  { value: 'sorteado',        label: 'Sorteado',         color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'desclassificado', label: 'Desclassificado',  color: 'bg-red-100 text-red-700' },
 ]
-
-export function StatusBadge({ status }: { status: CandidatoStatus }) {
-  const opt = STATUS_OPTIONS.find((o) => o.value === status) ?? STATUS_OPTIONS[0]
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${opt.color}`}>
-      {opt.label}
-    </span>
-  )
-}
 
 export default function StatusSelect({
   candidatoId,
   currentStatus,
 }: {
   candidatoId: string
-  currentStatus: CandidatoStatus
+  currentStatus: string
 }) {
-  const [isPending, startTransition] = useTransition()
+  const [pending, startTransition] = useTransition()
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const next = e.target.value as CandidatoStatus
-    startTransition(async () => {
-      await updateCandidatoStatus(candidatoId, next)
-    })
+    const status = e.target.value
+    startTransition(() => { updateCandidatoStatus(candidatoId, status) })
   }
 
-  const opt = STATUS_OPTIONS.find((o) => o.value === currentStatus)
+  const current = STATUS_OPTIONS.find((s) => s.value === currentStatus)
 
   return (
-    <select
-      value={currentStatus}
-      onChange={handleChange}
-      disabled={isPending}
-      className={`text-xs font-semibold border rounded-full px-3 py-1 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-60 ${opt?.color ?? ''}`}
-    >
-      {STATUS_OPTIONS.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
+    <div className="relative">
+      <select
+        defaultValue={currentStatus}
+        onChange={handleChange}
+        disabled={pending}
+        className={`
+          appearance-none cursor-pointer border rounded-lg px-3 py-2 pr-8
+          text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-sky-400
+          disabled:opacity-60 transition-colors
+          ${current?.color ?? 'bg-gray-100 text-gray-700'}
+        `}
+      >
+        {STATUS_OPTIONS.map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-current opacity-60 text-[10px]">▼</span>
+    </div>
   )
 }

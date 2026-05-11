@@ -1,41 +1,58 @@
 import Image from 'next/image'
 
-interface AvatarProps {
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? '?'
+  return ((parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '')).toUpperCase()
+}
+
+function colorFromName(name: string) {
+  const colors = [
+    'bg-sky-400 text-white',
+    'bg-emerald-500 text-white',
+    'bg-violet-500 text-white',
+    'bg-amber-400 text-white',
+    'bg-pink-500 text-white',
+    'bg-indigo-500 text-white',
+  ]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return colors[Math.abs(hash) % colors.length]
+}
+
+export default function Avatar({
+  name,
+  url,
+  size = 40,
+}: {
   name: string
   url?: string | null
   size?: number
-  className?: string
-  bgColor?: string
-}
-
-export default function Avatar({ name, url, size = 36, bgColor = '#2AABE1', className = '' }: AvatarProps) {
-  const initial = name?.charAt(0)?.toUpperCase() ?? '?'
-  const fontSize = size <= 32 ? 'text-sm' : size <= 48 ? 'text-base' : 'text-2xl'
+}) {
+  const style = { width: size, height: size, borderRadius: '50%', flexShrink: 0 }
+  const fontSize = Math.max(10, Math.round(size * 0.38))
 
   if (url) {
     return (
-      <div
-        className={`rounded-full overflow-hidden flex-shrink-0 ${className}`}
-        style={{ width: size, height: size }}
-      >
-        <Image
-          src={url}
-          alt={name}
-          width={size}
-          height={size}
-          className="w-full h-full object-cover"
-          unoptimized
-        />
-      </div>
+      <Image
+        src={url}
+        alt={name}
+        width={size}
+        height={size}
+        className="object-cover rounded-full flex-shrink-0"
+        style={style}
+        unoptimized
+      />
     )
   }
 
   return (
     <div
-      className={`rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 ${fontSize} ${className}`}
-      style={{ width: size, height: size, background: bgColor }}
+      className={`flex items-center justify-center font-semibold flex-shrink-0 ${colorFromName(name)}`}
+      style={{ ...style, fontSize }}
+      aria-label={name}
     >
-      {initial}
+      {initials(name)}
     </div>
   )
 }

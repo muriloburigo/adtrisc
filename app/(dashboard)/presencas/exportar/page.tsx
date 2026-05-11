@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import ExportForm from './ExportForm'
 import PrintButton from './PrintButton'
+import { formatarDiasSemana, formatarHorario, formatTelefone } from '@/lib/utils'
+import type { DiaSemana } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,8 +14,16 @@ type TurmaBasic = {
   nome: string
   modalidade: string
   coach_nome: string | null
+  dias_semana: DiaSemana[]
+  horario_inicio: string
+  horario_fim: string
 }
-type AlunoBasic = { id: string; nome: string }
+type AlunoBasic = {
+  id: string
+  nome: string
+  telefone: string | null
+  sexo: string | null
+}
 type PresencaEntry = {
   aluno_id: string
   data: string
@@ -21,23 +31,6 @@ type PresencaEntry = {
   justificada: boolean
 }
 type Estado = 'P' | 'F' | 'J'
-
-const MODALIDADE_LABEL: Record<string, string> = {
-  natacao: 'Natação',
-  ciclismo: 'Ciclismo',
-  corrida: 'Corrida',
-  triathlon: 'Triathlon',
-}
-
-function formatDateShort(d: string) {
-  // d = YYYY-MM-DD → DD/MM/AAAA
-  return `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
-}
-
-function formatDateCol(d: string) {
-  // d = YYYY-MM-DD → "DD\nMM" (two lines)
-  return { day: d.slice(8, 10), month: d.slice(5, 7) }
-}
 
 export default async function ExportarPresencasPage({
   searchParams,
@@ -57,7 +50,7 @@ export default async function ExportarPresencasPage({
 
   let turmasQuery = supabase
     .from('turmas')
-    .select('id, nome, modalidade, coach_id, profiles!turmas_coach_id_fkey(full_name)')
+    .select('id, nome, modalidade, coach_id, dias_semana, horario_inicio, horario_fim, profiles!turmas_coach_id_fkey(full_name)')
     .eq('status', 'ativa')
     .order('nome')
   if (profile?.role === 'coach') turmasQuery = turmasQuery.eq('coach_id', user?.id)
@@ -69,20 +62,25 @@ export default async function ExportarPresencasPage({
       id: t.id,
       nome: t.nome,
       modalidade: t.modalidade,
+      dias_semana: t.dias_semana ?? [],
+      horario_inicio: t.horario_inicio,
+      horario_fim: t.horario_fim,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       coach_nome: (t.profiles as any)?.full_name ?? null,
     }),
   )
 
   const params = await searchParams
-  const turmaId = params.turma ?? ''
+  const turmaId    = params.turma  ?? ''
   const dataInicio = params.inicio ?? ''
-  const dataFim = params.fim ?? ''
+  const dataFim    = params.fim    ?? ''
+  const local      = params.local  ?? 'Beira Mar São José'
 
   let turma: TurmaBasic | null = null
   let alunos: AlunoBasic[] = []
   let presencas: PresencaEntry[] = []
   let datas: string[] = []
+  let respMap: Record<string, string> = {}
 
   if (turmaId && dataInicio && dataFim) {
     turma = turmas.find((t) => t.id === turmaId) ?? null
@@ -91,7 +89,7 @@ export default async function ExportarPresencasPage({
       const [{ data: alunosRaw }, { data: presencasRaw }] = await Promise.all([
         supabase
           .from('alunos')
-          .select('id, nome')
+          .select('id, nome, telefone, sexo')
           .eq('turma_id', turmaId)
           .eq('status', 'ativo')
           .order('nome'),
@@ -101,11 +99,33 @@ export default async function ExportarPresencasPage({
           .eq('turma_id', turmaId)
           .gte('data', dataInicio)
           .lte('data', dataFim)
+          .is('deleted_at', null)
           .order('data'),
       ])
 
       alunos = (alunosRaw ?? []) as AlunoBasic[]
       presencas = (presencasRaw ?? []) as PresencaEntry[]
+
+      // Fetch principal responsável for each aluno
+      if (alunos.length > 0) {
+        const { data: respLinks } = await supabase
+          .from('aluno_responsavel')
+          .select('aluno_id, principal, responsaveis(nome)')
+          .in('aluno_id', alunos.map((a: AlunoBasic) => a.id))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const link of (respLinks ?? []) as any[]) {
+          if (link.principal && link.responsaveis?.nome) {
+            respMap[link.aluno_id] = link.responsaveis.nome
+          }
+        }
+        // fallback: non-principal if no principal found
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const link of (respLinks ?? []) as any[]) {
+          if (!respMap[link.aluno_id] && link.responsaveis?.nome) {
+            respMap[link.aluno_id] = link.responsaveis.nome
+          }
+        }
+      }
 
       const datasSet = new Set<string>()
       for (const p of presencas) datasSet.add(p.data)
@@ -121,20 +141,12 @@ export default async function ExportarPresencasPage({
   }
 
   const hasData = turma !== null && alunos.length > 0 && datas.length > 0
-  const geradoEm = new Date().toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 
   return (
     <>
-      {/* Inject print page settings scoped to this page */}
       <style>{`
         @media print {
-          @page { size: A4 landscape; margin: 12mm 10mm; }
+          @page { size: A4 landscape; margin: 8mm 8mm; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
       `}</style>
@@ -163,6 +175,7 @@ export default async function ExportarPresencasPage({
               initialTurma={turmaId}
               initialInicio={dataInicio}
               initialFim={dataFim}
+              initialLocal={local}
             />
           </Card>
 
@@ -179,10 +192,8 @@ export default async function ExportarPresencasPage({
           )}
         </div>
 
-        {/* Grid de chamada — aparece na tela quando há dados, sempre aparece no print */}
         {hasData && turma && (
           <div>
-            {/* Botão imprimir — somente na tela */}
             <div className="print:hidden flex items-center justify-between mb-4">
               <p className="text-sm text-gray-500">
                 {alunos.length} aluno{alunos.length !== 1 ? 's' : ''} ·{' '}
@@ -191,14 +202,13 @@ export default async function ExportarPresencasPage({
               <PrintButton />
             </div>
 
-            {/* O grid de chamada */}
             <AttendanceGrid
               turma={turma}
               alunos={alunos}
               datas={datas}
               presencaMap={presencaMap}
-              periodo={{ inicio: dataInicio, fim: dataFim }}
-              geradoEm={geradoEm}
+              respMap={respMap}
+              local={local}
             />
           </div>
         )}
@@ -212,236 +222,163 @@ function AttendanceGrid({
   alunos,
   datas,
   presencaMap,
-  periodo,
-  geradoEm,
+  respMap,
+  local,
 }: {
   turma: TurmaBasic
   alunos: AlunoBasic[]
   datas: string[]
   presencaMap: Map<string, Map<string, Estado>>
-  periodo: { inicio: string; fim: string }
-  geradoEm: string
+  respMap: Record<string, string>
+  local: string
 }) {
-  const alunoStats = alunos.map((aluno) => {
-    const m = presencaMap.get(aluno.id) ?? new Map<string, Estado>()
-    let presentes = 0
-    for (const [, e] of m) if (e === 'P') presentes++
-    const total = m.size
-    const pct = total > 0 ? Math.round((presentes / total) * 100) : 0
-    return { aluno, presentes, total, pct }
-  })
+  const year = new Date().getFullYear()
 
-  const dataStats = datas.map((data) => {
-    let presentes = 0
-    let total = 0
-    for (const aluno of alunos) {
-      const e = presencaMap.get(aluno.id)?.get(data)
-      if (e !== undefined) {
-        total++
-        if (e === 'P') presentes++
-      }
-    }
-    return { data, presentes, total }
-  })
+  // Column widths
+  const dateColW = datas.length <= 18 ? 26 : datas.length <= 26 ? 22 : 18
 
-  const overallPresentes = alunoStats.reduce((s, a) => s + a.presentes, 0)
-  const overallPossivel = alunoStats.reduce((s, a) => s + a.total, 0)
-  const overallPct = overallPossivel > 0 ? Math.round((overallPresentes / overallPossivel) * 100) : 0
-
-  // Largura das colunas de data: 28px para até 20 sessões, 22px para mais
-  const dateColW = datas.length <= 20 ? 28 : 22
+  // Info row style
+  const infoRow = 'flex text-[10px] border-b border-gray-400 last:border-b-0'
+  const infoLabel = 'font-bold uppercase'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 print:rounded-none print:border-none print:p-0 print:shadow-none">
-      {/* Cabeçalho do documento */}
-      <div className="flex justify-between items-start mb-5 pb-4 border-b border-gray-200">
-        <div>
-          <p className="text-xs font-bold text-sky-400 uppercase tracking-widest mb-0.5">ADTRISC</p>
-          <h2 className="text-xl font-extrabold text-navy-500">Lista de Chamada</h2>
-          <p className="text-sm font-semibold text-navy-500 mt-2">
-            {turma.nome}
-            <span className="font-normal text-gray-400">
-              {' '}·{' '}{MODALIDADE_LABEL[turma.modalidade] ?? turma.modalidade}
-            </span>
-          </p>
-          {turma.coach_nome && (
-            <p className="text-xs text-gray-400 mt-0.5">Coach: {turma.coach_nome}</p>
-          )}
+    <div className="bg-white print:shadow-none" style={{ fontFamily: 'Arial, sans-serif' }}>
+
+      {/* ── Logo header ── */}
+      <div className="flex justify-between items-center mb-2 pb-2" style={{ borderBottom: '2px solid #222' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-incentivo-esporte.png" alt="Incentivo ao Esporte" style={{ height: 56, objectFit: 'contain' }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-fesporte.png" alt="Fesporte" style={{ height: 56, objectFit: 'contain' }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-governo-sc.png" alt="Governo do Estado de Santa Catarina" style={{ height: 56, objectFit: 'contain' }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-quarto.png" alt="" style={{ height: 56, objectFit: 'contain' }} />
+      </div>
+
+      {/* ── Title ── */}
+      <p className="text-center font-bold uppercase mb-2" style={{ fontSize: 13 }}>
+        Lista de Presença – {year}
+      </p>
+
+      {/* ── Info block ── */}
+      <div className="mb-3" style={{ border: '1px solid #555', fontSize: 10 }}>
+        <div className={infoRow}>
+          <div className="flex-1 px-2 py-1">
+            <span className={infoLabel}>Nome da OSC: </span>
+            Associação Desportiva Triatlética de Santa Catarina/ADTRISC
+          </div>
         </div>
-        <div className="text-right text-xs text-gray-400">
-          <p className="font-semibold text-gray-600">
-            {formatDateShort(periodo.inicio)} — {formatDateShort(periodo.fim)}
-          </p>
-          <p className="mt-0.5">
-            {datas.length} sessão{datas.length !== 1 ? 'ões' : ''}
-          </p>
-          <p className="mt-3">Gerado em {geradoEm}</p>
+        <div className={infoRow}>
+          <div className="px-2 py-1">
+            <span className={infoLabel}>Local do Atendimento: </span>
+            {local}
+          </div>
+        </div>
+        <div className={infoRow}>
+          <div className="px-2 py-1">
+            <span className={infoLabel}>Turma: </span>{turma.nome}
+            <span className="mx-3">|</span>
+            <span className={infoLabel}>Dias da Semana: </span>{formatarDiasSemana(turma.dias_semana)}
+            <span className="mx-3">|</span>
+            <span className={infoLabel}>Horário: </span>
+            {formatarHorario(turma.horario_inicio)} às {formatarHorario(turma.horario_fim)}
+          </div>
         </div>
       </div>
 
-      {/* Legenda */}
-      <div className="print:hidden flex gap-4 mb-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">P</span>
-          Presente
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-5 h-5 rounded bg-red-100 text-red-600 flex items-center justify-center font-bold text-xs">F</span>
-          Falta
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-5 h-5 rounded bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xs">J</span>
-          Justificada
-        </span>
-      </div>
-
-      {/* Tabela de chamada */}
+      {/* ── Table ── */}
       <div className="overflow-x-auto">
         <table
-          className="border-collapse text-xs"
-          style={{ tableLayout: 'fixed', width: `${180 + datas.length * dateColW + 50 + 44}px`, minWidth: '100%' }}
+          className="border-collapse w-full"
+          style={{
+            fontSize: 9,
+            tableLayout: 'fixed',
+            width: `${28 + 160 + 90 + 130 + 18 + 18 + datas.length * dateColW}px`,
+            minWidth: '100%',
+          }}
         >
           <colgroup>
-            <col style={{ width: '180px', minWidth: '120px' }} />
-            {datas.map((d) => (
-              <col key={d} style={{ width: `${dateColW}px` }} />
-            ))}
-            <col style={{ width: '50px' }} />
-            <col style={{ width: '44px' }} />
+            <col style={{ width: 28 }} />
+            <col style={{ width: 160 }} />
+            <col style={{ width: 90 }} />
+            <col style={{ width: 130 }} />
+            <col style={{ width: 18 }} />
+            <col style={{ width: 18 }} />
+            {datas.map((d) => <col key={d} style={{ width: dateColW }} />)}
           </colgroup>
 
           <thead>
-            <tr style={{ backgroundColor: '#0C143D' }}>
-              <th className="text-left px-3 py-2 font-semibold text-white text-xs">Aluno</th>
-              {datas.map((d) => {
-                const { day, month } = formatDateCol(d)
-                return (
-                  <th key={d} className="text-center py-1.5 px-0 font-semibold text-white leading-tight">
-                    <span className="block text-[10px]">{day}</span>
-                    <span className="block text-[10px] opacity-70">{month}</span>
-                  </th>
-                )
-              })}
-              <th className="text-center px-1 py-2 font-semibold text-white text-[10px] leading-tight">
-                <span className="block">Pres.</span>
-              </th>
-              <th className="text-center px-1 py-2 font-semibold text-white text-[10px] leading-tight">
-                <span className="block">Freq.</span>
-              </th>
+            <tr style={{ backgroundColor: '#0C143D', color: '#fff' }}>
+              <th className="text-center py-1.5 px-1 font-bold" style={{ fontSize: 8 }}>Nº</th>
+              <th className="text-left px-2 py-1.5 font-bold" style={{ fontSize: 8 }}>NOME DO ALUNO</th>
+              <th className="text-left px-2 py-1.5 font-bold" style={{ fontSize: 8 }}>TELEFONE</th>
+              <th className="text-left px-2 py-1.5 font-bold" style={{ fontSize: 8 }}>RESPONSÁVEL</th>
+              <th className="text-center py-1.5 font-bold" style={{ fontSize: 8 }}>M</th>
+              <th className="text-center py-1.5 font-bold" style={{ fontSize: 8 }}>F</th>
+              {datas.map((d) => (
+                <th key={d} className="text-center py-1 font-bold leading-tight" style={{ fontSize: 8 }}>
+                  {d.slice(8, 10)}
+                </th>
+              ))}
             </tr>
           </thead>
 
           <tbody>
-            {alunoStats.map(({ aluno, presentes, total, pct }, idx) => {
+            {alunos.map((aluno, idx) => {
               const alunoMap = presencaMap.get(aluno.id) ?? new Map<string, Estado>()
-              const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+              const rowBg = idx % 2 === 0 ? '#FFFDE7' : '#DBEAFE'
               return (
-                <tr key={aluno.id} className={rowBg}>
-                  <td className="px-3 py-1.5 font-medium text-navy-500 text-xs border-b border-gray-100 truncate">
+                <tr key={aluno.id} style={{ backgroundColor: rowBg }}>
+                  <td className="text-center py-1 px-1" style={{ border: '1px solid #ccc', fontSize: 9 }}>
+                    {idx + 1}
+                  </td>
+                  <td className="px-2 py-1 font-medium truncate" style={{ border: '1px solid #ccc', fontSize: 9 }}>
                     {aluno.nome}
+                  </td>
+                  <td className="px-2 py-1" style={{ border: '1px solid #ccc', fontSize: 9 }}>
+                    {formatTelefone(aluno.telefone)}
+                  </td>
+                  <td className="px-2 py-1 truncate" style={{ border: '1px solid #ccc', fontSize: 9 }}>
+                    {respMap[aluno.id] ?? ''}
+                  </td>
+                  <td className="text-center py-1 font-bold" style={{ border: '1px solid #ccc', fontSize: 9 }}>
+                    {aluno.sexo === 'M' ? 'X' : ''}
+                  </td>
+                  <td className="text-center py-1 font-bold" style={{ border: '1px solid #ccc', fontSize: 9 }}>
+                    {aluno.sexo === 'F' ? 'X' : ''}
                   </td>
                   {datas.map((data) => {
                     const estado = alunoMap.get(data)
-                    const cellClass = 'text-center border-b border-gray-100'
-                    if (estado === 'P')
-                      return (
-                        <td key={data} className={cellClass}>
-                          <span className="block py-1.5 bg-emerald-100 text-emerald-700 font-bold text-[10px]">P</span>
-                        </td>
-                      )
-                    if (estado === 'F')
-                      return (
-                        <td key={data} className={cellClass}>
-                          <span className="block py-1.5 bg-red-100 text-red-600 font-bold text-[10px]">F</span>
-                        </td>
-                      )
-                    if (estado === 'J')
-                      return (
-                        <td key={data} className={cellClass}>
-                          <span className="block py-1.5 bg-amber-100 text-amber-600 font-bold text-[10px]">J</span>
-                        </td>
-                      )
                     return (
-                      <td key={data} className={cellClass}>
-                        <span className="block py-1.5 text-gray-200 text-[10px]">—</span>
+                      <td key={data} className="text-center py-1 font-bold" style={{ border: '1px solid #ccc', fontSize: 9 }}>
+                        {estado === 'P' ? 'X' : estado === 'J' ? 'J' : ''}
                       </td>
                     )
                   })}
-                  <td className="text-center py-1.5 px-1 text-xs font-semibold text-gray-600 border-b border-gray-100">
-                    {presentes}/{total}
-                  </td>
-                  <td
-                    className={`text-center py-1.5 px-1 text-xs font-bold border-b border-gray-100 ${
-                      pct >= 75
-                        ? 'text-emerald-600'
-                        : pct >= 50
-                          ? 'text-amber-500'
-                          : 'text-red-500'
-                    }`}
-                  >
-                    {pct}%
-                  </td>
                 </tr>
               )
             })}
           </tbody>
-
-          <tfoot>
-            <tr style={{ backgroundColor: '#eeeef4' }}>
-              <td className="px-3 py-2 text-xs font-bold text-navy-500">
-                Média geral —{' '}
-                <span
-                  className={
-                    overallPct >= 75
-                      ? 'text-emerald-600'
-                      : overallPct >= 50
-                        ? 'text-amber-500'
-                        : 'text-red-500'
-                  }
-                >
-                  {overallPct}%
-                </span>
-              </td>
-              {dataStats.map(({ data, presentes, total }) => (
-                <td key={data} className="text-center py-2 text-[10px] font-semibold text-navy-500 leading-tight">
-                  {total > 0 ? (
-                    <>
-                      <span className="block">{presentes}</span>
-                      <span className="block opacity-50">/{total}</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
-                </td>
-              ))}
-              <td
-                className={`text-center py-2 px-1 text-xs font-bold ${
-                  overallPct >= 75
-                    ? 'text-emerald-600'
-                    : overallPct >= 50
-                      ? 'text-amber-500'
-                      : 'text-red-500'
-                }`}
-                colSpan={2}
-              >
-                {overallPresentes}/{overallPossivel}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 
-      {/* Rodapé para assinatura — somente no print */}
-      <div className="hidden print:block mt-10 pt-5 border-t border-gray-300">
-        <div className="flex gap-16 text-xs text-gray-400">
-          <div className="flex-1">
-            <div className="border-b border-gray-400 mb-1.5 pb-7" />
-            <p>Assinatura do Treinador</p>
-          </div>
-          <div style={{ width: '180px' }}>
-            <div className="border-b border-gray-400 mb-1.5 pb-7" />
-            <p>Data</p>
-          </div>
+      {/* ── Legenda (só tela) ── */}
+      <div className="print:hidden flex gap-4 mt-4 text-xs text-gray-500">
+        <span><strong>X</strong> = Presente</span>
+        <span><strong>J</strong> = Justificada</span>
+        <span className="text-gray-300">(vazio = falta / não registrado)</span>
+      </div>
+
+      {/* ── Assinatura (só impressão) ── */}
+      <div className="hidden print:flex mt-8 gap-16 text-xs text-gray-500">
+        <div className="flex-1">
+          <div style={{ borderBottom: '1px solid #555', paddingBottom: 24, marginBottom: 4 }} />
+          <p>Assinatura do Treinador</p>
+        </div>
+        <div style={{ width: 160 }}>
+          <div style={{ borderBottom: '1px solid #555', paddingBottom: 24, marginBottom: 4 }} />
+          <p>Data</p>
         </div>
       </div>
     </div>

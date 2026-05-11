@@ -17,6 +17,7 @@ const FIELD_LABELS: Record<string, string> = {
   telefone: 'Telefone', sexo: 'Sexo', data_nascimento: 'Data de nascimento',
   rua: 'Rua', numero: 'Número', bairro: 'Bairro', cep: 'CEP', cidade: 'Cidade',
   profile_id: 'Perfil vinculado',
+  total: 'Total de atletas', presentes: 'Presentes', faltas: 'Faltas', justificadas: 'Justificadas',
 }
 
 const ACTION_LABEL: Record<string, string> = {
@@ -26,7 +27,7 @@ const ACTION_LABEL: Record<string, string> = {
 
 const RESOURCE_LABEL: Record<string, string> = {
   turma: 'Turma', atleta: 'Atleta', treinador: 'Treinador(a)',
-  candidato: 'Candidato(a)', usuario: 'Usuário',
+  candidato: 'Candidato(a)', usuario: 'Usuário', presenca: 'Presença',
 }
 
 // ── Diff helpers ──────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZone: 'America/Sao_Paulo',
   }).format(new Date(iso))
 }
 

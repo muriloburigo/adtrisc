@@ -41,18 +41,21 @@ export default function ExportForm({
   initialTurma,
   initialInicio,
   initialFim,
+  initialLocal,
 }: {
   turmas: TurmaBasic[]
   initialTurma: string
   initialInicio: string
   initialFim: string
+  initialLocal: string
 }) {
   const router = useRouter()
   const defaultDates = getMonthRange(0)
 
-  const [turmaId, setTurmaId] = useState(initialTurma || turmas[0]?.id || '')
+  const [turmaId, setTurmaId] = useState(initialTurma || '')
   const [inicio, setInicio] = useState(initialInicio || defaultDates.inicio)
   const [fim, setFim] = useState(initialFim || defaultDates.fim)
+  const [local, setLocal] = useState(initialLocal || 'Beira Mar São José')
 
   function applyPreset(fn: () => { inicio: string; fim: string }) {
     const { inicio: i, fim: f } = fn()
@@ -62,7 +65,7 @@ export default function ExportForm({
 
   function visualizar() {
     if (!turmaId || !inicio || !fim) return
-    const params = new URLSearchParams({ turma: turmaId, inicio, fim })
+    const params = new URLSearchParams({ turma: turmaId, inicio, fim, local })
     router.push(`/presencas/exportar?${params}`)
   }
 
@@ -79,6 +82,7 @@ export default function ExportForm({
           onChange={(e) => setTurmaId(e.target.value)}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
         >
+          <option value="" disabled>Selecione a turma</option>
           {turmas.length === 0 && (
             <option value="" disabled>Nenhuma turma ativa</option>
           )}
@@ -88,6 +92,19 @@ export default function ExportForm({
             </option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          Local do atendimento
+        </label>
+        <input
+          type="text"
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          placeholder="Ex: Beira Mar São José"
+          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+        />
       </div>
 
       <div>

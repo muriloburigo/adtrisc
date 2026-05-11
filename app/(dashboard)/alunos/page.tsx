@@ -7,8 +7,13 @@ import Badge, { statusAlunoVariant } from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
 import Avatar from '@/components/ui/Avatar'
-import { Users, Plus } from 'lucide-react'
-import { calcularIdade } from '@/lib/utils'
+import { Plus, Users } from 'lucide-react'
+import { calcularIdade, formatTelefone } from '@/lib/utils'
+import type { AlunoRow } from '@/types/database'
+
+type AlunoWithTurma = AlunoRow & {
+  turmas: { nome: string } | null
+}
 
 export default async function AlunosPage({
   searchParams,
@@ -16,62 +21,59 @@ export default async function AlunosPage({
   searchParams: Promise<Record<string, string>>
 }) {
   const filters = await searchParams
-  const q       = filters.q       ?? ''
-  const turmaId = filters.turma   ?? ''
-  const status  = filters.status  ?? ''
+  const q = filters.q ?? ''
+  const status = filters.status ?? ''
+  const turma = filters.turma ?? ''
 
   const supabase = await createClient()
 
-  // Turmas for filter dropdown
-  const { data: turmasRaw } = await supabase
-    .from('turmas')
-    .select('id, nome')
-    .eq('status', 'ativa')
+  let query = supabase
+    .from('alunos')
+    .select('*, turmas:turma_id ( nome )')
     .order('nome')
-  const turmaOptions = (turmasRaw ?? []).map((t: { id: string; nome: string }) => ({
+
+  if (status) query = query.eq('status', status)
+  if (turma) query = query.eq('turma_id', turma)
+
+  const [{ data: alunosRaw }, { data: turmasRaw }] = await Promise.all([
+    query,
+    supabase.from('turmas').select('id, nome').order('nome'),
+  ])
+
+  let alunos = (alunosRaw ?? []) as AlunoWithTurma[]
+
+  if (q) {
+    const lower = q.toLowerCase()
+    alunos = alunos.filter((a) =>
+      [a.nome, a.telefone, a.turmas?.nome]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(lower))
+    )
+  }
+
+  const turmaOptions = ((turmasRaw ?? []) as { id: string; nome: string }[]).map((t) => ({
     value: t.id,
     label: t.nome,
   }))
 
-  let query = supabase
-    .from('alunos')
-    .select('id, nome, sexo, data_nascimento, status, turma_id, foto_url, turmas:turma_id ( nome )')
-    .order('nome')
-
-  if (status) query = query.eq('status', status)
-  if (turmaId) query = query.eq('turma_id', turmaId)
-
-  const { data } = await query
-
-  type AlunoRow = {
-    id: string; nome: string; sexo: string | null
-    data_nascimento: string | null; status: string
-    foto_url: string | null
-    turmas: { nome: string } | null
-  }
-  let alunos = (data ?? []) as unknown as AlunoRow[]
-
-  if (q) {
-    const lower = q.toLowerCase()
-    alunos = alunos.filter((a) => a.nome.toLowerCase().includes(lower))
-  }
-
   const filterFields = [
-    { type: 'search' as const, key: 'q', placeholder: 'Buscar por nome…' },
-    { type: 'select' as const, key: 'turma', placeholder: 'Todas as turmas', options: turmaOptions },
+    { type: 'search' as const, key: 'q', placeholder: 'Buscar atleta...' },
     {
       type: 'select' as const,
       key: 'status',
       placeholder: 'Todos os status',
       options: [
-        { value: 'ativo',    label: 'Ativo'    },
-        { value: 'inativo',  label: 'Inativo'  },
-        { value: 'suspenso', label: 'Suspenso' },
+        { value: 'ativo', label: 'Ativo' },
+        { value: 'inativo', label: 'Inativo' },
+        { value: 'desligado', label: 'Desligado' },
       ],
     },
+    ...(turmaOptions.length > 0
+      ? [{ type: 'select' as const, key: 'turma', placeholder: 'Todas as turmas', options: turmaOptions }]
+      : []),
   ]
 
-  const initialValues = { q, turma: turmaId, status }
+  const hasFilters = Boolean(q || status || turma)
 
   return (
     <div className="p-4 sm:p-8">
@@ -80,82 +82,48 @@ export default async function AlunosPage({
         subtitle={`${alunos.length} atleta${alunos.length !== 1 ? 's' : ''} encontrado${alunos.length !== 1 ? 's' : ''}`}
         action={
           <Link href="/alunos/novo">
-            <Button><Plus size={16} />Novo(a) Atleta</Button>
+            <Button><Plus size={16} />Novo Atleta</Button>
           </Link>
         }
       />
 
-      <FilterBar fields={filterFields} initialValues={initialValues} />
+      <FilterBar fields={filterFields} initialValues={{ q, status, turma }} />
 
-      <Card padding={false}>
-        {alunos.length === 0 ? (
+      {alunos.length === 0 ? (
+        <Card>
           <EmptyState
             icon={Users}
-            title="Nenhum(a) atleta encontrado(a)"
-            description={q || turmaId || status ? 'Tente ajustar os filtros' : 'Adicione o(a) primeiro(a) atleta ao sistema'}
-            action={
-              !q && !turmaId && !status
-                ? <Link href="/alunos/novo"><Button><Plus size={16} />Novo(a) Atleta</Button></Link>
-                : undefined
-            }
+            title="Nenhum atleta encontrado"
+            description={hasFilters ? 'Tente ajustar os filtros' : 'Cadastre o primeiro atleta para começar'}
+            action={!hasFilters ? <Link href="/alunos/novo"><Button><Plus size={16} />Novo Atleta</Button></Link> : undefined}
           />
-        ) : (
-          <>
-            {/* Mobile: card list */}
-            <div className="md:hidden divide-y divide-gray-100">
-              {alunos.map((a) => (
-                <Link key={a.id} href={`/alunos/${a.id}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                  <Avatar name={a.nome} url={a.foto_url} size={36} />
-                  <div className="flex-1 min-w-0">
+        </Card>
+      ) : (
+        <Card padding={false}>
+          <div className="divide-y divide-gray-100">
+            {alunos.map((a) => (
+              <Link
+                key={a.id}
+                href={`/alunos/${a.id}`}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <Avatar name={a.nome} url={a.foto_url} size={42} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-medium text-navy-500 truncate">{a.nome}</p>
-                    <p className="text-xs text-gray-400 truncate">
-                      {a.turmas?.nome ?? 'Sem turma'}{a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
-                    </p>
+                    <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
                   </div>
-                  <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
-                </Link>
-              ))}
-            </div>
-            {/* Desktop: table */}
-            <table className="hidden md:table w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="w-12 px-4 py-3" />
-                  <th className="text-left px-4 py-3 text-gray-500 font-medium">Nome</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-medium">Turma</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-medium">Sexo</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-medium">Idade</th>
-                  <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {alunos.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2.5">
-                      <Avatar name={a.nome} url={a.foto_url} size={32} />
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <Link href={`/alunos/${a.id}`} className="font-medium text-navy-500 hover:text-sky-400 transition-colors">
-                        {a.nome}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 text-gray-500">{a.turmas?.nome ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-gray-500">
-                      {a.sexo === 'M' ? 'Masc.' : a.sexo === 'F' ? 'Fem.' : a.sexo ?? '—'}
-                    </td>
-                    <td className="px-4 py-3.5 text-gray-500">
-                      {a.data_nascimento ? `${calcularIdade(a.data_nascimento)} anos` : '—'}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )}
-      </Card>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {a.turmas?.nome ?? 'Sem turma'}
+                    {a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
+                    {a.telefone ? ` · ${formatTelefone(a.telefone)}` : ''}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

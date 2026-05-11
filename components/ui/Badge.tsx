@@ -4,7 +4,7 @@ type BadgeVariant = 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'sky'
 
 const variants: Record<BadgeVariant, string> = {
   green:  'bg-green-100 text-green-700',
-  red:    'bg-brand-red-100 text-brand-red-500',
+  red:    'bg-red-100 text-red-500',
   yellow: 'bg-yellow-100 text-yellow-700',
   blue:   'bg-navy-100 text-navy-500',
   gray:   'bg-gray-100 text-gray-600',

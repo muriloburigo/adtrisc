@@ -49,6 +49,7 @@ export default async function AlunoTimeline({
       .from('avaliacoes_fisicas')
       .select('data')
       .eq('aluno_id', alunoId)
+      .is('deleted_at', null)
       .order('data', { ascending: false }),
   ])
 

@@ -5,125 +5,131 @@ import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
 
-export type EntradaCampo = { alunoId: string; value: number | null }
-
-const CAMPOS_DERIVADOS = ['altura_cm', 'altura_ao_quadrado', 'imc', 'rce'] as const
-
-const CAMPOS_PERMITIDOS = new Set([
-  'massa_corporal', 'estatura', 'perimetro_cintura', 'envergadura',
-  'estatura_sentado', 'sentar_alcancar', 'resistencia_6min',
-  'forca_abdominal', 'arremesso_medicineball', 'agilidade',
-  'salto_horizontal', 'corrida_20m', 'natacao_12min', 'observacoes',
-  'natacao_50m_livre', 'natacao_100m_livre', 'natacao_200m_livre',
-  'natacao_400m_livre', 'natacao_800m_livre', 'natacao_1500m_livre',
-  'natacao_50m_estilo', 'natacao_100m_estilo', 'natacao_200m_estilo',
-])
-
-async function recalcularDerived(
+export async function saveAvaliacao(formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  alunoIds: string[],
-  data: string,
-) {
-  const { data: rows } = await supabase
-    .from('avaliacoes_fisicas')
-    .select('aluno_id, massa_corporal, estatura, perimetro_cintura')
-    .in('aluno_id', alunoIds)
-    .eq('data', data)
+  const db = (await createClient()) as any
+  const actor = await requireStaff()
 
-  if (!rows?.length) return
+  const alunoId = formData.get('aluno_id') as string
+  const alunoNome = formData.get('aluno_nome') as string
 
-  for (const row of rows) {
-    const mc  = row.massa_corporal as number | null
-    const est = row.estatura      as number | null
-    const pc  = row.perimetro_cintura as number | null
-    if (mc == null || est == null || est === 0) continue
+  const massaCorporal = parseFloat(formData.get('massa_corporal') as string) || null
+  const estatura      = parseFloat(formData.get('estatura') as string) || null
+  const imc = massaCorporal && estatura ? parseFloat((massaCorporal / (estatura * estatura)).toFixed(2)) : null
 
-    const altura_cm         = +(est * 100).toFixed(1)
-    const altura_ao_quadrado = +(est * est).toFixed(6)
-    const imc               = +(mc / (est * est)).toFixed(2)
-    const rce               = pc != null ? +(pc / altura_cm).toFixed(4) : null
-
-    await supabase
-      .from('avaliacoes_fisicas')
-      .update({ altura_cm, altura_ao_quadrado, imc, rce })
-      .eq('aluno_id', row.aluno_id)
-      .eq('data', data)
+  const payload = {
+    aluno_id:          alunoId,
+    data:              formData.get('data') as string,
+    massa_corporal:    massaCorporal,
+    estatura:          estatura,
+    imc,
+    resistencia_6min:  parseInt(formData.get('resistencia_6min') as string) || null,
+    forca_abdominal:   parseInt(formData.get('forca_abdominal') as string) || null,
+    envergadura:       parseFloat(formData.get('envergadura') as string) || null,
+    impulsao_vertical: parseFloat(formData.get('impulsao_vertical') as string) || null,
+    velocidade_20m:    parseFloat(formData.get('velocidade_20m') as string) || null,
+    flexibilidade:     parseFloat(formData.get('flexibilidade') as string) || null,
+    observacoes:       (formData.get('observacoes') as string)?.trim() || null,
   }
+
+  const { data: result, error } = await db
+    .from('avaliacoes_fisicas').insert(payload).select('id').single()
+
+  if (error) throw new Error(error.message)
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'criar', resource: 'atleta',
+    resourceId: alunoId, resourceLabel: `Avaliação de ${alunoNome}`,
+    after: payload as Record<string, unknown>,
+  })
+
+  revalidatePath(`/alunos/${alunoId}/avaliacoes`)
+  revalidatePath('/avaliacoes')
+
+  return result?.id as string
 }
 
-export async function saveCampoParaTurma(
-  turmaId: string,
+export async function saveAvaliacaoField(
+  alunoId: string,
   data: string,
-  campo: string,
-  entries: EntradaCampo[],
-): Promise<{ error?: string }> {
-  if (!CAMPOS_PERMITIDOS.has(campo)) return { error: 'Campo inválido.' }
-
-  const actor = await requireStaff()
+  field: string,
+  value: string,
+) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = (await createClient()) as any
+  const db = (await createClient()) as any
+  await requireStaff()
 
-  // Upsert one row per aluno with just this field
-  const rows = entries.map((e) => ({
-    aluno_id:      e.alunoId,
-    data,
-    [campo]:       e.value,
-    avaliador_id:  actor.id,
-    updated_at:    new Date().toISOString(),
-  }))
+  const numValue = value === '' ? null : parseFloat(value) || parseInt(value) || null
 
-  const { error } = await supabase
+  // Check if record exists for this aluno+data (ignore soft-deleted)
+  const { data: existing } = await db
     .from('avaliacoes_fisicas')
-    .upsert(rows, { onConflict: 'aluno_id,data' })
+    .select('id, massa_corporal, estatura')
+    .eq('aluno_id', alunoId)
+    .eq('data', data)
+    .is('deleted_at', null)
+    .single()
 
-  if (error) return { error: error.message }
-
-  // Recalculate IMC / RCE / etc. when relevant measurement changes
-  if (['massa_corporal', 'estatura', 'perimetro_cintura'].includes(campo)) {
-    await recalcularDerived(supabase, entries.map((e) => e.alunoId), data)
+  if (existing) {
+    const update: Record<string, unknown> = { [field]: numValue }
+    // Recalculate IMC if weight or height changed
+    const massa = field === 'massa_corporal' ? numValue as number : existing.massa_corporal
+    const alt   = field === 'estatura'       ? numValue as number : existing.estatura
+    if (massa && alt) update.imc = parseFloat((massa / (alt * alt)).toFixed(2))
+    await db.from('avaliacoes_fisicas').update(update).eq('id', existing.id)
+  } else {
+    const insert: Record<string, unknown> = {
+      aluno_id: alunoId,
+      data,
+      [field]: numValue,
+    }
+    await db.from('avaliacoes_fisicas').insert(insert)
   }
 
-  revalidatePath(`/avaliacoes/${turmaId}/${data}`)
   revalidatePath('/avaliacoes')
-  return {}
+}
+
+export async function deleteAvaliacao(id: string, alunoId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = (await createClient()) as any
+  await requireStaff()
+  await db.from('avaliacoes_fisicas').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+  revalidatePath(`/alunos/${alunoId}/avaliacoes`)
+  revalidatePath('/avaliacoes')
 }
 
 export async function deleteAvaliacoes(
   turmaId: string,
   data: string,
   turmaNome: string,
-): Promise<{ error?: string }> {
-  try {
-    const actor = await requireStaff()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = (await createClient()) as any
+): Promise<{ error?: string } | void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = (await createClient()) as any
+  const actor = await requireStaff()
 
-    const { data: alunos } = await supabase
-      .from('alunos').select('id').eq('turma_id', turmaId)
-    const alunoIds = (alunos ?? []).map((a: { id: string }) => a.id)
+  // Get aluno IDs for this turma
+  const { data: alunosRaw } = await db
+    .from('alunos').select('id').eq('turma_id', turmaId).eq('status', 'ativo')
+  const alunoIds = (alunosRaw ?? []).map((a: { id: string }) => a.id)
 
-    if (alunoIds.length === 0) return {}
+  if (alunoIds.length === 0) return
 
-    const { error, count } = await supabase
-      .from('avaliacoes_fisicas')
-      .delete({ count: 'exact' })
-      .in('aluno_id', alunoIds)
-      .eq('data', data)
+  const { error } = await db
+    .from('avaliacoes_fisicas')
+    .update({ deleted_at: new Date().toISOString() })
+    .in('aluno_id', alunoIds)
+    .eq('data', data)
+    .is('deleted_at', null)
 
-    if (error) return { error: error.message }
-    if (count === 0) return { error: 'Nenhum registro foi excluído. Verifique as permissões no banco (RLS).' }
+  if (error) return { error: error.message }
 
-    await logAudit({
-      userId: actor.id, userName: actor.name,
-      action: 'excluir', resource: 'avaliacao' as never,
-      resourceId: `${turmaId}__${data}`,
-      resourceLabel: `${turmaNome} — ${data}`,
-    })
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'atleta',
+    resourceId: turmaId,
+    resourceLabel: `Avaliação ${turmaNome} — ${data}`,
+  })
 
-    revalidatePath('/avaliacoes')
-    return {}
-  } catch (e: unknown) {
-    return { error: e instanceof Error ? e.message : 'Erro ao excluir avaliação' }
-  }
+  revalidatePath('/avaliacoes')
 }

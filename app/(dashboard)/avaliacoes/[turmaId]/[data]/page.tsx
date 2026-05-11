@@ -29,7 +29,8 @@ export default async function AvaliacaoCampoPage({
         (await supabase.from('alunos').select('id').eq('turma_id', turmaId).eq('status', 'ativo'))
           .data?.map((a: { id: string }) => a.id) ?? [],
       )
-      .eq('data', data),
+      .eq('data', data)
+      .is('deleted_at', null),
   ])
 
   if (!turmaRaw) notFound()

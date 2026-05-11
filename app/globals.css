@@ -1,70 +1,19 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-
-  /* ADTRISC Brand Colors — RGB exato da identidade visual */
-  /* Navy: R12 G20 B61 */
+@theme {
   --color-navy-50:  #eeeef4;
   --color-navy-100: #c5c7d9;
   --color-navy-500: #0C143D;
   --color-navy-600: #0a1133;
-  --color-navy-700: #080d28;
-  --color-navy-800: #05091c;
-  --color-navy-900: #03050f;
 
-  /* Sky blue: R42 G171 B225 */
   --color-sky-50:  #e8f6fd;
   --color-sky-100: #bae5f8;
   --color-sky-400: #2AABE1;
   --color-sky-500: #1f96cc;
   --color-sky-600: #1680b0;
 
-  /* Red: R235 G33 B39 */
-  --color-brand-red-50:  #fdedef;
+  --color-red-500: #EB2127;
+
   --color-brand-red-100: #f9bbbf;
-  --color-brand-red-500: #EB2127;
-  --color-brand-red-600: #cc1a1f;
-}
-
-html {
-  overflow-x: hidden;
-  /* svh = small viewport height: altura com barra de URL visível (iOS Safari fix) */
-  height: -webkit-fill-available;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-  min-height: -webkit-fill-available;
-}
-
-a, button, [role="button"], select, label[for], summary {
-  cursor: pointer;
-}
-
-@media print {
-  aside,
-  header {
-    display: none !important;
-  }
-
-  main {
-    padding-top: 0 !important;
-    overflow: visible !important;
-  }
-
-  body {
-    background: white !important;
-  }
+  --color-brand-red-500: #eb2127;
 }

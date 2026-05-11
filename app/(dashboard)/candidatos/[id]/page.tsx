@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import { ChevronLeft, User, School, Heart, Bike, UserCheck } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { formatDate, formatTelefone } from '@/lib/utils'
 import StatusSelect from '../StatusSelect'
 import type { CandidatoRow, UserRole } from '@/types/database'
 
@@ -121,7 +121,7 @@ export default async function CandidatoDetailPage({
 
         <Section icon={UserCheck} title="Responsável Legal">
           <Row label="Nome" value={c.responsavel_nome} />
-          <Row label="Telefone / WhatsApp" value={c.responsavel_telefone} />
+          <Row label="Telefone / WhatsApp" value={formatTelefone(c.responsavel_telefone)} />
           <Row label="E-mail do responsável" value={c.responsavel_email} />
           <Row label="E-mail de inscrição" value={c.email_responsavel} />
         </Section>

@@ -16,11 +16,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single()
 
   return (
-    <div className="flex h-screen h-[100svh] bg-gray-50">
+    <div className="flex h-screen h-[100svh] bg-gray-50 print:h-auto print:block">
       <Sidebar user={profile} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden print:overflow-visible">
         <MobileHeader user={profile} />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0 print:overflow-visible print:h-auto print:pt-0">
           {children}
         </main>
       </div>

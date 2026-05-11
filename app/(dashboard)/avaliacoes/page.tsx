@@ -92,6 +92,7 @@ export default async function AvaliacoesHubPage({
   let histQuery: any = supabase
     .from('avaliacoes_fisicas')
     .select('aluno_id, data')
+    .is('deleted_at', null)
     .order('data', { ascending: false })
     .limit(2000)
     .in('aluno_id', alunoIdsFiltro.length > 0 ? alunoIdsFiltro : ['__none__'])

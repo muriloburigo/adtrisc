@@ -7,7 +7,7 @@ export type AuditAction =
   | 'criar' | 'editar' | 'excluir' | 'senha' | 'status' | 'sorteio'
 
 export type AuditResource =
-  | 'turma' | 'atleta' | 'treinador' | 'candidato' | 'usuario'
+  | 'turma' | 'atleta' | 'treinador' | 'candidato' | 'usuario' | 'presenca'
 
 export interface AuditParams {
   userId:        string
@@ -36,19 +36,20 @@ export async function logAudit(params: AuditParams): Promise<void> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createAdminClient() as any
-    await admin.from('audit_logs').insert({
+    const { error } = await admin.from('audit_logs').insert({
       user_id:        params.userId   || null,
       user_name:      params.userName,
       action:         params.action,
       resource:       params.resource,
       resource_id:    params.resourceId,
       resource_label: params.resourceLabel ?? null,
-      before_data:    sanitize(params.before),
-      after_data:     sanitize(params.after),
+      before_data:    sanitize(params.before) ?? {},
+      after_data:     sanitize(params.after)  ?? {},
       metadata:       params.metadata ?? null,
     })
-  } catch {
-    // Audit logging must never fail the main operation
+    if (error) console.error('[audit]', error.message)
+  } catch (e) {
+    console.error('[audit] unexpected error:', e)
   }
 }
 

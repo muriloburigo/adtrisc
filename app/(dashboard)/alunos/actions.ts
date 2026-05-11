@@ -11,28 +11,42 @@ import type { AlunoStatus, Parentesco, SexoEnum } from '@/types/database'
 async function upsertResponsavel(db: any, alunoId: string, formData: FormData, parentesco: Parentesco) {
   const prefix = parentesco === 'mae' ? 'mae_' : 'pai_'
   const nome = (formData.get(`${prefix}nome`) as string)?.trim()
-  if (!nome) return
 
-  const { data: resp, error } = await db
-    .from('responsaveis')
-    .insert({
-      nome,
-      cpf:        (formData.get(`${prefix}cpf`) as string) || null,
-      rg:         (formData.get(`${prefix}rg`) as string) || null,
-      email:      (formData.get(`${prefix}email`) as string) || null,
-      telefone:   (formData.get(`${prefix}telefone`) as string) || null,
-      parentesco,
+  const payload = {
+    nome: nome || null,
+    cpf:        (formData.get(`${prefix}cpf`) as string) || null,
+    rg:         (formData.get(`${prefix}rg`) as string) || null,
+    email:      (formData.get(`${prefix}email`) as string) || null,
+    telefone:   (formData.get(`${prefix}telefone`) as string) || null,
+    parentesco,
+  }
+
+  // Find existing link for this aluno+parentesco
+  const { data: links } = await db
+    .from('aluno_responsavel')
+    .select('responsavel_id, responsaveis(id, parentesco)')
+    .eq('aluno_id', alunoId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const existingLink = (links ?? []).find((l: any) => l.responsaveis?.parentesco === parentesco)
+
+  if (existingLink) {
+    if (!nome) return // nothing to update
+    await db.from('responsaveis').update(payload).eq('id', existingLink.responsavel_id)
+  } else {
+    if (!nome) return // nothing to insert
+    const { data: resp, error } = await db
+      .from('responsaveis')
+      .insert(payload)
+      .select('id')
+      .single()
+    if (error || !resp) return
+    await db.from('aluno_responsavel').insert({
+      aluno_id: alunoId,
+      responsavel_id: resp.id,
+      principal: parentesco === 'mae',
     })
-    .select('id')
-    .single()
-
-  if (error || !resp) return
-
-  await db.from('aluno_responsavel').insert({
-    aluno_id: alunoId,
-    responsavel_id: resp.id,
-    principal: parentesco === 'mae',
-  })
+  }
 }
 
 export async function createAluno(formData: FormData) {
@@ -115,6 +129,9 @@ export async function updateAluno(id: string, formData: FormData) {
   const { error } = await db.from('alunos').update(payload).eq('id', id)
 
   if (error) throw new Error(error.message)
+
+  await upsertResponsavel(db, id, formData, 'mae')
+  await upsertResponsavel(db, id, formData, 'pai')
 
   const hoje = new Date().toISOString().slice(0, 10)
 

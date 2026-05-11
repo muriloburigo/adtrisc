@@ -80,7 +80,7 @@ export default function AttendanceChecklist({
     })
     startTransition(async () => {
       try {
-        const result = await savePresencas(turmaId, data, entries)
+        const result = await savePresencas(turmaId, data, entries, turmaNome)
         if (result?.error) {
           setSaveError(result.error)
         } else {

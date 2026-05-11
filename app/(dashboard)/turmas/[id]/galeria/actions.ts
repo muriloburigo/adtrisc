@@ -4,91 +4,51 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireStaff } from '@/lib/assert'
 
-const BUCKET = 'avatars'
-
-export async function addTurmaFoto(
-  turmaId: string,
-  formData: FormData,
-): Promise<{ error?: string }> {
-  let actor: { id: string; name: string }
-  try { actor = await requireStaff() }
-  catch { return { error: 'Sem permissão.' } }
-
-  const file     = formData.get('file') as File | null
-  const titulo   = (formData.get('titulo') as string | null)?.trim()
-  const data     = (formData.get('data') as string | null)
-  const fileHash = (formData.get('file_hash') as string | null) || null
-
-  if (!file || file.size === 0) return { error: 'Selecione uma imagem.' }
-  if (!titulo) return { error: 'Informe um título.' }
-  if (!data) return { error: 'Informe a data.' }
-  if (file.size > 15 * 1024 * 1024) return { error: 'Imagem muito grande (máx 15 MB).' }
-
+export async function addFotoTurma(formData: FormData) {
+  await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createAdminClient() as any
 
-  if (fileHash) {
-    const { data: existing } = await admin
-      .from('turma_fotos')
-      .select('id')
-      .eq('turma_id', turmaId)
-      .eq('file_hash', fileHash)
-      .maybeSingle()
-    if (existing) return { error: 'Esta foto já foi publicada nesta turma.' }
+  const turmaId = formData.get('turma_id') as string
+  const titulo  = (formData.get('titulo') as string)?.trim()
+  const data    = formData.get('data') as string
+  const file    = formData.get('file') as File | null
+
+  if (!turmaId || !titulo || !data || !file || file.size === 0) return
+
+  const ext  = file.name.split('.').pop() ?? 'jpg'
+  const path = `turmas/${turmaId}/${Date.now()}.${ext}`
+
+  const { error: uploadError } = await admin.storage
+    .from('fotos')
+    .upload(path, file, { contentType: file.type, upsert: false })
+
+  if (uploadError) {
+    console.error('[addFotoTurma] upload error:', uploadError.message)
+    return
   }
 
-  const ext = file.type === 'image/png' ? 'png' : 'jpg'
-  const storagePath = `turmas/${crypto.randomUUID()}.${ext}`
+  const { data: urlData } = admin.storage.from('fotos').getPublicUrl(path)
+  const url = urlData?.publicUrl as string
 
-  const buffer = Buffer.from(await file.arrayBuffer())
-
-  const { error: uploadErr } = await admin.storage
-    .from(BUCKET)
-    .upload(storagePath, buffer, {
-      contentType: file.type,
-      upsert: false,
-      cacheControl: '31536000',
-    })
-
-  if (uploadErr) return { error: uploadErr.message }
-
-  const { data: { publicUrl } } = admin.storage.from(BUCKET).getPublicUrl(storagePath)
-
-  const { error: insertErr } = await admin.from('turma_fotos').insert({
+  await admin.from('turma_fotos').insert({
     turma_id: turmaId,
-    url: publicUrl,
-    storage_path: storagePath,
     titulo,
     data,
-    uploaded_by: actor.id,
-    file_hash: fileHash,
+    url,
+    storage_path: path,
   })
 
-  if (insertErr) {
-    await admin.storage.from(BUCKET).remove([storagePath])
-    return { error: insertErr.message }
-  }
-
   revalidatePath(`/turmas/${turmaId}`)
-  return {}
 }
 
-export async function deleteTurmaFoto(
-  fotoId: string,
-  storagePath: string,
-  turmaId: string,
-): Promise<{ error?: string }> {
-  try { await requireStaff() }
-  catch { return { error: 'Sem permissão.' } }
-
+export async function deleteFotoTurma(fotoId: string, storagePath: string, turmaId: string) {
+  await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createAdminClient() as any
 
-  const { error } = await admin.from('turma_fotos').delete().eq('id', fotoId)
-  if (error) return { error: error.message }
-
-  await admin.storage.from(BUCKET).remove([storagePath])
+  await admin.storage.from('fotos').remove([storagePath])
+  await admin.from('turma_fotos').delete().eq('id', fotoId)
 
   revalidatePath(`/turmas/${turmaId}`)
-  return {}
 }

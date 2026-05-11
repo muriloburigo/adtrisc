@@ -23,11 +23,20 @@ export async function savePresencas(
   turmaId: string,
   data: string,
   entries: EntradaPresenca[],
+  turmaNome: string,
 ): Promise<{ error?: string }> {
   try {
     const actor = await requireStaff()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
+
+    // Determine if this is a new session or an update (ignore soft-deleted rows)
+    const { count: existing } = await supabase
+      .from('presencas')
+      .select('*', { count: 'exact', head: true })
+      .eq('turma_id', turmaId)
+      .eq('data', data)
+      .is('deleted_at', null)
 
     const rows = entries.map((e) => ({
       turma_id: turmaId,
@@ -44,6 +53,19 @@ export async function savePresencas(
       .upsert(rows, { onConflict: 'turma_id,aluno_id,data' })
 
     if (error) return { error: error.message }
+
+    const presentes    = entries.filter((e) => e.presente).length
+    const faltas       = entries.filter((e) => !e.presente && !e.justificada).length
+    const justificadas = entries.filter((e) => !e.presente && e.justificada).length
+
+    await logAudit({
+      userId: actor.id, userName: actor.name,
+      action: existing ? 'editar' : 'criar',
+      resource: 'presenca',
+      resourceId: `${turmaId}__${data}`,
+      resourceLabel: `${turmaNome} — ${data}`,
+      metadata: { total: entries.length, presentes, faltas, justificadas },
+    })
 
     revalidatePath(`/presencas/${turmaId}/${data}`)
     revalidatePath('/presencas')
@@ -63,18 +85,27 @@ export async function deletePresencas(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await createClient()) as any
 
-    const { error, count } = await supabase
+    const { count: total } = await supabase
       .from('presencas')
-      .delete({ count: 'exact' })
+      .select('*', { count: 'exact', head: true })
       .eq('turma_id', turmaId)
       .eq('data', data)
+      .is('deleted_at', null)
+
+    if ((total ?? 0) === 0) return { error: 'Nenhum registro encontrado para excluir.' }
+
+    const { error } = await supabase
+      .from('presencas')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('turma_id', turmaId)
+      .eq('data', data)
+      .is('deleted_at', null)
 
     if (error) return { error: error.message }
-    if (count === 0) return { error: 'Nenhum registro foi excluído. Verifique as permissões no banco (RLS).' }
 
     await logAudit({
       userId: actor.id, userName: actor.name,
-      action: 'excluir', resource: 'presenca' as never,
+      action: 'excluir', resource: 'presenca',
       resourceId: `${turmaId}__${data}`,
       resourceLabel: `${turmaNome} — ${data}`,
     })

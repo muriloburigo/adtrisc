@@ -23,7 +23,7 @@ export default async function PresencaChecklistPage({
   const [{ data: turmaRaw }, { data: alunosRaw }, { data: presencasRaw }] = await Promise.all([
     supabase.from('turmas').select('id, nome, modalidade').eq('id', turmaId).single(),
     supabase.from('alunos').select('id, nome').eq('turma_id', turmaId).eq('status', 'ativo').order('nome'),
-    supabase.from('presencas').select('*').eq('turma_id', turmaId).eq('data', data),
+    supabase.from('presencas').select('*').eq('turma_id', turmaId).eq('data', data).is('deleted_at', null),
   ])
 
   if (!turmaRaw) notFound()

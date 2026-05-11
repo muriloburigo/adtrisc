@@ -33,14 +33,14 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from('alunos').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
     supabase.from('turmas').select('*', { count: 'exact', head: true }).eq('status', 'ativa'),
-    supabase.from('avaliacoes_fisicas').select('*', { count: 'exact', head: true }),
+    supabase.from('avaliacoes_fisicas').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('turmas').select('id, nome, modalidade, status, dias_semana, horario_inicio, horario_fim, capacidade, coaches:coach_id ( full_name )').eq('status', 'ativa').order('nome'),
     supabase.from('alunos').select('turma_id').eq('status', 'ativo').not('turma_id', 'is', null),
     // sessoes do mês (para contar)
-    supabase.from('presencas').select('turma_id, data').gte('data', dataCorte),
+    supabase.from('presencas').select('turma_id, data').gte('data', dataCorte).is('deleted_at', null),
     supabase.from('alunos').select('id, nome, data_nascimento, turmas:turma_id ( nome )').order('created_at', { ascending: false }).limit(5),
     // sessoes recentes para o painel
-    supabase.from('presencas').select('turma_id, data, presente, turmas!inner(nome)').order('data', { ascending: false }).limit(300),
+    supabase.from('presencas').select('turma_id, data, presente, turmas!inner(nome)').is('deleted_at', null).order('data', { ascending: false }).limit(300),
   ])
 
   // Contagem de atletas por turma
@@ -118,18 +118,22 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {turmas.map((t) => {
                 const ativos = atletasMap[t.id] ?? 0
-                const pct    = t.capacidade > 0 ? Math.min((ativos / t.capacidade) * 100, 100) : 0
-                const cheia  = ativos >= t.capacidade
-                const quase  = !cheia && pct >= 80
-                const barColor  = cheia ? 'bg-red-400' : quase ? 'bg-amber-400' : 'bg-emerald-400'
-                const textColor = cheia ? 'text-red-500' : quase ? 'text-amber-500' : 'text-emerald-600'
+                const pct    = t.capacidade > 0 ? (ativos / t.capacidade) * 100 : 0
+                const acima  = ativos > t.capacidade
+                const exata  = ativos === t.capacidade
+                const quase  = !acima && !exata && pct >= 80
+                const barColor  = acima ? 'bg-red-400' : exata ? 'bg-emerald-400' : quase ? 'bg-amber-400' : 'bg-emerald-400'
+                const textColor = acima ? 'text-red-500' : exata ? 'text-emerald-600' : quase ? 'text-amber-500' : 'text-emerald-600'
                 return (
                   <Link key={t.id} href={`/turmas/${t.id}`}>
                     <Card className="hover:border-sky-400 hover:shadow-sm transition-all cursor-pointer h-full">
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <p className="font-semibold text-navy-500 text-sm leading-tight">{t.nome}</p>
-                        {cheia && (
-                          <span className="flex-shrink-0 text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">Lotada</span>
+                        {exata && (
+                          <span className="flex-shrink-0 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Completa</span>
+                        )}
+                        {acima && (
+                          <span className="flex-shrink-0 text-[10px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">Acima da cap.</span>
                         )}
                       </div>
                       <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-2">{t.modalidade}</p>

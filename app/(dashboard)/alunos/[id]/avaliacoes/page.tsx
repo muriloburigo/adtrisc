@@ -33,6 +33,7 @@ export default async function AvaliacoesPage({ params }: { params: Promise<{ id:
       .from('avaliacoes_fisicas')
       .select('*')
       .eq('aluno_id', id)
+      .is('deleted_at', null)
       .order('data', { ascending: false }),
   ])
 

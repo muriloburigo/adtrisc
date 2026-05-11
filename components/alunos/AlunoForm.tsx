@@ -1,54 +1,30 @@
 'use client'
 
-import { useState } from 'react'
-import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
-import Button from '@/components/ui/Button'
-import AvatarUpload from '@/components/ui/AvatarUpload'
-import type { Database, AlunoStatus } from '@/types/database'
+import { useTransition } from 'react'
 
-type Aluno = Database['public']['Tables']['alunos']['Row']
 type Turma = { id: string; nome: string }
-type Responsavel = Database['public']['Tables']['responsaveis']['Row']
 
-const STATUS_OPTIONS: { value: AlunoStatus; label: string }[] = [
-  { value: 'ativo',    label: 'Ativo' },
-  { value: 'inativo',  label: 'Inativo' },
-  { value: 'suspenso', label: 'Suspenso' },
-]
-
-function ResponsavelSection({
-  prefix,
-  title,
-  data,
-}: {
-  prefix: 'mae' | 'pai'
-  title: string
-  data?: Responsavel
-}) {
-  return (
-    <div className="border border-gray-200 rounded-xl p-5 space-y-4">
-      <h3 className="text-sm font-semibold text-navy-500 uppercase tracking-wide">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <Input label="Nome completo" name={`${prefix}_nome`} defaultValue={data?.nome} placeholder="Nome do responsável" />
-        </div>
-        <Input label="CPF" name={`${prefix}_cpf`} defaultValue={data?.cpf ?? ''} placeholder="000.000.000-00" />
-        <Input label="RG" name={`${prefix}_rg`} defaultValue={data?.rg ?? ''} placeholder="0000000" />
-        <Input label="E-mail" name={`${prefix}_email`} type="email" defaultValue={data?.email ?? ''} placeholder="email@exemplo.com" />
-        <Input label="Telefone" name={`${prefix}_telefone`} defaultValue={data?.telefone ?? ''} placeholder="(48) 99999-9999" />
-      </div>
-    </div>
-  )
+type AlunoData = {
+  turma_id?: string | null
+  nome?: string | null
+  telefone?: string | null
+  sexo?: string | null
+  data_nascimento?: string | null
+  rua?: string | null
+  numero?: string | null
+  bairro?: string | null
+  cep?: string | null
+  cidade?: string | null
+  observacoes?: string | null
+  status?: string | null
 }
 
-async function buscarCep(cep: string): Promise<{ logradouro: string; bairro: string; localidade: string } | null> {
-  const clean = cep.replace(/\D/g, '')
-  if (clean.length !== 8) return null
-  const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`)
-  const data = await res.json()
-  if (data.erro) return null
-  return data
+type RespData = {
+  nome?: string | null
+  cpf?: string | null
+  rg?: string | null
+  email?: string | null
+  telefone?: string | null
 }
 
 export default function AlunoForm({
@@ -59,158 +35,189 @@ export default function AlunoForm({
   pai,
   submitLabel = 'Salvar',
 }: {
-  action: (formData: FormData) => Promise<void>
-  aluno?: Aluno
+  action: (fd: FormData) => Promise<void> | void
+  aluno?: AlunoData
   turmas: Turma[]
-  mae?: Responsavel
-  pai?: Responsavel
+  mae?: RespData
+  pai?: RespData
   submitLabel?: string
 }) {
-  const [fotoUrl, setFotoUrl] = useState(aluno?.foto_url ?? '')
-  const [cep, setCep] = useState(aluno?.cep ?? '')
-  const [rua, setRua] = useState(aluno?.rua ?? '')
-  const [bairro, setBairro] = useState(aluno?.bairro ?? '')
-  const [cidade, setCidade] = useState(aluno?.cidade ?? '')
-  const [buscandoCep, setBuscandoCep] = useState(false)
+  const [pending, startTransition] = useTransition()
 
-  async function handleCepBlur() {
-    if (cep.replace(/\D/g, '').length !== 8) return
-    setBuscandoCep(true)
-    const dados = await buscarCep(cep)
-    if (dados) {
-      setRua(dados.logradouro)
-      setBairro(dados.bairro)
-      setCidade(dados.localidade)
-    }
-    setBuscandoCep(false)
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    startTransition(async () => { await action(fd) })
   }
 
+  const labelClass = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5'
+  const inputClass = 'w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white'
+  const sectionClass = 'space-y-4 border border-gray-100 rounded-2xl p-5 mb-6'
+  const sectionTitleClass = 'text-sm font-semibold text-navy-500 mb-4 pb-2 border-b border-gray-100'
+
   return (
-    <form action={action} className="space-y-8">
-      <input type="hidden" name="foto_url" value={fotoUrl} />
+    <form onSubmit={handleSubmit} className="space-y-0">
+      {/* Dados do atleta */}
+      <div className={sectionClass}>
+        <h3 className={sectionTitleClass}>Dados do Atleta</h3>
 
-      {/* Foto */}
-      <div className="border border-gray-200 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-navy-500 uppercase tracking-wide mb-4">Foto</h3>
-        <AvatarUpload
-          folder="alunos"
-          currentUrl={aluno?.foto_url}
-          name={aluno?.nome ?? 'A'}
-          onUpload={(url) => setFotoUrl(url)}
-        />
-      </div>
-
-      {/* Dados pessoais */}
-      <div className="border border-gray-200 rounded-xl p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-navy-500 uppercase tracking-wide">Dados do Participante</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <Input label="Nome completo" name="nome" defaultValue={aluno?.nome} placeholder="Nome do(a) atleta" required />
-          </div>
-
-          <Select
-            label="Turma"
-            name="turma_id"
-            defaultValue={aluno?.turma_id ?? ''}
-            placeholder="Selecione a turma..."
-            options={turmas.map((t) => ({ value: t.id, label: t.nome }))}
+        <div>
+          <label className={labelClass}>Nome completo *</label>
+          <input
+            name="nome"
             required
+            defaultValue={aluno?.nome ?? ''}
+            placeholder="Nome completo"
+            className={inputClass}
           />
+        </div>
 
-          <Input label="Telefone" name="telefone" defaultValue={aluno?.telefone ?? ''} placeholder="(48) 99999-9999" />
-
-          <Select
-            label="Sexo"
-            name="sexo"
-            defaultValue={aluno?.sexo ?? ''}
-            placeholder="Selecione..."
-            options={[
-              { value: 'M', label: 'Masculino' },
-              { value: 'F', label: 'Feminino' },
-              { value: 'outro', label: 'Outro' },
-            ]}
-          />
-
-          <Input label="Data de nascimento" name="data_nascimento" type="date" defaultValue={aluno?.data_nascimento ?? ''} />
-
-          {aluno && (
-            <Select
-              label="Status"
-              name="status"
-              defaultValue={aluno.status}
-              options={STATUS_OPTIONS}
-              required
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Sexo biológico</label>
+            <select name="sexo" defaultValue={aluno?.sexo ?? ''} className={inputClass}>
+              <option value="">Selecionar</option>
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Data de nascimento</label>
+            <input
+              name="data_nascimento"
+              type="date"
+              defaultValue={aluno?.data_nascimento ?? ''}
+              className={inputClass}
             />
-          )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Turma *</label>
+            <select name="turma_id" required defaultValue={aluno?.turma_id ?? ''} className={inputClass}>
+              <option value="">Selecionar turma</option>
+              {turmas.map((t) => (
+                <option key={t.id} value={t.id}>{t.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Telefone / WhatsApp</label>
+            <input
+              name="telefone"
+              type="tel"
+              defaultValue={aluno?.telefone ?? ''}
+              placeholder="(48) 99999-9999"
+              className={inputClass}
+            />
+          </div>
         </div>
       </div>
 
       {/* Endereço */}
-      <div className="border border-gray-200 rounded-xl p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-navy-500 uppercase tracking-wide">Endereço</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Input
-            label="CEP"
-            name="cep"
-            value={cep}
-            onChange={(e) => setCep(e.target.value)}
-            onBlur={handleCepBlur}
-            placeholder="00000-000"
-            hint={buscandoCep ? 'Buscando...' : undefined}
-          />
+      <div className={sectionClass}>
+        <h3 className={sectionTitleClass}>Endereço</h3>
 
-          <div className="md:col-span-2">
-            <Input
-              label="Rua"
-              name="rua"
-              value={rua}
-              onChange={(e) => setRua(e.target.value)}
-              placeholder="Nome da rua"
-            />
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2">
+            <label className={labelClass}>Rua / Av.</label>
+            <input name="rua" defaultValue={aluno?.rua ?? ''} placeholder="Rua das Flores" className={inputClass} />
           </div>
+          <div>
+            <label className={labelClass}>Número</label>
+            <input name="numero" defaultValue={aluno?.numero ?? ''} placeholder="123" className={inputClass} />
+          </div>
+        </div>
 
-          <Input label="Número" name="numero" defaultValue={aluno?.numero ?? ''} placeholder="123" />
-
-          <Input
-            label="Bairro"
-            name="bairro"
-            value={bairro}
-            onChange={(e) => setBairro(e.target.value)}
-            placeholder="Nome do bairro"
-          />
-
-          <Input
-            label="Cidade"
-            name="cidade"
-            value={cidade}
-            onChange={(e) => setCidade(e.target.value)}
-            placeholder="Nome da cidade"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className={labelClass}>Bairro</label>
+            <input name="bairro" defaultValue={aluno?.bairro ?? ''} placeholder="Centro" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>CEP</label>
+            <input name="cep" defaultValue={aluno?.cep ?? ''} placeholder="88000-000" className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Cidade</label>
+            <input name="cidade" defaultValue={aluno?.cidade ?? ''} placeholder="Florianópolis" className={inputClass} />
+          </div>
         </div>
       </div>
 
-      {/* Responsáveis */}
-      <ResponsavelSection prefix="mae" title="Mãe" data={mae} />
-      <ResponsavelSection prefix="pai" title="Pai" data={pai} />
+      {/* Responsável - Mãe */}
+      <div className={sectionClass}>
+        <h3 className={sectionTitleClass}>Responsável — Mãe / Feminino</h3>
+        <ResponsavelFields prefix="mae" data={mae} inputClass={inputClass} labelClass={labelClass} />
+      </div>
+
+      {/* Responsável - Pai */}
+      <div className={sectionClass}>
+        <h3 className={sectionTitleClass}>Responsável — Pai / Masculino</h3>
+        <ResponsavelFields prefix="pai" data={pai} inputClass={inputClass} labelClass={labelClass} />
+      </div>
 
       {/* Observações */}
-      <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">Observações</label>
+      <div className={sectionClass}>
+        <h3 className={sectionTitleClass}>Observações</h3>
         <textarea
           name="observacoes"
-          defaultValue={aluno?.observacoes ?? ''}
           rows={3}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"
-          placeholder="Informações de saúde, restrições, observações gerais..."
+          defaultValue={aluno?.observacoes ?? ''}
+          placeholder="Informações adicionais, alergias, necessidades especiais…"
+          className={inputClass}
         />
       </div>
 
-      <div className="flex gap-3">
-        <Button type="submit">{submitLabel}</Button>
-        <Button type="button" variant="secondary" onClick={() => history.back()}>
-          Cancelar
-        </Button>
-      </div>
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-full bg-sky-400 hover:bg-sky-500 text-white font-semibold rounded-xl py-3 transition-colors disabled:opacity-60"
+      >
+        {pending ? 'Salvando…' : submitLabel}
+      </button>
     </form>
+  )
+}
+
+function ResponsavelFields({
+  prefix,
+  data,
+  inputClass,
+  labelClass,
+}: {
+  prefix: string
+  data?: RespData
+  inputClass: string
+  labelClass: string
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Nome</label>
+          <input name={`${prefix}_nome`} defaultValue={data?.nome ?? ''} placeholder="Nome do responsável" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Telefone / WhatsApp</label>
+          <input name={`${prefix}_telefone`} type="tel" defaultValue={data?.telefone ?? ''} placeholder="(48) 99999-9999" className={inputClass} />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>E-mail</label>
+          <input name={`${prefix}_email`} type="email" defaultValue={data?.email ?? ''} placeholder="email@exemplo.com" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>CPF</label>
+          <input name={`${prefix}_cpf`} defaultValue={data?.cpf ?? ''} placeholder="000.000.000-00" className={inputClass} />
+        </div>
+      </div>
+      <div>
+        <label className={labelClass}>RG</label>
+        <input name={`${prefix}_rg`} defaultValue={data?.rg ?? ''} placeholder="0000000" className={inputClass} />
+      </div>
+    </div>
   )
 }

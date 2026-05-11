@@ -1,14 +1,17 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/layout/PageHeader'
+import BackButton from '@/components/ui/BackButton'
 import Card from '@/components/ui/Card'
 import Badge, { statusAlunoVariant } from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import AlunoTimeline from './AlunoTimeline'
+import FichaSection from './FichaSection'
 import { Pencil, User, MapPin, Phone, Users2, ClipboardList } from 'lucide-react'
-import { formatDate, calcularIdade } from '@/lib/utils'
+import { formatDate, calcularIdade, formatTelefone } from '@/lib/utils'
 import type { AlunoRow, ResponsavelRow } from '@/types/database'
 
 type AlunoWithTurma = AlunoRow & { turmas: { id: string; nome: string } | null }
@@ -17,27 +20,44 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
   const { id } = await params
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const adminDb = createAdminClient() as any
 
-  const [{ data: alunoRaw }, { data: respsRaw }] = await Promise.all([
+  const [{ data: alunoRaw }, { data: respsRaw }, { data: fichasRaw }] = await Promise.all([
     supabase.from('alunos').select('*, turmas:turma_id ( id, nome )').eq('id', id).single(),
-    supabase
+    adminDb
       .from('responsaveis')
       .select('*, aluno_responsavel!inner(aluno_id)')
       .eq('aluno_responsavel.aluno_id', id),
+    adminDb
+      .from('fichas_inscricao')
+      .select('id, token, status, gerado_em, preenchido_em, expires_at')
+      .eq('aluno_id', id)
+      .order('created_at', { ascending: false }),
   ])
 
   if (!alunoRaw) notFound()
 
   const a = alunoRaw as AlunoWithTurma
-  const resps = (respsRaw ?? []) as ResponsavelRow[]
+
+  // Deduplicate by parentesco — keep one entry per type (mae/pai/outro)
+  const seenParentesco = new Set<string>()
+  const resps: ResponsavelRow[] = []
+  for (const r of (respsRaw ?? []) as ResponsavelRow[]) {
+    if (r && !seenParentesco.has(r.parentesco)) {
+      seenParentesco.add(r.parentesco)
+      resps.push(r)
+    }
+  }
 
   return (
     <div className="p-4 sm:p-8">
+      <BackButton />
       <PageHeader
         title={a.nome}
         subtitle={a.turmas?.nome ?? ''}
         action={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link href={`/alunos/${id}/avaliacoes`}>
               <Button variant="secondary"><ClipboardList size={15} />Avaliações</Button>
             </Link>
@@ -90,7 +110,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
               </div>
               <div>
                 <dt className="text-gray-400 text-xs">Telefone</dt>
-                <dd className="text-gray-800 mt-0.5">{a.telefone ?? '—'}</dd>
+                <dd className="text-gray-800 mt-0.5">{formatTelefone(a.telefone)}</dd>
               </div>
               <div>
                 <dt className="text-gray-400 text-xs">Cadastro</dt>
@@ -140,7 +160,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
                     <p className="text-gray-700 mt-0.5">{r.nome}</p>
                     {r.telefone && (
                       <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1">
-                        <Phone size={11} />{r.telefone}
+                        <Phone size={11} />{formatTelefone(r.telefone)}
                       </p>
                     )}
                     {r.email && <p className="text-gray-400 text-xs">{r.email}</p>}
@@ -149,6 +169,14 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
                 ))}
               </div>
             )}
+          </Card>
+
+          <Card>
+            <FichaSection
+              alunoId={id}
+              fichas={fichasRaw ?? []}
+              responsaveis={resps.map(r => ({ nome: r.nome ?? '', telefone: r.telefone ?? null, email: r.email ?? null }))}
+            />
           </Card>
 
           <Card>

@@ -143,11 +143,12 @@ export default async function TurmasPage({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {turmas.map((t) => {
             const ativos = atletasMap[t.id] ?? 0
-            const pct    = t.capacidade > 0 ? Math.min((ativos / t.capacidade) * 100, 100) : 0
-            const cheia  = ativos >= t.capacidade
-            const quase  = !cheia && pct >= 80
-            const barColor = cheia ? 'bg-red-400' : quase ? 'bg-amber-400' : 'bg-emerald-400'
-            const textColor = cheia ? 'text-red-500' : quase ? 'text-amber-500' : 'text-emerald-600'
+            const pct    = t.capacidade > 0 ? (ativos / t.capacidade) * 100 : 0
+            const acima  = ativos > t.capacidade
+            const exata  = ativos === t.capacidade
+            const quase  = !acima && !exata && pct >= 80
+            const barColor  = acima ? 'bg-red-400' : exata ? 'bg-emerald-400' : quase ? 'bg-amber-400' : 'bg-emerald-400'
+            const textColor = acima ? 'text-red-500' : exata ? 'text-emerald-600' : quase ? 'text-amber-500' : 'text-emerald-600'
 
             return (
             <Link key={t.id} href={`/turmas/${t.id}`}>
@@ -172,7 +173,8 @@ export default async function TurmasPage({
                     <Users size={14} className="text-sky-400" />
                     <span className={`font-medium ${textColor}`}>{ativos}</span>
                     <span className="text-gray-400">/ {t.capacidade} atletas</span>
-                    {cheia && <span className="text-xs font-semibold text-red-500 ml-auto">Lotada</span>}
+                    {exata && <span className="text-xs font-semibold text-emerald-600 ml-auto">Completa</span>}
+                    {acima && <span className="text-xs font-semibold text-red-500 ml-auto">Acima da cap.</span>}
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
                     <div
