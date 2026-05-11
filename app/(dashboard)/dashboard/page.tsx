@@ -27,20 +27,20 @@ export default async function DashboardPage() {
     { count: totalAvaliacoes },
     { data: turmasRaw },
     { data: atletasRaw },
-    { data: presencasRaw },
+    { data: presencasCountRaw },
     { data: ultimosAtletasRaw },
     { data: sessoesRaw },
   ] = await Promise.all([
-    supabase.from('alunos').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
-    supabase.from('turmas').select('*', { count: 'exact', head: true }).eq('status', 'ativa'),
-    supabase.from('avaliacoes_fisicas').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase.from('alunos').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
+    supabase.from('turmas').select('id', { count: 'exact', head: true }).eq('status', 'ativa'),
+    supabase.from('avaliacoes_fisicas').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('turmas').select('id, nome, modalidade, status, dias_semana, horario_inicio, horario_fim, capacidade, coaches:coach_id ( full_name )').eq('status', 'ativa').order('nome'),
     supabase.from('alunos').select('turma_id').eq('status', 'ativo').not('turma_id', 'is', null),
-    // sessoes do mês (para contar)
-    supabase.from('presencas').select('turma_id, data').gte('data', dataCorte).is('deleted_at', null),
+    // Apenas os IDs e datas para contar sessões únicas no mês
+    supabase.from('presencas').select('turma_id, data').gte('data', dataCorte).is('deleted_at', null).limit(1000),
     supabase.from('alunos').select('id, nome, data_nascimento, turmas:turma_id ( nome )').order('created_at', { ascending: false }).limit(5),
-    // sessoes recentes para o painel
-    supabase.from('presencas').select('turma_id, data, presente, turmas!inner(nome)').is('deleted_at', null).order('data', { ascending: false }).limit(300),
+    // sessoes recentes (reduzido de 300 para 150 para processamento mais rápido)
+    supabase.from('presencas').select('turma_id, data, presente, turmas!inner(nome)').is('deleted_at', null).order('data', { ascending: false }).limit(150),
   ])
 
   // Contagem de atletas por turma
@@ -51,7 +51,7 @@ export default async function DashboardPage() {
 
   // Sessões do mês (distinct turma+data)
   const sessoesDoMes = new Set(
-    (presencasRaw ?? []).map((r: { turma_id: string; data: string }) => `${r.turma_id}__${r.data}`)
+    (presencasCountRaw ?? []).map((r: { turma_id: string; data: string }) => `${r.turma_id}__${r.data}`)
   ).size
 
   // Sessões recentes agrupadas
