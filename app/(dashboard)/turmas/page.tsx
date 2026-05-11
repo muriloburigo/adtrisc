@@ -24,17 +24,27 @@ export default async function TurmasPage({
 
   const supabase = await createClient()
 
-  let query = supabase
-    .from('turmas')
-    .select('*, coaches:coach_id ( full_name )')
-    .order('nome')
-
-  if (modalidade) query = query.eq('modalidade', modalidade)
-  if (status)     query = query.eq('status', status)
-  if (ano)        query = query.eq('ano', parseInt(ano))
-  if (semestre)   query = query.eq('semestre', parseInt(semestre))
-
-  const { data } = await query
+  // Paraleliza as consultas iniciais: Turmas, Contagem de Atletas e Anos para o filtro
+  const [
+    { data: turmasRawData },
+    { data: atletasRaw },
+    { data: anosRaw }
+  ] = await Promise.all([
+    supabase
+      .from('turmas')
+      .select('id, nome, modalidade, status, dias_semana, horario_inicio, horario_fim, capacidade, ano, semestre, idade_min, idade_max, coaches:coach_id ( full_name )')
+      .order('nome'),
+    supabase
+      .from('alunos')
+      .select('turma_id')
+      .eq('status', 'ativo')
+      .not('turma_id', 'is', null),
+    supabase
+      .from('turmas')
+      .select('ano')
+      .not('ano', 'is', null)
+      .order('ano', { ascending: false })
+  ])
 
   type TurmaRow = {
     id: string; nome: string; modalidade: string; status: string
@@ -44,31 +54,22 @@ export default async function TurmasPage({
     idade_min: number | null; idade_max: number | null
   }
 
-  let turmas = (data ?? []) as unknown as TurmaRow[]
+  let turmas = (turmasRawData ?? []) as unknown as TurmaRow[]
 
+  // Filtros em memória para as turmas já buscadas (mais rápido que queries sequenciais para listas pequenas/médias)
+  if (modalidade) turmas = turmas.filter(t => t.modalidade === modalidade)
+  if (status)     turmas = turmas.filter(t => t.status === status)
+  if (ano)        turmas = turmas.filter(t => t.ano === parseInt(ano))
+  if (semestre)   turmas = turmas.filter(t => t.semestre === parseInt(semestre))
   if (q) {
     const lower = q.toLowerCase()
     turmas = turmas.filter((t) => t.nome.toLowerCase().includes(lower))
   }
 
-  // Contagem de atletas ativos por turma
-  const { data: atletasRaw } = await supabase
-    .from('alunos')
-    .select('turma_id')
-    .eq('status', 'ativo')
-    .not('turma_id', 'is', null)
-
   const atletasMap: Record<string, number> = {}
   for (const a of (atletasRaw ?? []) as { turma_id: string }[]) {
     atletasMap[a.turma_id] = (atletasMap[a.turma_id] ?? 0) + 1
   }
-
-  // Collect unique anos from all records (unfiltered) for the ano dropdown
-  const { data: anosRaw } = await supabase
-    .from('turmas')
-    .select('ano')
-    .not('ano', 'is', null)
-    .order('ano', { ascending: false })
 
   const anosUnicos = [...new Set((anosRaw ?? []).map((r: { ano: number }) => r.ano))].filter(Boolean) as number[]
   const anoOptions = anosUnicos.map((a) => ({ value: String(a), label: String(a) }))

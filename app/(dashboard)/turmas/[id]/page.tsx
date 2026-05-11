@@ -40,52 +40,6 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   const alunos = (alunosRaw ?? []) as AlunoBasic[]
   const fotos  = (fotosRaw  ?? []) as TurmaFotoRow[]
 
-  // Pending fichas for the turma — pre-load so FichasTurmaButton keeps state across navigation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let initialFichasTurma: any[] = []
-  if (alunos.length > 0) {
-    const alunoIds = alunos.map((a) => a.id)
-    const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://adtrisc.vercel.app'
-
-    const [{ data: fichasPendentes }, { data: respsRaw }] = await Promise.all([
-      adminDb.from('fichas_inscricao').select('aluno_id, token').in('aluno_id', alunoIds).eq('status', 'pendente'),
-      adminDb.from('responsaveis').select('*, aluno_responsavel!inner(aluno_id)').in('aluno_responsavel.aluno_id', alunoIds),
-    ])
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const respsByAluno = new Map<string, any[]>()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const r of (respsRaw ?? []) as any[]) {
-      const links = Array.isArray(r.aluno_responsavel) ? r.aluno_responsavel : [r.aluno_responsavel]
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      for (const link of links as any[]) {
-        if (!link?.aluno_id) continue
-        if (!respsByAluno.has(link.aluno_id)) respsByAluno.set(link.aluno_id, [])
-        respsByAluno.get(link.aluno_id)!.push(r)
-      }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fichasMap = new Map<string, string>((fichasPendentes ?? []).map((f: any) => [f.aluno_id, f.token]))
-
-    initialFichasTurma = alunos.flatMap((a) => {
-      const token = fichasMap.get(a.id)
-      if (!token) return []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const resps = respsByAluno.get(a.id) ?? []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mae = resps.find((r: any) => r.parentesco === 'mae')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pai = resps.find((r: any) => r.parentesco === 'pai')
-      return [{
-        alunoId: a.id, nome: a.nome, token, url: `${base}/ficha/${token}`,
-        telefone: mae?.telefone ?? pai?.telefone ?? a.telefone ?? null,
-        email: mae?.email ?? pai?.email ?? null,
-        novo: false,
-      }]
-    })
-  }
-
   return (
     <div className="p-4 sm:p-8">
       <BackButton />
@@ -154,7 +108,7 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h2 className="text-base font-semibold text-navy-500">Atletas da turma</h2>
         <div className="flex items-center gap-2">
-          <FichasTurmaButton turmaId={id} initialResults={initialFichasTurma} />
+          <FichasTurmaButton turmaId={id} />
           <Link href={`/alunos/novo?turma=${id}`}>
             <Button size="sm"><Plus size={14} />Adicionar atleta</Button>
           </Link>
