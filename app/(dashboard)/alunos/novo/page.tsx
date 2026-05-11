@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import AlunoForm from '@/components/alunos/AlunoForm'
+import BackButton from '@/components/ui/BackButton'
 import { createAluno } from '../actions'
 
 export default async function NovoAlunoPage({
@@ -30,6 +31,7 @@ export default async function NovoAlunoPage({
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
+      <BackButton />
       <PageHeader title="Novo(a) Atleta" subtitle="Preencha a ficha de inscrição completa" />
       <AlunoForm action={actionComTurma} turmas={turmas} submitLabel="Cadastrar Atleta" />
     </div>

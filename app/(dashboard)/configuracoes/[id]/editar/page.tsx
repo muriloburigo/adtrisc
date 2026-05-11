@@ -1,9 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
-import { ChevronLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import UserEditForm from './UserEditForm'
 import type { ProfileRow, UserRole } from '@/types/database'
 
@@ -28,12 +27,7 @@ export default async function EditarUsuarioPage({
 
   return (
     <div className="p-4 sm:p-8 max-w-lg">
-      <Link
-        href="/configuracoes"
-        className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-navy-500 transition-colors mb-4"
-      >
-        <ChevronLeft size={13} /> Configurações
-      </Link>
+      <BackButton />
 
       <PageHeader title="Editar usuário" subtitle={profile.email ?? ''} />
 

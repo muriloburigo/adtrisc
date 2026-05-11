@@ -1,9 +1,8 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
-import { ChevronLeft } from 'lucide-react'
+import BackButton from '@/components/ui/BackButton'
 import AvaliacaoForm from './AvaliacaoForm'
 import type { AlunoRow } from '@/types/database'
 
@@ -20,14 +19,7 @@ export default async function NovaAvaliacaoPage({ params }: { params: Promise<{ 
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl">
-      <div className="mb-4">
-        <Link
-          href={`/alunos/${id}/avaliacoes`}
-          className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-navy-500 transition-colors"
-        >
-          <ChevronLeft size={15} /> Voltar
-        </Link>
-      </div>
+      <BackButton />
 
       <PageHeader
         title="Nova Avaliação Física"
