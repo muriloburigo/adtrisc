@@ -23,7 +23,7 @@ export default function Select({
       <select
         id={selectId}
         className={cn(
-          'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white',
+          'w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white cursor-pointer',
           'focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent',
           error && 'border-brand-red-500 focus:ring-brand-red-500',
           className

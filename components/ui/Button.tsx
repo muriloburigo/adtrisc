@@ -18,7 +18,7 @@ export default function Button({
     <button
       disabled={disabled}
       className={cn(
-        'inline-flex items-center gap-2 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center gap-2 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
         size === 'sm' && 'px-3 py-1.5 text-xs',
         size === 'md' && 'px-4 py-2 text-sm',
         variant === 'primary'   && 'bg-navy-500 text-white hover:bg-navy-600',

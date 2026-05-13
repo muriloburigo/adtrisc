@@ -17,3 +17,12 @@
   --color-brand-red-100: #f9bbbf;
   --color-brand-red-500: #eb2127;
 }
+
+@layer base {
+  button, select, [role="button"], input[type="button"], input[type="submit"], input[type="reset"] {
+    cursor: pointer;
+  }
+  button:disabled, select:disabled {
+    cursor: not-allowed;
+  }
+}
