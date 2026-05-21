@@ -10,8 +10,10 @@ next-env.d.ts
 build
 
 # env
-.env
-.env*.local
+.env*
+
+# Supabase CLI temp files
+supabase/.temp/
 
 # vercel
 .vercel
