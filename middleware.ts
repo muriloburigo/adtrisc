@@ -1,6 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const AUTH_CHECK_TIMEOUT_MS = 5000
+
+/** fetch com timeout: evita que uma Auth API lenta prenda o middleware até o limite da Vercel */
+function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), AUTH_CHECK_TIMEOUT_MS)
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeout))
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -20,10 +29,23 @@ export async function middleware(request: NextRequest) {
           )
         },
       },
+      global: {
+        fetch: fetchWithTimeout,
+      },
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch (error) {
+    // Auth API lenta/indisponível: segue sem bloquear a request. As páginas do
+    // dashboard e as Server Actions (requireStaff/requireAdmin) fazem sua própria
+    // checagem de autenticação, então isso não abre brecha de acesso.
+    console.error('[middleware] auth.getUser() falhou ou expirou:', error)
+    return supabaseResponse
+  }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/signup')
