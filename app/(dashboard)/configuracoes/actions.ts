@@ -33,11 +33,14 @@ export async function updateUser(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
+  // profiles só tem policy de update para o próprio usuário (auth.uid() = id);
+  // admin editando o perfil de outra pessoa precisa do client de service role.
+  const admin = createAdminClient() as any
 
   const { data: before } = await supabase
     .from('profiles').select('full_name, email, role').eq('id', userId).single()
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('profiles')
     .update({ full_name: fullName, role })
     .eq('id', userId)
