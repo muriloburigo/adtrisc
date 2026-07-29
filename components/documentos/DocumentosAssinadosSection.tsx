@@ -17,11 +17,13 @@ export type DocumentoAssinadoItem = {
 
 export default function DocumentosAssinadosSection({
   turmaId,
+  coachId,
   tipo,
   periodo,
   documentos,
 }: {
-  turmaId: string
+  turmaId?: string
+  coachId?: string
   tipo: DocumentoAssinadoTipo
   periodo: string
   documentos: DocumentoAssinadoItem[]
@@ -68,7 +70,8 @@ export default function DocumentosAssinadosSection({
     if (!formRef.current) return
     setError(null)
     const fd = new FormData(formRef.current)
-    fd.set('turma_id', turmaId)
+    if (turmaId) fd.set('turma_id', turmaId)
+    if (coachId) fd.set('coach_id', coachId)
     fd.set('tipo', tipo)
     fd.set('periodo', periodo)
     startTransition(async () => {
@@ -84,7 +87,7 @@ export default function DocumentosAssinadosSection({
   function handleDelete(id: string, storagePath: string) {
     if (!confirm('Excluir este documento?')) return
     startTransition(async () => {
-      await deleteDocumentoAssinado(id, storagePath, turmaId)
+      await deleteDocumentoAssinado(id, storagePath, tipo, turmaId ?? null)
     })
   }
 
