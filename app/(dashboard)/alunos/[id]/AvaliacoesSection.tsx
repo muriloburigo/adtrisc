@@ -53,7 +53,11 @@ export default async function AvaliacoesSection({ alunoId }: { alunoId: string }
       ) : (
         <div className="space-y-3">
           {avaliacoes.map((av, idx) => (
-            <div key={av.id} className="border border-gray-100 rounded-xl p-3">
+            <Link
+              key={av.id}
+              href={`/alunos/${alunoId}/avaliacoes/${av.id}`}
+              className="block border border-gray-100 rounded-xl p-3 hover:border-sky-400 transition-colors"
+            >
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                   {idx === 0 && (
@@ -91,7 +95,7 @@ export default async function AvaliacoesSection({ alunoId }: { alunoId: string }
                   )}
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
