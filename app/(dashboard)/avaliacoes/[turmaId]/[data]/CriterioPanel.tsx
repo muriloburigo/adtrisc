@@ -1,20 +1,30 @@
 'use client'
 
-import { useOptimistic, useTransition } from 'react'
+import { useTransition } from 'react'
 import { saveAvaliacaoField } from '../../actions'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 
 type AlunoBasic = { id: string; nome: string }
 
-const CAMPOS: { key: keyof AvaliacaoFisicaRow; label: string; unit: string; step: string }[] = [
-  { key: 'massa_corporal',    label: 'Massa (kg)',      unit: 'kg', step: '0.1' },
-  { key: 'estatura',          label: 'Estatura (m)',    unit: 'm',  step: '0.01' },
-  { key: 'resistencia_6min',  label: 'Resist. 6\' (m)', unit: 'm',  step: '1'   },
-  { key: 'forca_abdominal',   label: 'Abd. (rep)',      unit: '',   step: '1'   },
-  { key: 'envergadura',       label: 'Enverg. (cm)',    unit: 'cm', step: '0.1' },
-  { key: 'impulsao_vertical', label: 'Impulsão (cm)',   unit: 'cm', step: '0.1' },
-  { key: 'velocidade_20m',    label: 'Vel. 20m (s)',    unit: 's',  step: '0.01'},
-  { key: 'flexibilidade',     label: 'Flex. (cm)',      unit: 'cm', step: '0.1' },
+// Campos medidos em cm na grade, mas guardados em metros no banco
+// (o server action já faz a conversão) — aqui só precisamos multiplicar
+// por 100 pra exibir o valor certo na célula.
+const CAMPOS_CM_PARA_M = new Set<keyof AvaliacaoFisicaRow>(['estatura', 'envergadura', 'estatura_sentado'])
+
+const CAMPOS: { key: keyof AvaliacaoFisicaRow; label: string }[] = [
+  { key: 'massa_corporal',         label: 'Massa (kg)' },
+  { key: 'estatura',               label: 'Estatura (cm)' },
+  { key: 'envergadura',            label: 'Enverg. (cm)' },
+  { key: 'estatura_sentado',       label: 'Est. sentado (cm)' },
+  { key: 'perimetro_cintura',      label: 'Circ. abdom. (cm)' },
+  { key: 'sentar_alcancar',        label: 'Sentar/alcançar (cm)' },
+  { key: 'resistencia_6min',       label: "Resist. 6' (m)" },
+  { key: 'forca_abdominal',        label: 'Abd. (rep)' },
+  { key: 'arremesso_medicineball', label: 'Medicine ball (m)' },
+  { key: 'salto_horizontal',       label: 'Salto horiz. (m)' },
+  { key: 'agilidade',              label: 'Agilidade (s)' },
+  { key: 'corrida_20m',            label: 'Corrida 20m (s)' },
+  { key: 'natacao_12min',          label: "Teste 12' (m)" },
 ]
 
 function CellInput({
@@ -27,9 +37,10 @@ function CellInput({
   data: string
   field: keyof AvaliacaoFisicaRow
   initialValue: number | null | undefined
-  step: string
 }) {
   const [, startTransition] = useTransition()
+  const emCm = CAMPOS_CM_PARA_M.has(field)
+  const displayValue = initialValue != null && emCm ? initialValue * 100 : initialValue
 
   function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
     const val = e.target.value
@@ -40,7 +51,7 @@ function CellInput({
     <input
       type="number"
       step="any"
-      defaultValue={initialValue ?? ''}
+      defaultValue={displayValue ?? ''}
       onBlur={handleBlur}
       className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400"
       placeholder="—"
@@ -85,7 +96,6 @@ export default function CriterioPanel({
                       data={data}
                       field={c.key}
                       initialValue={av[c.key] as number | null}
-                      step={c.step}
                     />
                   </div>
                 ))}
@@ -125,7 +135,6 @@ export default function CriterioPanel({
                         data={data}
                         field={c.key}
                         initialValue={av[c.key] as number | null}
-                        step={c.step}
                       />
                     </td>
                   ))}

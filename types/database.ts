@@ -79,18 +79,28 @@ export type TurmaFotoRow = {
 export type AvaliacaoFisicaRow = {
   id: string
   aluno_id: string
+  avaliador_id: string | null
   data: string
   massa_corporal: number | null
   estatura: number | null
+  perimetro_cintura: number | null
+  envergadura: number | null
+  estatura_sentado: number | null
+  altura_cm: number | null
+  altura_ao_quadrado: number | null
   imc: number | null
+  rce: number | null
+  sentar_alcancar: number | null
   resistencia_6min: number | null
   forca_abdominal: number | null
-  envergadura: number | null
-  impulsao_vertical: number | null
-  velocidade_20m: number | null
-  flexibilidade: number | null
+  arremesso_medicineball: number | null
+  agilidade: number | null
+  salto_horizontal: number | null
+  corrida_20m: number | null
+  natacao_12min: number | null
   observacoes: string | null
   created_at: string
+  updated_at: string
 }
 
 export type HistoricoAtletaRow = {

@@ -16,16 +16,13 @@ export default function AvaliacaoForm({
   const [massa, setMassa] = useState('')
   const [alt, setAlt] = useState('')
 
-  const altM = parseFloat(alt)
+  const altM = parseFloat(alt) / 100
   const massaKg = parseFloat(massa)
-  const imc = altM > 0 && massaKg > 0 ? (massaKg / (altM / 100) ** 2).toFixed(1) : null
+  const imc = altM > 0 && massaKg > 0 ? (massaKg / (altM * altM)).toFixed(1) : null
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    // Convert estatura from cm to m
-    const altCm = parseFloat(fd.get('estatura') as string)
-    if (!isNaN(altCm)) fd.set('estatura', String(altCm / 100))
     fd.set('aluno_nome', alunoNome)
     startTransition(async () => {
       await saveAvaliacao(fd)
@@ -88,74 +85,62 @@ export default function AvaliacaoForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
+          <label className={labelClass}>Envergadura (cm)</label>
+          <input name="envergadura" type="number" step="0.1" min="0" placeholder="Em centímetros" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Estatura sentado (cm)</label>
+          <input name="estatura_sentado" type="number" step="0.1" min="0" placeholder="Em centímetros" className={inputClass} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Circunf. abdominal (cm)</label>
+          <input name="perimetro_cintura" type="number" step="0.1" min="0" placeholder="Em centímetros" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Sentar/alcançar (cm)</label>
+          <input name="sentar_alcancar" type="number" step="0.1" min="0" placeholder="Em centímetros" className={inputClass} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
           <label className={labelClass}>Resistência 6 min (m)</label>
-          <input
-            name="resistencia_6min"
-            type="number"
-            min="0"
-            placeholder="Distância em metros"
-            className={inputClass}
-          />
+          <input name="resistencia_6min" type="number" min="0" placeholder="Distância em metros" className={inputClass} />
         </div>
         <div>
           <label className={labelClass}>Força abdominal (rep)</label>
-          <input
-            name="forca_abdominal"
-            type="number"
-            min="0"
-            placeholder="Repetições"
-            className={inputClass}
-          />
+          <input name="forca_abdominal" type="number" min="0" placeholder="Repetições" className={inputClass} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Envergadura (cm)</label>
-          <input
-            name="envergadura"
-            type="number"
-            step="0.1"
-            min="0"
-            placeholder="Em centímetros"
-            className={inputClass}
-          />
+          <label className={labelClass}>Arremesso medicine ball (m)</label>
+          <input name="arremesso_medicineball" type="number" step="0.01" min="0" placeholder="Em metros" className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Impulsão vertical (cm)</label>
-          <input
-            name="impulsao_vertical"
-            type="number"
-            step="0.1"
-            min="0"
-            placeholder="Em centímetros"
-            className={inputClass}
-          />
+          <label className={labelClass}>Salto horizontal (m)</label>
+          <input name="salto_horizontal" type="number" step="0.01" min="0" placeholder="Em metros" className={inputClass} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Velocidade 20 m (s)</label>
-          <input
-            name="velocidade_20m"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Em segundos"
-            className={inputClass}
-          />
+          <label className={labelClass}>Agilidade — corrida quadrado (s)</label>
+          <input name="agilidade" type="number" step="0.01" min="0" placeholder="Em segundos" className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>Flexibilidade (cm)</label>
-          <input
-            name="flexibilidade"
-            type="number"
-            step="0.1"
-            placeholder="Em centímetros"
-            className={inputClass}
-          />
+          <label className={labelClass}>Corrida 20 m (s)</label>
+          <input name="corrida_20m" type="number" step="0.01" min="0" placeholder="Em segundos" className={inputClass} />
         </div>
+      </div>
+
+      <div>
+        <label className={labelClass}>Teste 12 min (m)</label>
+        <input name="natacao_12min" type="number" min="0" placeholder="Distância em metros" className={inputClass} />
       </div>
 
       <div>

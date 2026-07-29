@@ -5,6 +5,22 @@ import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
 
+// Campos medidos em cm no formulário, mas guardados em metros no banco
+// (mesma escala de "estatura", já usada assim antes desta correção).
+const CAMPOS_CM_PARA_M = new Set(['estatura', 'envergadura', 'estatura_sentado'])
+
+function calcularDerivados(massaCorporal: number | null, estaturaM: number | null, perimetroCintura: number | null) {
+  const altura_cm = estaturaM ? Math.round(estaturaM * 100 * 10) / 10 : null
+  const altura_ao_quadrado = estaturaM ? Math.round(estaturaM * estaturaM * 1_000_000) / 1_000_000 : null
+  const imc = massaCorporal && estaturaM
+    ? Math.round((massaCorporal / (estaturaM * estaturaM)) * 100) / 100
+    : null
+  const rce = perimetroCintura && altura_cm
+    ? Math.round((perimetroCintura / altura_cm) * 10_000) / 10_000
+    : null
+  return { altura_cm, altura_ao_quadrado, imc, rce }
+}
+
 export async function saveAvaliacao(formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
@@ -13,23 +29,34 @@ export async function saveAvaliacao(formData: FormData) {
   const alunoId = formData.get('aluno_id') as string
   const alunoNome = formData.get('aluno_nome') as string
 
-  const massaCorporal = parseFloat(formData.get('massa_corporal') as string) || null
-  const estatura      = parseFloat(formData.get('estatura') as string) || null
-  const imc = massaCorporal && estatura ? parseFloat((massaCorporal / (estatura * estatura)).toFixed(2)) : null
+  const massaCorporal   = parseFloat(formData.get('massa_corporal') as string) || null
+  const estaturaCm      = parseFloat(formData.get('estatura') as string) || null
+  const envergaduraCm   = parseFloat(formData.get('envergadura') as string) || null
+  const estaturaSentCm  = parseFloat(formData.get('estatura_sentado') as string) || null
+  const perimetro       = parseFloat(formData.get('perimetro_cintura') as string) || null
+
+  const estatura = estaturaCm ? estaturaCm / 100 : null
+  const derivados = calcularDerivados(massaCorporal, estatura, perimetro)
 
   const payload = {
-    aluno_id:          alunoId,
-    data:              formData.get('data') as string,
-    massa_corporal:    massaCorporal,
-    estatura:          estatura,
-    imc,
-    resistencia_6min:  parseInt(formData.get('resistencia_6min') as string) || null,
-    forca_abdominal:   parseInt(formData.get('forca_abdominal') as string) || null,
-    envergadura:       parseFloat(formData.get('envergadura') as string) || null,
-    impulsao_vertical: parseFloat(formData.get('impulsao_vertical') as string) || null,
-    velocidade_20m:    parseFloat(formData.get('velocidade_20m') as string) || null,
-    flexibilidade:     parseFloat(formData.get('flexibilidade') as string) || null,
-    observacoes:       (formData.get('observacoes') as string)?.trim() || null,
+    aluno_id:               alunoId,
+    avaliador_id:           actor.id,
+    data:                   formData.get('data') as string,
+    massa_corporal:         massaCorporal,
+    estatura,
+    envergadura:            envergaduraCm ? envergaduraCm / 100 : null,
+    estatura_sentado:       estaturaSentCm ? estaturaSentCm / 100 : null,
+    perimetro_cintura:      perimetro,
+    ...derivados,
+    sentar_alcancar:        parseFloat(formData.get('sentar_alcancar') as string) || null,
+    resistencia_6min:       parseInt(formData.get('resistencia_6min') as string) || null,
+    forca_abdominal:        parseInt(formData.get('forca_abdominal') as string) || null,
+    arremesso_medicineball: parseFloat(formData.get('arremesso_medicineball') as string) || null,
+    agilidade:              parseFloat(formData.get('agilidade') as string) || null,
+    salto_horizontal:       parseFloat(formData.get('salto_horizontal') as string) || null,
+    corrida_20m:            parseFloat(formData.get('corrida_20m') as string) || null,
+    natacao_12min:          parseInt(formData.get('natacao_12min') as string) || null,
+    observacoes:            (formData.get('observacoes') as string)?.trim() || null,
   }
 
   const { data: result, error } = await db
@@ -58,14 +85,15 @@ export async function saveAvaliacaoField(
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
-  await requireStaff()
+  const actor = await requireStaff()
 
-  const numValue = value === '' ? null : parseFloat(value) || parseInt(value) || null
+  let numValue = value === '' ? null : parseFloat(value)
+  if (numValue !== null && CAMPOS_CM_PARA_M.has(field)) numValue = numValue / 100
 
   // Check if record exists for this aluno+data (ignore soft-deleted)
   const { data: existing } = await db
     .from('avaliacoes_fisicas')
-    .select('id, massa_corporal, estatura')
+    .select('id, massa_corporal, estatura, perimetro_cintura')
     .eq('aluno_id', alunoId)
     .eq('data', data)
     .is('deleted_at', null)
@@ -73,16 +101,22 @@ export async function saveAvaliacaoField(
 
   if (existing) {
     const update: Record<string, unknown> = { [field]: numValue }
-    // Recalculate IMC if weight or height changed
-    const massa = field === 'massa_corporal' ? numValue as number : existing.massa_corporal
-    const alt   = field === 'estatura'       ? numValue as number : existing.estatura
-    if (massa && alt) update.imc = parseFloat((massa / (alt * alt)).toFixed(2))
+    const massa     = field === 'massa_corporal'    ? numValue : existing.massa_corporal
+    const estatura  = field === 'estatura'          ? numValue : existing.estatura
+    const perimetro = field === 'perimetro_cintura' ? numValue : existing.perimetro_cintura
+    Object.assign(update, calcularDerivados(massa, estatura, perimetro))
     await db.from('avaliacoes_fisicas').update(update).eq('id', existing.id)
   } else {
     const insert: Record<string, unknown> = {
       aluno_id: alunoId,
+      avaliador_id: actor.id,
       data,
       [field]: numValue,
+      ...calcularDerivados(
+        field === 'massa_corporal' ? numValue : null,
+        field === 'estatura' ? numValue : null,
+        field === 'perimetro_cintura' ? numValue : null,
+      ),
     }
     await db.from('avaliacoes_fisicas').insert(insert)
   }
