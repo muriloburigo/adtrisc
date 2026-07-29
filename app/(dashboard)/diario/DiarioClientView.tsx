@@ -5,6 +5,7 @@ import { X, Plus, CheckCircle, Loader, AlertCircle, Printer } from 'lucide-react
 import Card from '@/components/ui/Card'
 import { formatDate } from '@/lib/utils'
 import { criarMultiplosRegistros } from './actions'
+import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 // ── Report constants ────────────────────────────────────────────────────────
 const MESES_LABEL = [
@@ -90,6 +91,7 @@ export default function DiarioClientView({
   initialDays, allTurmas, targetCoachId, mes, ano,
   coachName,
   initialCref, initialCidade, initialProcesso, initialResumo,
+  periodo, documentos,
 }: {
   initialDays: InitialDay[]
   allTurmas: TurmaBasic[]
@@ -97,6 +99,8 @@ export default function DiarioClientView({
   mes: number; ano: number
   coachName: string
   initialCref: string; initialCidade: string; initialProcesso: string; initialResumo: string
+  periodo: string
+  documentos: DocumentoAssinadoItem[]
 }) {
   const storageKey    = `diario-draft-${targetCoachId ?? 'self'}-${ano}-${mes}`
   const hasUserEdited = useRef(false)
@@ -419,6 +423,17 @@ export default function DiarioClientView({
                   className={`${inputCls} resize-y`} />
               </div>
             </div>
+
+            <hr className="border-gray-100" />
+
+            {targetCoachId && (
+              <DocumentosAssinadosSection
+                coachId={targetCoachId}
+                tipo="diario_aula"
+                periodo={periodo}
+                documentos={documentos}
+              />
+            )}
 
             <hr className="border-gray-100" />
 

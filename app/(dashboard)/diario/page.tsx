@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireStaff } from '@/lib/assert'
 import Card from '@/components/ui/Card'
 import DiarioFilterForm from './DiarioFilterForm'
 import DiarioClientView from './DiarioClientView'
 import type { InitialDay } from './DiarioClientView'
+import type { DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,6 +144,38 @@ export default async function DiarioPage({
     }
   }
 
+  // ── Documentos assinados do diário ──────────────────────────────────────
+  const periodo = `${ano}-${String(mes).padStart(2, '0')}`
+  let documentos: DocumentoAssinadoItem[] = []
+  if (targetCoachId) {
+    const { data: docsRaw } = await supabase
+      .from('documentos_assinados')
+      .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
+      .eq('coach_id', targetCoachId)
+      .eq('tipo', 'diario_aula')
+      .eq('periodo', periodo)
+      .order('enviado_em', { ascending: false })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adminForSigned = createAdminClient() as any
+    documentos = await Promise.all(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((docsRaw ?? []) as any[]).map(async (d) => {
+        const { data: signed } = await adminForSigned.storage
+          .from('documentos')
+          .createSignedUrl(d.storage_path, 3600)
+        return {
+          id: d.id,
+          nomeArquivo: d.nome_arquivo,
+          storagePath: d.storage_path,
+          enviadoEm: d.enviado_em,
+          enviadoPorNome: d.enviado_por?.full_name ?? null,
+          signedUrl: signed?.signedUrl ?? null,
+        }
+      }),
+    )
+  }
+
   return (
     <>
       <style>{`
@@ -191,6 +225,8 @@ export default async function DiarioPage({
             initialCidade={cidade}
             initialProcesso={processo}
             initialResumo={resumo}
+            periodo={periodo}
+            documentos={documentos}
           />
         )}
 
