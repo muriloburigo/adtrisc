@@ -153,7 +153,6 @@ export default async function DiarioPage({
       .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
       .eq('coach_id', targetCoachId)
       .eq('tipo', 'diario_aula')
-      .eq('periodo', periodo)
       .order('enviado_em', { ascending: false })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

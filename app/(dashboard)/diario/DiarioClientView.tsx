@@ -379,7 +379,18 @@ export default function DiarioClientView({
       </div>
 
       {/* ══ FORM (hidden when printing) ══════════════════════════════════════ */}
-      <div className="print:hidden">
+      <div className="print:hidden space-y-4">
+        {targetCoachId && (
+          <Card>
+            <DocumentosAssinadosSection
+              coachId={targetCoachId}
+              tipo="diario_aula"
+              periodo={periodo}
+              documentos={documentos}
+            />
+          </Card>
+        )}
+
         <Card>
           <div className="space-y-6">
 
@@ -423,17 +434,6 @@ export default function DiarioClientView({
                   className={`${inputCls} resize-y`} />
               </div>
             </div>
-
-            <hr className="border-gray-100" />
-
-            {targetCoachId && (
-              <DocumentosAssinadosSection
-                coachId={targetCoachId}
-                tipo="diario_aula"
-                periodo={periodo}
-                documentos={documentos}
-              />
-            )}
 
             <hr className="border-gray-100" />
 
