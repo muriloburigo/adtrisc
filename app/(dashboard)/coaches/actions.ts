@@ -97,6 +97,26 @@ export async function resetPassword(
   return null
 }
 
+export async function updateCoachAvatar(id: string, url: string | null): Promise<{ error?: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createAdminClient() as any
+  const actor = await getSessionUser()
+
+  const { error } = await admin.from('profiles').update({ avatar_url: url }).eq('id', id)
+  if (error) return { error: error.message }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'editar', resource: 'treinador',
+    resourceId: id, resourceLabel: null,
+    after: { avatar_url: url },
+  })
+
+  revalidatePath('/coaches')
+  revalidatePath(`/coaches/${id}/editar`)
+  return {}
+}
+
 export async function updateCoach(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createAdminClient() as any

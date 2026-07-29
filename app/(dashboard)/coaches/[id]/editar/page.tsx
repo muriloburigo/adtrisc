@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
 import ResetPasswordForm from './ResetPasswordForm'
 import EditarCoachForm from './EditarCoachForm'
+import CoachAvatarCard from './CoachAvatarCard'
 
 export default async function EditarCoachPage({
   params,
@@ -22,7 +23,7 @@ export default async function EditarCoachPage({
   const { id } = await params
   const { data: coach } = await supabase
     .from('profiles')
-    .select('id, full_name, email, cref')
+    .select('id, full_name, email, cref, avatar_url')
     .eq('id', id)
     .eq('role', 'coach')
     .single()
@@ -43,6 +44,12 @@ export default async function EditarCoachPage({
           <p className="text-sm text-gray-400 mt-0.5">{coach.email}</p>
         </div>
       </div>
+
+      <CoachAvatarCard
+        coachId={id}
+        currentUrl={coach.avatar_url}
+        name={coach.full_name ?? 'T'}
+      />
 
       <Card>
         <EditarCoachForm id={id} fullName={coach.full_name ?? ''} cref={coach.cref ?? ''} />
