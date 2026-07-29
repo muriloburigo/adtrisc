@@ -58,3 +58,16 @@ export function UltimosAtletasSkeleton() {
     </div>
   )
 }
+
+export function FaltasAlertSkeleton() {
+  return (
+    <div>
+      <div className="h-4 w-56 bg-gray-200 rounded mb-3"></div>
+      <div className="space-y-2">
+        {[1, 2].map((i) => (
+          <Card key={i} className="h-14"><></></Card>
+        ))}
+      </div>
+    </div>
+  )
+}
