@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { FileText, Upload, X, Trash2, Download } from 'lucide-react'
+import { FileText, Upload, X, Trash2, Download, CheckCircle2 } from 'lucide-react'
 import { uploadDocumentoAssinado, deleteDocumentoAssinado } from '@/lib/documentosAssinados'
 import { formatDate } from '@/lib/utils'
 import type { DocumentoAssinadoTipo } from '@/types/database'
@@ -29,7 +29,39 @@ export default function DocumentosAssinadosSection({
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function applyFile(file: File | undefined | null) {
+    if (!file) return
+    if (file.type !== 'application/pdf') {
+      setError('Apenas arquivos PDF são aceitos.')
+      return
+    }
+    setError(null)
+    setSelectedFile(file)
+    if (fileInputRef.current) {
+      const dt = new DataTransfer()
+      dt.items.add(file)
+      fileInputRef.current.files = dt.files
+    }
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLLabelElement>) {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    applyFile(e.dataTransfer.files?.[0])
+  }
+
+  function resetForm() {
+    setOpen(false)
+    setError(null)
+    setSelectedFile(null)
+    formRef.current?.reset()
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,8 +77,7 @@ export default function DocumentosAssinadosSection({
         setError(result.error)
         return
       }
-      setOpen(false)
-      formRef.current?.reset()
+      resetForm()
     })
   }
 
@@ -118,7 +149,7 @@ export default function DocumentosAssinadosSection({
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-sm font-semibold text-navy-500">Enviar documento assinado</h2>
-              <button onClick={() => { setOpen(false); setError(null) }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
               </button>
             </div>
@@ -128,10 +159,43 @@ export default function DocumentosAssinadosSection({
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                   Arquivo PDF assinado
                 </label>
-                <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-8 cursor-pointer hover:border-sky-400 transition-colors">
-                  <Upload size={20} className="text-gray-300" />
-                  <span className="text-xs text-gray-400">Clique para selecionar (PDF, máx 10 MB)</span>
-                  <input name="file" type="file" accept="application/pdf" required className="hidden" />
+                <label
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-8 cursor-pointer transition-colors ${
+                    isDragging ? 'border-sky-400 bg-sky-50' : 'border-gray-200 hover:border-sky-400'
+                  }`}
+                >
+                  {selectedFile ? (
+                    <>
+                      <CheckCircle2 size={20} className="text-emerald-500" />
+                      <span className="text-xs text-navy-500 font-medium px-4 text-center break-all">{selectedFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                        className="text-xs text-gray-400 hover:text-red-500 underline underline-offset-2"
+                      >
+                        Trocar arquivo
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={20} className="text-gray-300" />
+                      <span className="text-xs text-gray-400 text-center px-4">
+                        Arraste o PDF aqui ou clique para selecionar (máx 10 MB)
+                      </span>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    name="file"
+                    type="file"
+                    accept="application/pdf"
+                    required
+                    className="hidden"
+                    onChange={(e) => applyFile(e.target.files?.[0])}
+                  />
                 </label>
               </div>
 
@@ -144,7 +208,7 @@ export default function DocumentosAssinadosSection({
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => { setOpen(false); setError(null) }}
+                  onClick={resetForm}
                   className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
                 >
                   Cancelar
