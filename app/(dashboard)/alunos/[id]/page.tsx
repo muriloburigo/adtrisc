@@ -10,7 +10,8 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import AlunoTimeline from './AlunoTimeline'
 import FichaSection from './FichaSection'
-import { Pencil, User, MapPin, Phone, Users2, ClipboardList } from 'lucide-react'
+import AvaliacoesSection from './AvaliacoesSection'
+import { Pencil, User, MapPin, Phone, Users2 } from 'lucide-react'
 import { formatDate, calcularIdade, formatTelefone } from '@/lib/utils'
 import type { AlunoRow, ResponsavelRow } from '@/types/database'
 
@@ -58,9 +59,6 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
         subtitle={a.turmas?.nome ?? ''}
         action={
           <div className="flex gap-2 flex-wrap">
-            <Link href={`/alunos/${id}/avaliacoes`}>
-              <Button variant="secondary"><ClipboardList size={15} />Avaliações</Button>
-            </Link>
             <Link href={`/alunos/${id}/editar`}>
               <Button variant="secondary"><Pencil size={15} />Editar</Button>
             </Link>
@@ -139,6 +137,10 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
               </p>
             </Card>
           )}
+
+          <Card>
+            <AvaliacoesSection alunoId={id} />
+          </Card>
         </div>
 
         {/* Coluna direita: Responsáveis + Histórico */}

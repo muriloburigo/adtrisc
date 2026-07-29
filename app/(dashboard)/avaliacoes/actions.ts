@@ -71,7 +71,7 @@ export async function saveAvaliacao(formData: FormData) {
     after: payload as Record<string, unknown>,
   })
 
-  revalidatePath(`/alunos/${alunoId}/avaliacoes`)
+  revalidatePath(`/alunos/${alunoId}`)
   revalidatePath('/avaliacoes')
 
   return result?.id as string
@@ -129,7 +129,7 @@ export async function deleteAvaliacao(id: string, alunoId: string) {
   const db = (await createClient()) as any
   await requireStaff()
   await db.from('avaliacoes_fisicas').update({ deleted_at: new Date().toISOString() }).eq('id', id)
-  revalidatePath(`/alunos/${alunoId}/avaliacoes`)
+  revalidatePath(`/alunos/${alunoId}`)
   revalidatePath('/avaliacoes')
 }
 
