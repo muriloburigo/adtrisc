@@ -28,7 +28,8 @@ export default async function TurmasPage({
   const [
     { data: turmasRawData },
     { data: atletasRaw },
-    { data: anosRaw }
+    { data: anosRaw },
+    { data: auxCoachesRaw }
   ] = await Promise.all([
     supabase
       .from('turmas')
@@ -43,7 +44,10 @@ export default async function TurmasPage({
       .from('turmas')
       .select('ano')
       .not('ano', 'is', null)
-      .order('ano', { ascending: false })
+      .order('ano', { ascending: false }),
+    supabase
+      .from('turma_coaches')
+      .select('turma_id, coach:profiles ( full_name )')
   ])
 
   type TurmaRow = {
@@ -69,6 +73,13 @@ export default async function TurmasPage({
   const atletasMap: Record<string, number> = {}
   for (const a of (atletasRaw ?? []) as { turma_id: string }[]) {
     atletasMap[a.turma_id] = (atletasMap[a.turma_id] ?? 0) + 1
+  }
+
+  const auxCoachesMap: Record<string, string[]> = {}
+  for (const r of (auxCoachesRaw ?? []) as { turma_id: string; coach: { full_name: string | null } | null }[]) {
+    if (!r.coach?.full_name) continue
+    if (!auxCoachesMap[r.turma_id]) auxCoachesMap[r.turma_id] = []
+    auxCoachesMap[r.turma_id].push(r.coach.full_name)
   }
 
   const anosUnicos = [...new Set((anosRaw ?? []).map((r: { ano: number }) => r.ano))].filter(Boolean) as number[]
@@ -205,9 +216,10 @@ export default async function TurmasPage({
                   </div>
                 )}
 
-                {t.coaches?.full_name && (
+                {(t.coaches?.full_name || auxCoachesMap[t.id]) && (
                   <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
-                    Treinador(a): {t.coaches.full_name}
+                    Treinador(a): {t.coaches?.full_name ?? '—'}
+                    {auxCoachesMap[t.id] && ` · Auxiliares: ${auxCoachesMap[t.id].join(', ')}`}
                   </p>
                 )}
               </Card>
