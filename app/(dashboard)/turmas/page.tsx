@@ -8,6 +8,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
 import { Users2, Plus, Clock, Users } from 'lucide-react'
 import { formatarDiasSemana, formatarHorario, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
+import { getTurmaIdsForCoach } from '@/lib/turmas'
 import type { DiaSemana } from '@/types/database'
 
 export default async function TurmasPage({
@@ -22,7 +23,21 @@ export default async function TurmasPage({
   const ano        = filters.ano        ?? ''
   const semestre   = filters.semestre   ?? ''
 
-  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles').select('role').eq('id', user?.id).single()
+  const isAdmin = profile?.role === 'admin'
+
+  let turmasQuery = supabase
+    .from('turmas')
+    .select('id, nome, modalidade, status, dias_semana, horario_inicio, horario_fim, capacidade, ano, semestre, idade_min, idade_max, coaches:coach_id ( full_name )')
+    .order('nome')
+  if (profile?.role === 'coach') {
+    const turmaIdsCoach = await getTurmaIdsForCoach(supabase, user?.id)
+    turmasQuery = turmasQuery.in('id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
+  }
 
   // Paraleliza as consultas iniciais: Turmas, Contagem de Atletas e Anos para o filtro
   const [
@@ -31,10 +46,7 @@ export default async function TurmasPage({
     { data: anosRaw },
     { data: auxCoachesRaw }
   ] = await Promise.all([
-    supabase
-      .from('turmas')
-      .select('id, nome, modalidade, status, dias_semana, horario_inicio, horario_fim, capacidade, ano, semestre, idade_min, idade_max, coaches:coach_id ( full_name )')
-      .order('nome'),
+    turmasQuery,
     supabase
       .from('alunos')
       .select('turma_id')
@@ -130,9 +142,11 @@ export default async function TurmasPage({
         title="Turmas"
         subtitle={`${turmas.length} turma${turmas.length !== 1 ? 's' : ''} encontrada${turmas.length !== 1 ? 's' : ''}`}
         action={
-          <Link href="/turmas/nova">
-            <Button><Plus size={16} />Nova Turma</Button>
-          </Link>
+          isAdmin ? (
+            <Link href="/turmas/nova">
+              <Button><Plus size={16} />Nova Turma</Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -143,9 +157,9 @@ export default async function TurmasPage({
           <EmptyState
             icon={Users2}
             title="Nenhuma turma encontrada"
-            description={q || modalidade || status || ano || semestre ? 'Tente ajustar os filtros' : 'Crie a primeira turma para começar'}
+            description={q || modalidade || status || ano || semestre ? 'Tente ajustar os filtros' : isAdmin ? 'Crie a primeira turma para começar' : 'Nenhuma turma vinculada a você ainda'}
             action={
-              !q && !modalidade && !status && !ano && !semestre
+              isAdmin && !q && !modalidade && !status && !ano && !semestre
                 ? <Link href="/turmas/nova"><Button><Plus size={16} />Nova Turma</Button></Link>
                 : undefined
             }

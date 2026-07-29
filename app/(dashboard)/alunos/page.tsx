@@ -10,6 +10,7 @@ import Avatar from '@/components/ui/Avatar'
 import AlunoActionsMenu from './AlunoActionsMenu'
 import { Plus, Users } from 'lucide-react'
 import { calcularIdade, formatTelefone } from '@/lib/utils'
+import { getTurmaIdsForCoach } from '@/lib/turmas'
 import type { AlunoRow } from '@/types/database'
 
 type AlunoWithTurma = AlunoRow & {
@@ -26,7 +27,16 @@ export default async function AlunosPage({
   const status = filters.status ?? ''
   const turma = filters.turma ?? ''
 
-  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles').select('role').eq('id', user?.id).single()
+
+  let turmaIdsCoach: string[] | null = null
+  if (profile?.role === 'coach') {
+    turmaIdsCoach = await getTurmaIdsForCoach(supabase, user?.id)
+  }
 
   let query = supabase
     .from('alunos')
@@ -35,10 +45,16 @@ export default async function AlunosPage({
 
   if (status) query = query.eq('status', status)
   if (turma) query = query.eq('turma_id', turma)
+  if (turmaIdsCoach) query = query.in('turma_id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
+
+  let turmasQuery = supabase.from('turmas').select('id, nome').order('nome')
+  if (turmaIdsCoach) {
+    turmasQuery = turmasQuery.in('id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
+  }
 
   const [{ data: alunosRaw }, { data: turmasRaw }] = await Promise.all([
     query,
-    supabase.from('turmas').select('id, nome').order('nome'),
+    turmasQuery,
   ])
 
   let alunos = (alunosRaw ?? []) as AlunoWithTurma[]

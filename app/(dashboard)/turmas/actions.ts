@@ -4,13 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/audit'
-import { requireStaff } from '@/lib/assert'
+import { requireStaff, requireAdmin } from '@/lib/assert'
 import type { DiaSemana, TurmaModalidade, TurmaStatus } from '@/types/database'
 
 export async function createTurma(formData: FormData) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const actor = await requireStaff()
+  const actor = await requireAdmin()
   const dias = formData.getAll('dias_semana') as DiaSemana[]
 
   const semestreRaw = formData.get('semestre') as string

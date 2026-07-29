@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
 import { Clock, ChevronRight } from 'lucide-react'
 import { formatarDiasSemana, formatarHorario } from '@/lib/utils'
+import { getTurmaIdsForCoach } from '@/lib/turmas'
 import type { DiaSemana } from '@/types/database'
 
 type TurmaCard = {
@@ -13,16 +14,35 @@ type TurmaCard = {
 }
 
 export default async function TurmasOcupacaoSection() {
-  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles').select('role').eq('id', user?.id).single()
 
-  const { data: turmasRaw } = await supabase
+  let turmasQuery = supabase
     .from('turmas')
     .select('id, nome, modalidade, status, dias_semana, horario_inicio, horario_fim, capacidade, coaches:coach_id ( full_name ), alunos(count)')
     .eq('status', 'ativa')
     .eq('alunos.status', 'ativo')
     .order('nome')
+  if (profile?.role === 'coach') {
+    const turmaIdsCoach = await getTurmaIdsForCoach(supabase, user?.id)
+    turmasQuery = turmasQuery.in('id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
+  }
+
+  const [{ data: turmasRaw }, { data: auxCoachesRaw }] = await Promise.all([
+    turmasQuery,
+    supabase.from('turma_coaches').select('turma_id, coach:profiles ( full_name )'),
+  ])
 
   const turmas = (turmasRaw ?? []) as any[]
+  const auxCoachesMap: Record<string, string[]> = {}
+  for (const r of (auxCoachesRaw ?? []) as { turma_id: string; coach: { full_name: string | null } | null }[]) {
+    if (!r.coach?.full_name) continue
+    if (!auxCoachesMap[r.turma_id]) auxCoachesMap[r.turma_id] = []
+    auxCoachesMap[r.turma_id].push(r.coach.full_name)
+  }
 
   return (
     <div className="lg:col-span-2 space-y-4">
@@ -76,8 +96,15 @@ export default async function TurmasOcupacaoSection() {
                     <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                   </div>
 
-                  {t.coaches?.full_name && (
-                    <p className="text-[11px] text-gray-400 mt-2">{t.coaches.full_name}</p>
+                  {(t.coaches?.full_name || auxCoachesMap[t.id]) && (
+                    <div className="mt-2 space-y-0.5">
+                      {t.coaches?.full_name && (
+                        <p className="text-[11px] text-gray-400">{t.coaches.full_name}</p>
+                      )}
+                      {auxCoachesMap[t.id]?.map((nome) => (
+                        <p key={nome} className="text-[11px] text-gray-400">{nome}</p>
+                      ))}
+                    </div>
                   )}
                 </Card>
               </Link>

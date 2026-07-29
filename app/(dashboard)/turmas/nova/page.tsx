@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
@@ -6,7 +7,14 @@ import BackButton from '@/components/ui/BackButton'
 import { createTurma } from '../actions'
 
 export default async function NovaTurmaPage() {
-  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+
+  const { data: { user: me } } = await supabase.auth.getUser()
+  if (!me) redirect('/login')
+  const { data: profileRaw } = await supabase.from('profiles').select('role').eq('id', me.id).single()
+  if (profileRaw?.role !== 'admin') redirect('/dashboard')
+
   const { data } = await supabase
     .from('profiles')
     .select('id, full_name')
