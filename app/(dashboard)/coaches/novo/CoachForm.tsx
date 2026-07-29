@@ -1,17 +1,29 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import PasswordInput from '@/components/ui/PasswordInput'
+import AvatarUpload from '@/components/ui/AvatarUpload'
 import { createCoach } from '../actions'
 
 export default function CoachForm() {
   const [state, formAction, isPending] = useActionState(createCoach, null)
+  const [fotoUrl, setFotoUrl] = useState('')
 
   return (
     <form action={formAction} className="space-y-5">
+      <input type="hidden" name="avatar_url" value={fotoUrl} />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Foto de perfil</label>
+        <AvatarUpload
+          folder="coaches"
+          currentUrl={null}
+          name="T"
+          onUpload={(url) => setFotoUrl(url)}
+        />
+      </div>
       <Input
         label="Nome completo"
         name="full_name"

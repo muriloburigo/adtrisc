@@ -13,10 +13,11 @@ export async function createCoach(_prev: ActionState, formData: FormData): Promi
   const admin = createAdminClient() as any
   const actor = await getSessionUser()
 
-  const full_name = (formData.get('full_name') as string)?.trim()
-  const email     = (formData.get('email') as string)?.trim()
-  const password  = formData.get('password') as string
-  const cref      = (formData.get('cref') as string)?.trim() || null
+  const full_name  = (formData.get('full_name') as string)?.trim()
+  const email      = (formData.get('email') as string)?.trim()
+  const password   = formData.get('password') as string
+  const cref       = (formData.get('cref') as string)?.trim() || null
+  const avatar_url = (formData.get('avatar_url') as string)?.trim() || null
 
   if (!full_name || !email || !password) return { error: 'Preencha todos os campos.' }
 
@@ -37,6 +38,7 @@ export async function createCoach(_prev: ActionState, formData: FormData): Promi
     email,
     role: 'coach',
     cref,
+    avatar_url,
   })
 
   await logAudit({

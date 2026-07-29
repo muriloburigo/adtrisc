@@ -1,6 +1,7 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import AvatarUpload from '@/components/ui/AvatarUpload'
 
 type Turma = { id: string; nome: string }
 
@@ -17,6 +18,7 @@ type AlunoData = {
   cidade?: string | null
   observacoes?: string | null
   status?: string | null
+  foto_url?: string | null
 }
 
 type RespData = {
@@ -45,6 +47,7 @@ export default function AlunoForm({
   showStatus?: boolean
 }) {
   const [pending, startTransition] = useTransition()
+  const [fotoUrl, setFotoUrl] = useState(aluno?.foto_url ?? '')
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -59,6 +62,19 @@ export default function AlunoForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-0">
+      <input type="hidden" name="foto_url" value={fotoUrl ?? ''} />
+
+      {/* Foto */}
+      <div className={sectionClass}>
+        <h3 className={sectionTitleClass}>Foto</h3>
+        <AvatarUpload
+          folder="alunos"
+          currentUrl={aluno?.foto_url}
+          name={aluno?.nome ?? 'A'}
+          onUpload={(url) => setFotoUrl(url)}
+        />
+      </div>
+
       {/* Dados do atleta */}
       <div className={sectionClass}>
         <h3 className={sectionTitleClass}>Dados do Atleta</h3>
