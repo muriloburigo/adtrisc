@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils'
 import AttendanceChecklist from './AttendanceChecklist'
 import type { AlunoRow, TurmaRow, PresencaRow } from '@/types/database'
 
-type AlunoBasic = Pick<AlunoRow, 'id' | 'nome'>
+type AlunoBasic = Pick<AlunoRow, 'id' | 'nome' | 'status'>
 
 export default async function PresencaChecklistPage({
   params,
@@ -22,7 +22,7 @@ export default async function PresencaChecklistPage({
 
   const [{ data: turmaRaw }, { data: alunosRaw }, { data: presencasRaw }] = await Promise.all([
     supabase.from('turmas').select('id, nome, modalidade').eq('id', turmaId).single(),
-    supabase.from('alunos').select('id, nome').eq('turma_id', turmaId).eq('status', 'ativo').order('nome'),
+    supabase.from('alunos').select('id, nome, status').eq('turma_id', turmaId).in('status', ['ativo', 'inativo']).order('nome'),
     supabase.from('presencas').select('*').eq('turma_id', turmaId).eq('data', data).is('deleted_at', null),
   ])
 

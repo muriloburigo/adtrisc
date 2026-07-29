@@ -7,7 +7,7 @@ import { savePresencas, type EntradaPresenca } from '../../actions'
 import DeletePresencaButton from '../../DeletePresencaButton'
 import type { AlunoRow, PresencaRow } from '@/types/database'
 
-type AlunoBasic = Pick<AlunoRow, 'id' | 'nome'>
+type AlunoBasic = Pick<AlunoRow, 'id' | 'nome' | 'status'>
 
 type Estado = 'presente' | 'falta' | 'justificada'
 
@@ -21,7 +21,8 @@ function initEstados(
     if (p) {
       map.set(a.id, p.presente ? 'presente' : p.justificada ? 'justificada' : 'falta')
     } else {
-      map.set(a.id, 'presente')
+      // Atleta inativo entra automaticamente como falta justificada, não precisa marcar manualmente
+      map.set(a.id, a.status === 'inativo' ? 'justificada' : 'presente')
     }
   }
   return map
@@ -139,7 +140,14 @@ export default function AttendanceChecklist({
                   {aluno.nome.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-medium text-navy-500 text-sm leading-tight">{aluno.nome}</p>
+                  <p className="font-medium text-navy-500 text-sm leading-tight flex items-center gap-1.5">
+                    {aluno.nome}
+                    {aluno.status === 'inativo' && (
+                      <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                        Inativo
+                      </span>
+                    )}
+                  </p>
                   {!presente && (
                     <button
                       onClick={() => toggleJustificada(aluno.id)}
