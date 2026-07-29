@@ -395,7 +395,11 @@ function AttendanceGrid({
           <div style={{ borderBottom: '1px solid #555', paddingBottom: 24, marginBottom: 4 }} />
           <p>
             Assinatura do Treinador
-            {coachCref && <span style={{ marginLeft: 16 }}>CREF {coachCref}</span>}
+            {(turma.coach_nome || coachCref) && (
+              <span style={{ marginLeft: 16 }}>
+                {turma.coach_nome}{turma.coach_nome && coachCref ? ' – ' : ''}{coachCref && `CREF ${coachCref}`}
+              </span>
+            )}
           </p>
         </div>
         <div style={{ width: 160 }}>

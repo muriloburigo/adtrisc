@@ -42,7 +42,7 @@ const MESES_EXTENSO = [
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ]
 
-type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null } | null }
+type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null; cref: string | null } | null }
 type AlunoBasic = {
   id: string
   nome: string
@@ -73,7 +73,6 @@ export default async function RelatorioTurmaPage({
   const mes    = Number(sp.mes)  || now.getMonth() + 1
   const ano    = Number(sp.ano)  || now.getFullYear()
   const local  = sp.local  ?? 'Beira Mar São José'
-  const cref   = sp.cref   ?? ''
   const cidade = sp.cidade ?? 'São José'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,7 +84,7 @@ export default async function RelatorioTurmaPage({
   const [{ data: turmaRaw }, { data: alunosRaw }, { data: presencasRaw }] = await Promise.all([
     supabase
       .from('turmas')
-      .select('*, coaches:coach_id ( full_name )')
+      .select('*, coaches:coach_id ( full_name, cref )')
       .eq('id', id)
       .single(),
     supabase
@@ -140,6 +139,7 @@ export default async function RelatorioTurmaPage({
   const hasSessions = datas.length > 0
   const year = ano
   const coachName = turma.coaches?.full_name ?? ''
+  const coachCref = turma.coaches?.cref ?? ''
 
   const dateColW = datas.length <= 18 ? 26 : datas.length <= 26 ? 22 : 18
 
@@ -183,7 +183,7 @@ export default async function RelatorioTurmaPage({
           </div>
 
           <Card>
-            <RelatorioForm mes={mes} ano={ano} local={local} cref={cref} cidade={cidade} />
+            <RelatorioForm mes={mes} ano={ano} local={local} cidade={cidade} />
           </Card>
 
           {!hasSessions && (
@@ -334,7 +334,7 @@ export default async function RelatorioTurmaPage({
                 <p style={{ margin: 0, fontWeight: 700 }}>Treinador(a) Responsável</p>
                 {coachName && (
                   <p style={{ margin: '2px 0 0' }}>
-                    {coachName}{cref ? ` – CREF ${cref}` : ''}
+                    {coachName}{coachCref ? ` – CREF ${coachCref}` : ''}
                   </p>
                 )}
               </div>
