@@ -4,12 +4,14 @@ import TurmasOcupacaoSection from './_components/TurmasOcupacaoSection'
 import RecentPresencasSection from './_components/RecentPresencasSection'
 import UltimosAtletasSection from './_components/UltimosAtletasSection'
 import FaltasAlertSection from './_components/FaltasAlertSection'
+import NovosCandidatosAlertSection from './_components/NovosCandidatosAlertSection'
 import {
   StatsSkeleton,
   TurmasOcupacaoSkeleton,
   RecentPresencasSkeleton,
   UltimosAtletasSkeleton,
-  FaltasAlertSkeleton
+  FaltasAlertSkeleton,
+  NovosCandidatosAlertSkeleton
 } from './_components/Skeletons'
 
 export default function DashboardPage() {
@@ -25,8 +27,11 @@ export default function DashboardPage() {
         <StatsSection />
       </Suspense>
 
-      {/* Alerta de faltas — Independente */}
-      <div className="mb-6">
+      {/* Alertas — Independentes */}
+      <div className="mb-6 space-y-4">
+        <Suspense fallback={<NovosCandidatosAlertSkeleton />}>
+          <NovosCandidatosAlertSection />
+        </Suspense>
         <Suspense fallback={<FaltasAlertSkeleton />}>
           <FaltasAlertSection />
         </Suspense>

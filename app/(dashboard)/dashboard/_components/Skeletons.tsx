@@ -71,3 +71,7 @@ export function FaltasAlertSkeleton() {
     </div>
   )
 }
+
+export function NovosCandidatosAlertSkeleton() {
+  return <Card className="h-16"><></></Card>
+}
