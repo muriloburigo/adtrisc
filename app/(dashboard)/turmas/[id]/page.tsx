@@ -1,8 +1,6 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import BackButton from '@/components/ui/BackButton'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
@@ -10,13 +8,11 @@ import Badge, { statusAlunoVariant, statusTurmaVariant } from '@/components/ui/B
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import Avatar from '@/components/ui/Avatar'
-import AddFotoModal from './AddFotoModal'
-import DeleteFotoButton from './DeleteFotoButton'
 import FichasTurmaButton from './FichasTurmaButton'
 import AlunoActionsMenu from '@/app/(dashboard)/alunos/AlunoActionsMenu'
-import { Users, Pencil, Clock, Plus, FileDown, Images } from 'lucide-react'
-import { formatarDiasSemana, formatarHorario, calcularIdade, formatFaixaEtaria, formatSemestre, formatDate } from '@/lib/utils'
-import type { TurmaRow, TurmaFotoRow, DiaSemana } from '@/types/database'
+import { Users, Pencil, Clock, Plus, FileDown } from 'lucide-react'
+import { formatarDiasSemana, formatarHorario, calcularIdade, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
+import type { TurmaRow, DiaSemana } from '@/types/database'
 
 type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null } | null }
 type AlunoBasic = { id: string; nome: string; sexo: string | null; data_nascimento: string | null; status: string; foto_url: string | null; telefone: string | null }
@@ -26,13 +22,9 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const adminDb = createAdminClient() as any
-
-  const [{ data: turmaRaw }, { data: alunosRaw }, { data: fotosRaw }, { data: auxRaw }] = await Promise.all([
+  const [{ data: turmaRaw }, { data: alunosRaw }, { data: auxRaw }] = await Promise.all([
     supabase.from('turmas').select('*, coaches:coach_id ( full_name )').eq('id', id).single(),
     supabase.from('alunos').select('id, nome, sexo, data_nascimento, status, foto_url, telefone').eq('turma_id', id).order('nome'),
-    adminDb.from('turma_fotos').select('*').eq('turma_id', id).order('data', { ascending: false }),
     supabase.from('turma_coaches').select('coach:profiles(full_name)').eq('turma_id', id),
   ])
 
@@ -40,7 +32,6 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
 
   const turma = turmaRaw as TurmaWithCoach & { dias_semana: DiaSemana[] }
   const alunos = (alunosRaw ?? []) as AlunoBasic[]
-  const fotos  = (fotosRaw  ?? []) as TurmaFotoRow[]
   const auxiliaryCoachNames = ((auxRaw ?? []) as { coach: { full_name: string | null } | null }[])
     .map((r) => r.coach?.full_name)
     .filter((n): n is string => Boolean(n))
@@ -193,48 +184,6 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
           </>
         )}
       </Card>
-
-      {/* ── Galeria de fotos ── */}
-      <div className="mt-10">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-navy-500 flex items-center gap-2">
-            <Images size={16} className="text-sky-400" />
-            Galeria de Fotos
-            {fotos.length > 0 && (
-              <span className="text-xs font-normal text-gray-400">· {fotos.length} foto{fotos.length !== 1 ? 's' : ''}</span>
-            )}
-          </h2>
-          <AddFotoModal turmaId={id} />
-        </div>
-
-        {fotos.length === 0 ? (
-          <div className="border-2 border-dashed border-gray-200 rounded-xl py-10 text-center">
-            <Images size={28} className="text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">Nenhuma foto ainda. Clique em &ldquo;Adicionar foto&rdquo; para começar.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {fotos.map((foto) => (
-              <div key={foto.id} className="group relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                <div className="relative aspect-video">
-                  <Image
-                    src={foto.url}
-                    alt={foto.titulo}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-                <div className="px-3 py-2.5">
-                  <p className="text-xs font-semibold text-navy-500 truncate">{foto.titulo}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{formatDate(foto.data)}</p>
-                </div>
-                <DeleteFotoButton fotoId={foto.id} storagePath={foto.storage_path} turmaId={id} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { X, Plus, CheckCircle, Loader, AlertCircle, Printer } from 'lucide-react'
+import { useState, useEffect, useRef, useTransition } from 'react'
+import { X, Plus, CheckCircle, Loader, AlertCircle, Printer, Image as ImageIcon, Trash2 } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import { formatDate } from '@/lib/utils'
 import { criarMultiplosRegistros } from './actions'
+import { setFotoDoDia, removerFotoDoDia, type FotoDoDia } from './fotoActions'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 // ── Report constants ────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ function diaSemana(dateStr: string) {
 
 // ── Types ───────────────────────────────────────────────────────────────────
 type TurmaBasic = { id: string; nome: string }
-type FotoBasic  = { id: string; url: string; titulo: string }
+type FotoBasic  = { id: string; url: string; titulo: string; turma_id: string; storage_path: string }
 
 export type InitialDay = {
   date: string
@@ -84,6 +85,95 @@ function loadDraft(key: string): Draft | null {
   if (typeof window === 'undefined') return null
   try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : null }
   catch { return null }
+}
+
+// ── Foto do dia (por turma) ──────────────────────────────────────────────────
+function FotoDoDiaSlot({
+  entryKey, date, turmaId, turmaLabel, foto, onChange,
+}: {
+  entryKey: string
+  date: string
+  turmaId: string
+  turmaLabel: string | null
+  foto: FotoBasic | undefined
+  onChange: (foto: FotoDoDia | null) => void
+}) {
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function applyFile(file: File | undefined | null) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Apenas imagens são aceitas.'); return }
+    setError(null)
+    const fd = new FormData()
+    fd.set('turma_id', turmaId)
+    fd.set('data', date)
+    fd.set('file', file)
+    startTransition(async () => {
+      const result = await setFotoDoDia(fd)
+      if (result.error) { setError(result.error); return }
+      if (result.foto) onChange(result.foto)
+    })
+  }
+
+  function handleRemove() {
+    if (!foto) return
+    if (!confirm('Remover esta foto?')) return
+    startTransition(async () => {
+      await removerFotoDoDia(turmaId, date, foto.storage_path)
+      onChange(null)
+    })
+  }
+
+  return (
+    <div>
+      {turmaLabel && <p className="text-xs text-gray-400 mb-1">{turmaLabel}</p>}
+      {foto ? (
+        <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50 aspect-video max-w-[220px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={foto.url} alt={foto.titulo || 'Foto do dia'} className="w-full h-full object-cover" />
+          <button
+            type="button"
+            disabled={pending}
+            onClick={handleRemove}
+            className="absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1 hover:bg-red-500/90 transition-colors disabled:opacity-50"
+            title="Remover foto"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ) : (
+        <label
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); applyFile(e.dataTransfer.files?.[0]) }}
+          className={`flex flex-col items-center justify-center gap-1 border-2 border-dashed rounded-lg py-4 px-3 cursor-pointer transition-colors max-w-[220px] ${
+            isDragging ? 'border-sky-400 bg-sky-50' : 'border-gray-200 hover:border-sky-400'
+          }`}
+        >
+          {pending ? (
+            <Loader size={16} className="text-gray-300 animate-spin" />
+          ) : (
+            <>
+              <ImageIcon size={16} className="text-gray-300" />
+              <span className="text-[11px] text-gray-400 text-center">Arraste ou clique</span>
+            </>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={pending}
+            onChange={(e) => applyFile(e.target.files?.[0])}
+          />
+        </label>
+      )}
+      {error && <p className="text-[11px] text-red-500 mt-1">{error}</p>}
+    </div>
+  )
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -238,6 +328,14 @@ export default function DiarioClientView({
     setEntries((prev) => prev.filter((e) => e.key !== key))
   }
 
+  function handleFotoChange(entryKey: string, turmaId: string, foto: FotoDoDia | null) {
+    setEntries((prev) => prev.map((e) => {
+      if (e.key !== entryKey) return e
+      const semEssaTurma = e.fotos.filter((f) => f.turma_id !== turmaId)
+      return { ...e, fotos: foto ? [...semEssaTurma, foto] : semEssaTurma }
+    }))
+  }
+
   function setMeta<T>(setter: (v: T) => void) {
     return (v: T) => { hasUserEdited.current = true; setter(v) }
   }
@@ -351,11 +449,13 @@ export default function DiarioClientView({
                 {entry.fotos.map((foto) => (
                   <div key={foto.id} className="no-break" style={{ marginBottom: 16, textAlign: 'center' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={foto.url} alt={foto.titulo}
+                    <img src={foto.url} alt={foto.titulo || 'Foto do dia'}
                       style={{ maxWidth: '80%', maxHeight: 280, objectFit: 'cover', borderRadius: 4, display: 'block', margin: '0 auto' }} />
-                    <p style={{ fontSize: 10, color: '#333', marginTop: 6 }}>
-                      <strong>{foto.titulo}</strong>
-                    </p>
+                    {foto.titulo && (
+                      <p style={{ fontSize: 10, color: '#333', marginTop: 6 }}>
+                        <strong>{foto.titulo}</strong>
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -494,6 +594,26 @@ export default function DiarioClientView({
                       onChange={(e) => update(entry.key, { observacoes: e.target.value })}
                       placeholder="Ex: ✔ Aula realizada normalmente"
                       className={`${inputCls} resize-y`} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Fotos do dia</label>
+                    {selectedTurmaIds.size === 0 ? (
+                      <p className="text-xs text-gray-400">Selecione ao menos uma turma para adicionar fotos.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-3">
+                        {[...selectedTurmaIds].map((turmaId) => (
+                          <FotoDoDiaSlot
+                            key={turmaId}
+                            entryKey={entry.key}
+                            date={entry.date}
+                            turmaId={turmaId}
+                            turmaLabel={selectedTurmaIds.size > 1 ? (allTurmas.find((t) => t.id === turmaId)?.nome ?? null) : null}
+                            foto={entry.fotos.find((f) => f.turma_id === turmaId)}
+                            onChange={(foto) => handleFotoChange(entry.key, turmaId, foto)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

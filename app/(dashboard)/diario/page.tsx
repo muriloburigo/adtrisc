@@ -65,7 +65,7 @@ export default async function DiarioPage({
   }
 
   // ── Load fotos ────────────────────────────────────────────────────────────
-  type FotoBasic = { id: string; url: string; titulo: string; data: string }
+  type FotoBasic = { id: string; url: string; titulo: string; data: string; turma_id: string; storage_path: string }
   let fotos: FotoBasic[] = []
   if (targetCoachId) {
     const { data: turmasRaw } = await supabase
@@ -73,7 +73,7 @@ export default async function DiarioPage({
     const turmaIds = (turmasRaw ?? []).map((t: { id: string }) => t.id)
     if (turmaIds.length > 0) {
       const { data: fotosRaw } = await supabase
-        .from('turma_fotos').select('id, url, titulo, data')
+        .from('turma_fotos').select('id, url, titulo, data, turma_id, storage_path')
         .in('turma_id', turmaIds)
         .gte('data', dataInicio).lte('data', dataFim)
         .order('data')
@@ -130,7 +130,7 @@ export default async function DiarioPage({
       const allDates = new Set([...registroMap.keys(), ...byDate.keys()])
       initialDays = [...allDates].sort().map((date) => {
         const existing = registroMap.get(date)
-        const dayFotos = fotos.filter((f) => f.data === date).map(({ id, url, titulo }) => ({ id, url, titulo }))
+        const dayFotos = fotos.filter((f) => f.data === date).map(({ id, url, titulo, turma_id, storage_path }) => ({ id, url, titulo, turma_id, storage_path }))
         if (existing) {
           return { date, ...existing, fotos: dayFotos }
         }
@@ -139,7 +139,7 @@ export default async function DiarioPage({
     } else {
       initialDays = [...registroMap.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, r]) => ({
         date, ...r,
-        fotos: fotos.filter((f) => f.data === date).map(({ id, url, titulo }) => ({ id, url, titulo })),
+        fotos: fotos.filter((f) => f.data === date).map(({ id, url, titulo, turma_id, storage_path }) => ({ id, url, titulo, turma_id, storage_path })),
       }))
     }
   }
