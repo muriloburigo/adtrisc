@@ -4,9 +4,10 @@ import { useTransition } from 'react'
 import { updateCandidatoStatus } from './actions'
 
 const STATUS_OPTIONS = [
-  { value: 'inscrito',        label: 'Inscrito',         color: 'bg-gray-100 text-gray-700' },
-  { value: 'sorteado',        label: 'Sorteado',         color: 'bg-emerald-100 text-emerald-700' },
-  { value: 'desclassificado', label: 'Desclassificado',  color: 'bg-red-100 text-red-700' },
+  { value: 'pendente',     label: 'Pendente',      color: 'bg-gray-100 text-gray-700' },
+  { value: 'sorteado',     label: 'Sorteado',      color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'nao_sorteado', label: 'Não sorteado',  color: 'bg-amber-100 text-amber-700' },
+  { value: 'convertido',   label: 'Convertido',    color: 'bg-sky-100 text-sky-700' },
 ]
 
 export default function StatusSelect({

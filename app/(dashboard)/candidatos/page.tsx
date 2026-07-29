@@ -16,17 +16,17 @@ type CandidatoWithTurma = CandidatoRow & {
 
 function statusVariant(status: string) {
   if (status === 'sorteado') return 'green'
-  if (status === 'em_espera') return 'yellow'
-  if (status === 'cancelado') return 'red'
+  if (status === 'nao_sorteado') return 'yellow'
+  if (status === 'convertido') return 'sky'
   return 'gray'
 }
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
-    inscrito: 'Inscrito',
+    pendente: 'Pendente',
     sorteado: 'Sorteado',
-    em_espera: 'Em espera',
-    cancelado: 'Cancelado',
+    nao_sorteado: 'Não sorteado',
+    convertido: 'Convertido',
   }
   return labels[status] ?? status
 }
@@ -85,10 +85,10 @@ export default async function CandidatosPage({
       key: 'status',
       placeholder: 'Todos os status',
       options: [
-        { value: 'inscrito', label: 'Inscrito' },
+        { value: 'pendente', label: 'Pendente' },
         { value: 'sorteado', label: 'Sorteado' },
-        { value: 'em_espera', label: 'Em espera' },
-        { value: 'cancelado', label: 'Cancelado' },
+        { value: 'nao_sorteado', label: 'Não sorteado' },
+        { value: 'convertido', label: 'Convertido' },
       ],
     },
     ...(turmaOptions.length > 0

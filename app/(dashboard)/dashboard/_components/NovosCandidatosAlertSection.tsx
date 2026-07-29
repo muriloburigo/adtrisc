@@ -10,14 +10,14 @@ export default async function NovosCandidatosAlertSection() {
   const { data: candidatosRaw } = await supabase
     .from('candidatos')
     .select('id')
-    .eq('status', 'inscrito')
+    .eq('status', 'pendente')
 
   const candidatos = (candidatosRaw ?? []) as { id: string }[]
   if (candidatos.length === 0) return null
 
   const href = candidatos.length === 1
     ? `/candidatos/${candidatos[0].id}`
-    : '/candidatos?status=inscrito'
+    : '/candidatos?status=pendente'
 
   return (
     <Link href={href}>
