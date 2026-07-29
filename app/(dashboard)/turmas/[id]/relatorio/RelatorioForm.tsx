@@ -18,23 +18,27 @@ export default function RelatorioForm({
   ano,
   local: initialLocal,
   cidade: initialCidade,
+  processo: initialProcesso,
 }: {
   mes: number
   ano: number
   local: string
   cidade: string
+  processo: string
 }) {
   const router = useRouter()
   const pathname = usePathname()
   const [local, setLocal] = useState(initialLocal)
   const [cidade, setCidade] = useState(initialCidade)
+  const [processo, setProcesso] = useState(initialProcesso)
 
-  function navigate(nextMes: number, nextAno: number, nextLocal: string, nextCidade: string) {
+  function navigate(nextMes: number, nextAno: number, nextLocal: string, nextCidade: string, nextProcesso: string) {
     const params = new URLSearchParams({
       mes: String(nextMes),
       ano: String(nextAno),
       local: nextLocal,
       cidade: nextCidade,
+      processo: nextProcesso,
     })
     router.push(`${pathname}?${params}`)
   }
@@ -49,7 +53,7 @@ export default function RelatorioForm({
             </label>
             <select
               value={mes}
-              onChange={(e) => navigate(Number(e.target.value), ano, local, cidade)}
+              onChange={(e) => navigate(Number(e.target.value), ano, local, cidade, processo)}
               className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
             >
               {MESES.map((m, i) => (
@@ -63,7 +67,7 @@ export default function RelatorioForm({
             </label>
             <select
               value={ano}
-              onChange={(e) => navigate(mes, Number(e.target.value), local, cidade)}
+              onChange={(e) => navigate(mes, Number(e.target.value), local, cidade, processo)}
               className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
             >
               {gerarAnos().map((a) => (
@@ -74,7 +78,7 @@ export default function RelatorioForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Local do atendimento
@@ -83,8 +87,21 @@ export default function RelatorioForm({
             type="text"
             value={local}
             onChange={(e) => setLocal(e.target.value)}
-            onBlur={() => navigate(mes, ano, local, cidade)}
+            onBlur={() => navigate(mes, ano, local, cidade, processo)}
             placeholder="Ex: Beira Mar São José"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Processo SGPE <span className="normal-case font-normal text-gray-400">(opcional)</span>
+          </label>
+          <input
+            type="text"
+            value={processo}
+            onChange={(e) => setProcesso(e.target.value)}
+            onBlur={() => navigate(mes, ano, local, cidade, processo)}
+            placeholder="Ex: 5217/2025"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
           />
         </div>
@@ -96,7 +113,7 @@ export default function RelatorioForm({
             type="text"
             value={cidade}
             onChange={(e) => setCidade(e.target.value)}
-            onBlur={() => navigate(mes, ano, local, cidade)}
+            onBlur={() => navigate(mes, ano, local, cidade, processo)}
             placeholder="Ex: São José"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
           />

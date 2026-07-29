@@ -72,8 +72,9 @@ export default async function RelatorioTurmaPage({
   const now = new Date()
   const mes    = Number(sp.mes)  || now.getMonth() + 1
   const ano    = Number(sp.ano)  || now.getFullYear()
-  const local  = sp.local  ?? 'Beira Mar São José'
-  const cidade = sp.cidade ?? 'São José'
+  const local    = sp.local    ?? 'Beira Mar São José'
+  const cidade   = sp.cidade   ?? 'São José'
+  const processo = sp.processo ?? ''
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
@@ -183,7 +184,7 @@ export default async function RelatorioTurmaPage({
           </div>
 
           <Card>
-            <RelatorioForm mes={mes} ano={ano} local={local} cidade={cidade} />
+            <RelatorioForm mes={mes} ano={ano} local={local} cidade={cidade} processo={processo} />
           </Card>
 
           {!hasSessions && (
@@ -216,6 +217,11 @@ export default async function RelatorioTurmaPage({
                 <div className="flex-1 px-2" style={{ padding: '3px 8px' }}>
                   <span className="font-bold uppercase">Nome da OSC: </span>
                   Associação Desportiva Triatlética de Santa Catarina/ADTRISC
+                  {processo && (
+                    <span style={{ marginLeft: 24 }}>
+                      <span className="font-bold uppercase">Processo SGPE FESPORTE: </span>{processo}
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ padding: '3px 8px', borderBottom: '1px solid #555' }}>
