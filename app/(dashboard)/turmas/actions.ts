@@ -38,11 +38,21 @@ export async function createTurma(formData: FormData) {
 
   if (error) throw new Error(error.message)
 
+  const coachIds = [...new Set(formData.getAll('coach_ids') as string[])]
+    .filter((id) => id && id !== payload.coach_id)
+
+  if (coachIds.length > 0) {
+    await supabase
+      .from('turma_coaches')
+      .insert(coachIds.map((coachId) => ({ turma_id: data.id, coach_id: coachId })))
+  }
+
   await logAudit({
     userId: actor.id, userName: actor.name,
     action: 'criar', resource: 'turma',
     resourceId: data.id, resourceLabel: payload.nome,
     after: payload as Record<string, unknown>,
+    metadata: { auxiliaryCoachIds: coachIds },
   })
 
   revalidatePath('/turmas')
@@ -82,12 +92,23 @@ export async function updateTurma(id: string, formData: FormData) {
 
   if (error) throw new Error(error.message)
 
+  const coachIds = [...new Set(formData.getAll('coach_ids') as string[])]
+    .filter((coachId) => coachId && coachId !== payload.coach_id)
+
+  await supabase.from('turma_coaches').delete().eq('turma_id', id)
+  if (coachIds.length > 0) {
+    await supabase
+      .from('turma_coaches')
+      .insert(coachIds.map((coachId) => ({ turma_id: id, coach_id: coachId })))
+  }
+
   await logAudit({
     userId: actor.id, userName: actor.name,
     action: 'editar', resource: 'turma',
     resourceId: id, resourceLabel: payload.nome,
     before: before as Record<string, unknown>,
     after: payload as Record<string, unknown>,
+    metadata: { auxiliaryCoachIds: coachIds },
   })
 
   revalidatePath('/turmas')

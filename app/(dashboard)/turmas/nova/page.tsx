@@ -20,7 +20,7 @@ export default async function NovaTurmaPage() {
       <BackButton />
       <PageHeader title="Nova Turma" subtitle="Preencha os dados da turma" />
       <Card>
-        <TurmaForm action={createTurma} coaches={coaches} submitLabel="Criar Turma" />
+        <TurmaForm action={createTurma} coaches={coaches} auxiliaryCoachIds={[]} submitLabel="Criar Turma" />
       </Card>
     </div>
   )

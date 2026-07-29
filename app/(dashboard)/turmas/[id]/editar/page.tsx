@@ -12,15 +12,17 @@ export default async function EditarTurmaPage({ params }: { params: Promise<{ id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
-  const [{ data: turmaRaw }, { data: coachesRaw }] = await Promise.all([
+  const [{ data: turmaRaw }, { data: coachesRaw }, { data: auxRaw }] = await Promise.all([
     supabase.from('turmas').select('*').eq('id', id).single(),
     supabase.from('profiles').select('id, full_name').eq('role', 'coach').order('full_name'),
+    supabase.from('turma_coaches').select('coach_id').eq('turma_id', id),
   ])
 
   if (!turmaRaw) notFound()
 
   const turma = turmaRaw as TurmaRow
   const coaches = (coachesRaw ?? []) as { id: string; full_name: string | null }[]
+  const auxiliaryCoachIds = ((auxRaw ?? []) as { coach_id: string }[]).map((r) => r.coach_id)
   const action = updateTurma.bind(null, id)
 
   return (
@@ -28,7 +30,13 @@ export default async function EditarTurmaPage({ params }: { params: Promise<{ id
       <BackButton />
       <PageHeader title="Editar Turma" subtitle={turma.nome} />
       <Card>
-        <TurmaForm action={action} turma={turma} coaches={coaches} submitLabel="Salvar alterações" />
+        <TurmaForm
+          action={action}
+          turma={turma}
+          coaches={coaches}
+          auxiliaryCoachIds={auxiliaryCoachIds}
+          submitLabel="Salvar alterações"
+        />
       </Card>
     </div>
   )

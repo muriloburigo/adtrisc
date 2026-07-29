@@ -30,6 +30,12 @@ export type TurmaRow = {
   updated_at: string
 }
 
+export type TurmaCoachRow = {
+  turma_id: string
+  coach_id: string
+  created_at: string
+}
+
 export type AlunoRow = {
   id: string
   turma_id: string | null

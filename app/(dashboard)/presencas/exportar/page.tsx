@@ -5,6 +5,7 @@ import Card from '@/components/ui/Card'
 import ExportForm from './ExportForm'
 import PrintButton from './PrintButton'
 import { formatarDiasSemana, formatarHorario, formatTelefone } from '@/lib/utils'
+import { getTurmaIdsForCoach } from '@/lib/turmas'
 import type { DiaSemana } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -54,7 +55,10 @@ export default async function ExportarPresencasPage({
     .select('id, nome, modalidade, coach_id, dias_semana, horario_inicio, horario_fim, profiles!turmas_coach_id_fkey(full_name, cref)')
     .eq('status', 'ativa')
     .order('nome')
-  if (profile?.role === 'coach') turmasQuery = turmasQuery.eq('coach_id', user?.id)
+  if (profile?.role === 'coach') {
+    const turmaIdsCoach = await getTurmaIdsForCoach(supabase, user?.id)
+    turmasQuery = turmasQuery.in('id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
+  }
   const { data: turmasRaw } = await turmasQuery
 
   const turmas: TurmaBasic[] = (turmasRaw ?? []).map(

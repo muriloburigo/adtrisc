@@ -29,10 +29,11 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminDb = createAdminClient() as any
 
-  const [{ data: turmaRaw }, { data: alunosRaw }, { data: fotosRaw }] = await Promise.all([
+  const [{ data: turmaRaw }, { data: alunosRaw }, { data: fotosRaw }, { data: auxRaw }] = await Promise.all([
     supabase.from('turmas').select('*, coaches:coach_id ( full_name )').eq('id', id).single(),
     supabase.from('alunos').select('id, nome, sexo, data_nascimento, status, foto_url, telefone').eq('turma_id', id).order('nome'),
     adminDb.from('turma_fotos').select('*').eq('turma_id', id).order('data', { ascending: false }),
+    supabase.from('turma_coaches').select('coach:profiles(full_name)').eq('turma_id', id),
   ])
 
   if (!turmaRaw) notFound()
@@ -40,6 +41,9 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   const turma = turmaRaw as TurmaWithCoach & { dias_semana: DiaSemana[] }
   const alunos = (alunosRaw ?? []) as AlunoBasic[]
   const fotos  = (fotosRaw  ?? []) as TurmaFotoRow[]
+  const auxiliaryCoachNames = ((auxRaw ?? []) as { coach: { full_name: string | null } | null }[])
+    .map((r) => r.coach?.full_name)
+    .filter((n): n is string => Boolean(n))
 
   return (
     <div className="p-4 sm:p-8">
@@ -78,6 +82,9 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
         <Card>
           <p className="text-xs text-gray-400 mb-1">Treinador(a)</p>
           <p className="text-sm font-semibold text-navy-500">{turma.coaches?.full_name ?? '—'}</p>
+          {auxiliaryCoachNames.length > 0 && (
+            <p className="text-xs text-gray-400 mt-1">Auxiliares: {auxiliaryCoachNames.join(', ')}</p>
+          )}
         </Card>
         <Card>
           <p className="text-xs text-gray-400 mb-1">Status</p>

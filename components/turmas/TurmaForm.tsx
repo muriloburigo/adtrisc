@@ -37,11 +37,13 @@ export default function TurmaForm({
   action,
   turma,
   coaches,
+  auxiliaryCoachIds = [],
   submitLabel = 'Salvar',
 }: {
   action: (formData: FormData) => Promise<void>
   turma?: Turma
   coaches: Coach[]
+  auxiliaryCoachIds?: string[]
   submitLabel?: string
 }) {
   const formRef = useRef<HTMLFormElement>(null)
@@ -152,6 +154,35 @@ export default function TurmaForm({
           />
         )}
       </div>
+
+      {/* Treinadores auxiliares */}
+      {coaches.length > 0 && (
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            Treinadores auxiliares <span className="text-gray-400 font-normal">(opcional)</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {coaches.map((c) => (
+              <label key={c.id} className="cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="coach_ids"
+                  value={c.id}
+                  defaultChecked={auxiliaryCoachIds.includes(c.id)}
+                  className="sr-only peer"
+                />
+                <span className={cn(
+                  'inline-flex px-3 py-1.5 rounded-full text-xs font-medium border transition-colors select-none',
+                  'border-gray-300 text-gray-600',
+                  'peer-checked:bg-sky-400 peer-checked:text-white peer-checked:border-sky-400'
+                )}>
+                  {c.full_name ?? c.id}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Dias da semana */}
       <div>

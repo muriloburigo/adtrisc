@@ -8,6 +8,7 @@ import AvaTurmaSelector from './AvaTurmaSelector'
 import DeleteAvaliacaoButton from './DeleteAvaliacaoButton'
 import { Dumbbell, Users2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { getTurmaIdsForCoach } from '@/lib/turmas'
 import type { TurmaRow } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -60,7 +61,10 @@ export default async function AvaliacoesHubPage({
   // Turmas
   let turmasQuery = supabase
     .from('turmas').select('id, nome, modalidade').eq('status', 'ativa').order('nome')
-  if (profile?.role === 'coach') turmasQuery = turmasQuery.eq('coach_id', user?.id)
+  if (profile?.role === 'coach') {
+    const turmaIdsCoach = await getTurmaIdsForCoach(supabase, user?.id)
+    turmasQuery = turmasQuery.in('id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
+  }
   const { data: turmasRaw } = await turmasQuery
   const turmas = (turmasRaw ?? []) as TurmaBasic[]
   const turmaIds = turmas.map((t) => t.id)
