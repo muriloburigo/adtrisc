@@ -165,6 +165,19 @@ export type RegistroAulaTurmaRow = {
   descricao: string | null
 }
 
+export type DocumentoAssinadoTipo = 'relatorio_turma' | 'presenca_exportar'
+
+export type DocumentoAssinadoRow = {
+  id: string
+  turma_id: string
+  tipo: DocumentoAssinadoTipo
+  periodo: string
+  nome_arquivo: string
+  storage_path: string
+  enviado_por: string | null
+  enviado_em: string
+}
+
 export type ProfileRow = {
   id: string
   full_name: string | null

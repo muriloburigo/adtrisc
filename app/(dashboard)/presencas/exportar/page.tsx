@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import Card from '@/components/ui/Card'
@@ -6,6 +7,7 @@ import ExportForm from './ExportForm'
 import PrintButton from './PrintButton'
 import { formatarDiasSemana, formatarHorario, formatTelefone } from '@/lib/utils'
 import { getTurmaIdsForCoach } from '@/lib/turmas'
+import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 import type { DiaSemana } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
@@ -149,6 +151,37 @@ export default async function ExportarPresencasPage({
 
   const hasData = turma !== null && alunos.length > 0 && datas.length > 0
 
+  const periodo = `${dataInicio}_${dataFim}`
+  let documentos: DocumentoAssinadoItem[] = []
+  if (hasData && turma) {
+    const { data: docsRaw } = await supabase
+      .from('documentos_assinados')
+      .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
+      .eq('turma_id', turma.id)
+      .eq('tipo', 'presenca_exportar')
+      .eq('periodo', periodo)
+      .order('enviado_em', { ascending: false })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const adminForSigned = createAdminClient() as any
+    documentos = await Promise.all(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((docsRaw ?? []) as any[]).map(async (d) => {
+        const { data: signed } = await adminForSigned.storage
+          .from('documentos')
+          .createSignedUrl(d.storage_path, 3600)
+        return {
+          id: d.id,
+          nomeArquivo: d.nome_arquivo,
+          storagePath: d.storage_path,
+          enviadoEm: d.enviado_em,
+          enviadoPorNome: d.enviado_por?.full_name ?? null,
+          signedUrl: signed?.signedUrl ?? null,
+        }
+      }),
+    )
+  }
+
   return (
     <>
       <style>{`
@@ -208,6 +241,15 @@ export default async function ExportarPresencasPage({
                 {datas.length} sessão{datas.length !== 1 ? 'ões' : ''}
               </p>
               <PrintButton />
+            </div>
+
+            <div className="print:hidden mb-4">
+              <DocumentosAssinadosSection
+                turmaId={turma.id}
+                tipo="presenca_exportar"
+                periodo={periodo}
+                documentos={documentos}
+              />
             </div>
 
             <AttendanceGrid

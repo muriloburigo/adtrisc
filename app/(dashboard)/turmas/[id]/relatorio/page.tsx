@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Card from '@/components/ui/Card'
 import { ArrowLeft } from 'lucide-react'
 import {
@@ -11,6 +12,7 @@ import {
 import type { TurmaRow, DiaSemana } from '@/types/database'
 import RelatorioForm from './RelatorioForm'
 import PrintButton from './PrintButton'
+import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 export const dynamic = 'force-dynamic'
 
@@ -106,6 +108,34 @@ export default async function RelatorioTurmaPage({
 
   if (!turmaRaw) notFound()
 
+  const periodo = `${ano}-${String(mes).padStart(2, '0')}`
+  const { data: docsRaw } = await supabase
+    .from('documentos_assinados')
+    .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
+    .eq('turma_id', id)
+    .eq('tipo', 'relatorio_turma')
+    .eq('periodo', periodo)
+    .order('enviado_em', { ascending: false })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const adminForSigned = createAdminClient() as any
+  const documentos: DocumentoAssinadoItem[] = await Promise.all(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ((docsRaw ?? []) as any[]).map(async (d) => {
+      const { data: signed } = await adminForSigned.storage
+        .from('documentos')
+        .createSignedUrl(d.storage_path, 3600)
+      return {
+        id: d.id,
+        nomeArquivo: d.nome_arquivo,
+        storagePath: d.storage_path,
+        enviadoEm: d.enviado_em,
+        enviadoPorNome: d.enviado_por?.full_name ?? null,
+        signedUrl: signed?.signedUrl ?? null,
+      }
+    }),
+  )
+
   const turma    = turmaRaw as TurmaWithCoach & { dias_semana: DiaSemana[] }
   const alunos   = (alunosRaw   ?? []) as AlunoBasic[]
   const presencas = (presencasRaw ?? []) as PresencaEntry[]
@@ -186,6 +216,15 @@ export default async function RelatorioTurmaPage({
           <Card>
             <RelatorioForm mes={mes} ano={ano} local={local} cidade={cidade} processo={processo} />
           </Card>
+
+          <div className="mt-4">
+            <DocumentosAssinadosSection
+              turmaId={id}
+              tipo="relatorio_turma"
+              periodo={periodo}
+              documentos={documentos}
+            />
+          </div>
 
           {!hasSessions && (
             <p className="text-sm text-gray-400 text-center py-10">
