@@ -83,7 +83,11 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
           <p className="text-xs text-gray-400 mb-1">Treinador(a)</p>
           <p className="text-sm font-semibold text-navy-500">{turma.coaches?.full_name ?? '—'}</p>
           {auxiliaryCoachNames.length > 0 && (
-            <p className="text-xs text-gray-400 mt-1">Auxiliares: {auxiliaryCoachNames.join(', ')}</p>
+            <div className="mt-1 space-y-0.5">
+              {auxiliaryCoachNames.map((nome) => (
+                <p key={nome} className="text-xs text-gray-400">Auxiliar: {nome}</p>
+              ))}
+            </div>
           )}
         </Card>
         <Card>

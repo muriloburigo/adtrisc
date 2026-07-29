@@ -217,10 +217,12 @@ export default async function TurmasPage({
                 )}
 
                 {(t.coaches?.full_name || auxCoachesMap[t.id]) && (
-                  <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100">
-                    Treinador(a): {t.coaches?.full_name ?? '—'}
-                    {auxCoachesMap[t.id] && ` · Auxiliares: ${auxCoachesMap[t.id].join(', ')}`}
-                  </p>
+                  <div className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-100 space-y-0.5">
+                    <p>Treinador(a): {t.coaches?.full_name ?? '—'}</p>
+                    {auxCoachesMap[t.id]?.map((nome) => (
+                      <p key={nome}>Auxiliar: {nome}</p>
+                    ))}
+                  </div>
                 )}
               </Card>
             </Link>
