@@ -141,12 +141,31 @@ export type CandidatoRow = {
   created_at: string
 }
 
+export type RegistroAulaRow = {
+  id: string
+  coach_id: string
+  data: string
+  modalidade: string
+  objetivo: string | null
+  observacoes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type RegistroAulaTurmaRow = {
+  id: string
+  registro_aula_id: string
+  turma_id: string
+  descricao: string | null
+}
+
 export type ProfileRow = {
   id: string
   full_name: string | null
   email: string | null
   role: UserRole
   avatar_url: string | null
+  cref: string | null
   created_at: string
 }
 

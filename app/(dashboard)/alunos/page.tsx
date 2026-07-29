@@ -7,6 +7,7 @@ import Badge, { statusAlunoVariant } from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
 import Avatar from '@/components/ui/Avatar'
+import AlunoActionsMenu from './AlunoActionsMenu'
 import { Plus, Users } from 'lucide-react'
 import { calcularIdade, formatTelefone } from '@/lib/utils'
 import type { AlunoRow } from '@/types/database'
@@ -102,24 +103,23 @@ export default async function AlunosPage({
         <Card padding={false}>
           <div className="divide-y divide-gray-100">
             {alunos.map((a) => (
-              <Link
-                key={a.id}
-                href={`/alunos/${a.id}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-              >
-                <Avatar name={a.nome} url={a.foto_url} size={42} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-medium text-navy-500 truncate">{a.nome}</p>
-                    <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
+              <div key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                <Link href={`/alunos/${a.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                  <Avatar name={a.nome} url={a.foto_url} size={42} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-navy-500 truncate">{a.nome}</p>
+                      <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {a.turmas?.nome ?? 'Sem turma'}
+                      {a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
+                      {a.telefone ? ` · ${formatTelefone(a.telefone)}` : ''}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {a.turmas?.nome ?? 'Sem turma'}
-                    {a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
-                    {a.telefone ? ` · ${formatTelefone(a.telefone)}` : ''}
-                  </p>
-                </div>
-              </Link>
+                </Link>
+                <AlunoActionsMenu alunoId={a.id} alunoNome={a.nome} turmaId={a.turma_id} />
+              </div>
             ))}
           </div>
         </Card>

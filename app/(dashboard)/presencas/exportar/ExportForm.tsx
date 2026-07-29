@@ -42,12 +42,14 @@ export default function ExportForm({
   initialInicio,
   initialFim,
   initialLocal,
+  initialProcesso,
 }: {
   turmas: TurmaBasic[]
   initialTurma: string
   initialInicio: string
   initialFim: string
   initialLocal: string
+  initialProcesso: string
 }) {
   const router = useRouter()
   const defaultDates = getMonthRange(0)
@@ -56,6 +58,7 @@ export default function ExportForm({
   const [inicio, setInicio] = useState(initialInicio || defaultDates.inicio)
   const [fim, setFim] = useState(initialFim || defaultDates.fim)
   const [local, setLocal] = useState(initialLocal || 'Beira Mar São José')
+  const [processo, setProcesso] = useState(initialProcesso || '')
 
   function applyPreset(fn: () => { inicio: string; fim: string }) {
     const { inicio: i, fim: f } = fn()
@@ -66,6 +69,7 @@ export default function ExportForm({
   function visualizar() {
     if (!turmaId || !inicio || !fim) return
     const params = new URLSearchParams({ turma: turmaId, inicio, fim, local })
+    if (processo) params.set('processo', processo)
     router.push(`/presencas/exportar?${params}`)
   }
 
@@ -94,17 +98,31 @@ export default function ExportForm({
         </select>
       </div>
 
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          Local do atendimento
-        </label>
-        <input
-          type="text"
-          value={local}
-          onChange={(e) => setLocal(e.target.value)}
-          placeholder="Ex: Beira Mar São José"
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Local do atendimento
+          </label>
+          <input
+            type="text"
+            value={local}
+            onChange={(e) => setLocal(e.target.value)}
+            placeholder="Ex: Beira Mar São José"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Processo SGPE <span className="normal-case font-normal text-gray-400">(opcional)</span>
+          </label>
+          <input
+            type="text"
+            value={processo}
+            onChange={(e) => setProcesso(e.target.value)}
+            placeholder="Ex: 5217/2025"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
+          />
+        </div>
       </div>
 
       <div>

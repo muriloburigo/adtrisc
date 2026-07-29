@@ -13,7 +13,7 @@ export default async function EditarAlunoPage({ params }: { params: Promise<{ id
 
   const [{ data: alunoRaw }, { data: turmasRaw }, { data: respsRaw }] = await Promise.all([
     supabase.from('alunos').select('*').eq('id', id).single(),
-    supabase.from('turmas').select('id, nome').eq('status', 'ativa').order('nome'),
+    supabase.from('turmas').select('id, nome').order('nome'),
     supabase
       .from('responsaveis')
       .select('*, aluno_responsavel!inner(aluno_id)')
@@ -33,7 +33,7 @@ export default async function EditarAlunoPage({ params }: { params: Promise<{ id
     <div className="p-4 sm:p-8 max-w-3xl">
       <BackButton />
       <PageHeader title="Editar Atleta" subtitle={aluno.nome} />
-      <AlunoForm action={action} aluno={aluno} turmas={turmas} mae={mae} pai={pai} submitLabel="Salvar alterações" />
+      <AlunoForm action={action} aluno={aluno} turmas={turmas} mae={mae} pai={pai} submitLabel="Salvar alterações" showStatus />
     </div>
   )
 }

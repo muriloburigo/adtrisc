@@ -34,6 +34,7 @@ export default function AlunoForm({
   mae,
   pai,
   submitLabel = 'Salvar',
+  showStatus = false,
 }: {
   action: (fd: FormData) => Promise<void> | void
   aluno?: AlunoData
@@ -41,6 +42,7 @@ export default function AlunoForm({
   mae?: RespData
   pai?: RespData
   submitLabel?: string
+  showStatus?: boolean
 }) {
   const [pending, startTransition] = useTransition()
 
@@ -94,9 +96,9 @@ export default function AlunoForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Turma *</label>
-            <select name="turma_id" required defaultValue={aluno?.turma_id ?? ''} className={inputClass}>
-              <option value="">Selecionar turma</option>
+            <label className={labelClass}>Turma</label>
+            <select name="turma_id" defaultValue={aluno?.turma_id ?? ''} className={inputClass}>
+              <option value="">Sem turma</option>
               {turmas.map((t) => (
                 <option key={t.id} value={t.id}>{t.nome}</option>
               ))}
@@ -113,6 +115,17 @@ export default function AlunoForm({
             />
           </div>
         </div>
+
+        {showStatus && (
+          <div>
+            <label className={labelClass}>Status</label>
+            <select name="status" defaultValue={aluno?.status ?? 'ativo'} className={inputClass}>
+              <option value="ativo">Ativo (matriculado e frequentando)</option>
+              <option value="inativo">Inativo (temporariamente afastado)</option>
+              <option value="desligado">Desligado (perdeu a vaga)</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Endereço */}

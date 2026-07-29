@@ -67,8 +67,42 @@ export async function savePresencas(
       metadata: { total: entries.length, presentes, faltas, justificadas },
     })
 
+    // Auto-create diary entry for this day if one doesn't exist yet
+    const { data: turma } = await supabase
+      .from('turmas').select('coach_id').eq('id', turmaId).single()
+
+    if (turma?.coach_id) {
+      const { data: existingRegistro } = await supabase
+        .from('registros_aula')
+        .select('id')
+        .eq('coach_id', turma.coach_id)
+        .eq('data', data)
+        .maybeSingle()
+
+      let registroId: string | null = existingRegistro?.id ?? null
+
+      if (!registroId) {
+        const { data: novo } = await supabase
+          .from('registros_aula')
+          .insert({ coach_id: turma.coach_id, data, modalidade: 'corrida' })
+          .select('id')
+          .single()
+        registroId = novo?.id ?? null
+      }
+
+      if (registroId) {
+        await supabase
+          .from('registro_aula_turmas')
+          .upsert(
+            { registro_aula_id: registroId, turma_id: turmaId, descricao: null },
+            { onConflict: 'registro_aula_id,turma_id', ignoreDuplicates: true }
+          )
+      }
+    }
+
     revalidatePath(`/presencas/${turmaId}/${data}`)
     revalidatePath('/presencas')
+    revalidatePath('/diario')
     return {}
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'Erro ao salvar presenças' }

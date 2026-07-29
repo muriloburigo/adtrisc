@@ -14,6 +14,7 @@ type TurmaBasic = {
   nome: string
   modalidade: string
   coach_nome: string | null
+  coach_cref: string | null
   dias_semana: DiaSemana[]
   horario_inicio: string
   horario_fim: string
@@ -50,7 +51,7 @@ export default async function ExportarPresencasPage({
 
   let turmasQuery = supabase
     .from('turmas')
-    .select('id, nome, modalidade, coach_id, dias_semana, horario_inicio, horario_fim, profiles!turmas_coach_id_fkey(full_name)')
+    .select('id, nome, modalidade, coach_id, dias_semana, horario_inicio, horario_fim, profiles!turmas_coach_id_fkey(full_name, cref)')
     .eq('status', 'ativa')
     .order('nome')
   if (profile?.role === 'coach') turmasQuery = turmasQuery.eq('coach_id', user?.id)
@@ -67,14 +68,16 @@ export default async function ExportarPresencasPage({
       horario_fim: t.horario_fim,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       coach_nome: (t.profiles as any)?.full_name ?? null,
+      coach_cref: (t.profiles as any)?.cref ?? null,
     }),
   )
 
   const params = await searchParams
-  const turmaId    = params.turma  ?? ''
-  const dataInicio = params.inicio ?? ''
-  const dataFim    = params.fim    ?? ''
-  const local      = params.local  ?? 'Beira Mar São José'
+  const turmaId    = params.turma    ?? ''
+  const dataInicio = params.inicio   ?? ''
+  const dataFim    = params.fim      ?? ''
+  const local      = params.local    ?? 'Beira Mar São José'
+  const processo   = params.processo ?? ''
 
   let turma: TurmaBasic | null = null
   let alunos: AlunoBasic[] = []
@@ -176,6 +179,7 @@ export default async function ExportarPresencasPage({
               initialInicio={dataInicio}
               initialFim={dataFim}
               initialLocal={local}
+              initialProcesso={processo}
             />
           </Card>
 
@@ -209,6 +213,8 @@ export default async function ExportarPresencasPage({
               presencaMap={presencaMap}
               respMap={respMap}
               local={local}
+              processo={processo}
+              coachCref={turma.coach_cref ?? ''}
             />
           </div>
         )}
@@ -224,6 +230,8 @@ function AttendanceGrid({
   presencaMap,
   respMap,
   local,
+  processo,
+  coachCref,
 }: {
   turma: TurmaBasic
   alunos: AlunoBasic[]
@@ -231,6 +239,8 @@ function AttendanceGrid({
   presencaMap: Map<string, Map<string, Estado>>
   respMap: Record<string, string>
   local: string
+  processo: string
+  coachCref: string
 }) {
   const year = new Date().getFullYear()
 
@@ -267,6 +277,11 @@ function AttendanceGrid({
           <div className="flex-1 px-2 py-1">
             <span className={infoLabel}>Nome da OSC: </span>
             Associação Desportiva Triatlética de Santa Catarina/ADTRISC
+            {processo && (
+              <span style={{ marginLeft: 24 }}>
+                <span className={infoLabel}>Processo SGPE FESPORTE: </span>{processo}
+              </span>
+            )}
           </div>
         </div>
         <div className={infoRow}>
@@ -374,7 +389,10 @@ function AttendanceGrid({
       <div className="hidden print:flex mt-8 gap-16 text-xs text-gray-500">
         <div className="flex-1">
           <div style={{ borderBottom: '1px solid #555', paddingBottom: 24, marginBottom: 4 }} />
-          <p>Assinatura do Treinador</p>
+          <p>
+            Assinatura do Treinador
+            {coachCref && <span style={{ marginLeft: 16 }}>CREF {coachCref}</span>}
+          </p>
         </div>
         <div style={{ width: 160 }}>
           <div style={{ borderBottom: '1px solid #555', paddingBottom: 24, marginBottom: 4 }} />

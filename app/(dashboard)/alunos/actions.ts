@@ -111,7 +111,7 @@ export async function updateAluno(id: string, formData: FormData) {
   const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
 
   const payload = {
-    turma_id:        formData.get('turma_id') as string,
+    turma_id:        (formData.get('turma_id') as string) || null,
     nome:            formData.get('nome') as string,
     telefone:        (formData.get('telefone') as string) || null,
     sexo:            (formData.get('sexo') as SexoEnum) || null,
@@ -121,7 +121,7 @@ export async function updateAluno(id: string, formData: FormData) {
     bairro:          (formData.get('bairro') as string) || null,
     cep:             (formData.get('cep') as string) || null,
     cidade:          (formData.get('cidade') as string) || null,
-    status:          formData.get('status') as AlunoStatus,
+    status:          ((formData.get('status') as AlunoStatus) || before?.status) as AlunoStatus,
     observacoes:     (formData.get('observacoes') as string) || null,
     foto_url:        (formData.get('foto_url') as string) || null,
   }
@@ -173,6 +173,52 @@ export async function updateAluno(id: string, formData: FormData) {
   revalidatePath('/alunos')
   revalidatePath(`/alunos/${id}`)
   redirect(`/alunos/${id}`)
+}
+
+export async function removerAlunoTurma(id: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = (await createClient()) as any
+  const actor = await requireStaff()
+
+  const { data: before } = await db.from('alunos').select('nome, turma_id, status').eq('id', id).single()
+  if (!before) throw new Error('Atleta não encontrado')
+
+  const { error } = await db
+    .from('alunos')
+    .update({ turma_id: null, status: 'desligado' })
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  const hoje = new Date().toISOString().slice(0, 10)
+
+  let turmaAnteriorNome: string | null = null
+  if (before.turma_id) {
+    const { data: t } = await db.from('turmas').select('nome').eq('id', before.turma_id).single()
+    turmaAnteriorNome = t?.nome ?? null
+  }
+
+  await db.from('historico_atleta').insert({
+    aluno_id: id,
+    tipo: 'desligamento',
+    data: hoje,
+    turma_id: null,
+    turma_nome: null,
+    turma_anterior_id: before.turma_id ?? null,
+    turma_anterior_nome: turmaAnteriorNome,
+  })
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'status', resource: 'atleta',
+    resourceId: id, resourceLabel: before.nome,
+    before: { status: before.status, turma_id: before.turma_id } as Record<string, unknown>,
+    after: { status: 'desligado', turma_id: null } as Record<string, unknown>,
+  })
+
+  revalidatePath('/alunos')
+  revalidatePath(`/alunos/${id}`)
+  if (before.turma_id) revalidatePath(`/turmas/${before.turma_id}`)
 }
 
 export async function deleteAluno(id: string) {

@@ -61,9 +61,13 @@ export default async function AlunoTimeline({
     if (h.tipo === 'matricula') {
       descricao = h.turma_nome ? `Turma: ${h.turma_nome}` : undefined
     } else if (h.tipo === 'mudanca_turma') {
-      const de  = h.turma_anterior_nome ?? '?'
+      const de   = h.turma_anterior_nome ?? '?'
       const para = h.turma_nome ?? '?'
       descricao = `${de} → ${para}`
+    } else if (h.tipo === 'desligamento') {
+      descricao = h.turma_anterior_nome ? `Turma: ${h.turma_anterior_nome}` : undefined
+    } else if (h.tipo === 'reativacao') {
+      descricao = h.turma_nome ? `Turma: ${h.turma_nome}` : undefined
     }
     eventos.push({
       key:       h.id,

@@ -7,11 +7,16 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string | Date) {
+  // Only append T12:00:00 for plain YYYY-MM-DD strings to avoid UTC midnight shift.
+  // Full timestamps (already contain 'T') are passed as-is.
+  const d = typeof date === 'string'
+    ? new Date(date.includes('T') ? date : date + 'T12:00:00')
+    : date
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  }).format(new Date(date))
+  }).format(d)
 }
 
 export function formatCurrency(value: number) {

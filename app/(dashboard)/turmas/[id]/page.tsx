@@ -13,6 +13,7 @@ import Avatar from '@/components/ui/Avatar'
 import AddFotoModal from './AddFotoModal'
 import DeleteFotoButton from './DeleteFotoButton'
 import FichasTurmaButton from './FichasTurmaButton'
+import AlunoActionsMenu from '@/app/(dashboard)/alunos/AlunoActionsMenu'
 import { Users, Pencil, Clock, Plus, FileDown, Images } from 'lucide-react'
 import { formatarDiasSemana, formatarHorario, calcularIdade, formatFaixaEtaria, formatSemestre, formatDate } from '@/lib/utils'
 import type { TurmaRow, TurmaFotoRow, DiaSemana } from '@/types/database'
@@ -123,17 +124,20 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
             {/* Mobile */}
             <div className="md:hidden divide-y divide-gray-100">
               {alunos.map((a) => (
-                <Link key={a.id} href={`/alunos/${a.id}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
-                  <Avatar name={a.nome} url={a.foto_url} size={36} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-navy-500 truncate">{a.nome}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {a.sexo === 'M' ? 'Masc.' : a.sexo === 'F' ? 'Fem.' : '—'}
-                      {a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
-                    </p>
-                  </div>
-                  <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
-                </Link>
+                <div key={a.id} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors">
+                  <Link href={`/alunos/${a.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <Avatar name={a.nome} url={a.foto_url} size={36} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-navy-500 truncate">{a.nome}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {a.sexo === 'M' ? 'Masc.' : a.sexo === 'F' ? 'Fem.' : '—'}
+                        {a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
+                      </p>
+                    </div>
+                    <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
+                  </Link>
+                  <AlunoActionsMenu alunoId={a.id} alunoNome={a.nome} turmaId={id} />
+                </div>
               ))}
             </div>
             {/* Desktop */}
@@ -145,6 +149,7 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
                   <th className="text-left px-4 py-3 text-gray-500 font-medium">Sexo</th>
                   <th className="text-left px-4 py-3 text-gray-500 font-medium">Idade</th>
                   <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
+                  <th className="w-12 px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -166,6 +171,9 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
                     </td>
                     <td className="px-4 py-3.5">
                       <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <AlunoActionsMenu alunoId={a.id} alunoNome={a.nome} turmaId={id} />
                     </td>
                   </tr>
                 ))}

@@ -9,7 +9,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
 import Avatar from '@/components/ui/Avatar'
 import DeleteCoachButton from './[id]/DeleteCoachButton'
-import { Plus, UserCheck } from 'lucide-react'
+import { Pencil, Plus, UserCheck } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { ProfileRow } from '@/types/database'
 
@@ -31,7 +31,7 @@ export default async function CoachesPage({
 
   const { data } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, avatar_url, created_at')
+    .select('id, full_name, email, role, avatar_url, cref, created_at')
     .eq('role', 'coach')
     .order('full_name')
 
@@ -82,10 +82,20 @@ export default async function CoachesPage({
                       <Badge variant="sky">Treinador(a)</Badge>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {coach.email ?? 'Sem e-mail'} · Cadastro em {formatDate(coach.created_at)}
+                      {coach.email ?? 'Sem e-mail'}
+                      {coach.cref && <span className="text-gray-300"> · CREF {coach.cref}</span>}
+                      {' · '}Cadastro em {formatDate(coach.created_at)}
                     </p>
                   </div>
-                  <DeleteCoachButton id={coach.id} name={name} />
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={`/coaches/${coach.id}/editar`}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-navy-500 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <Pencil size={13} /> Editar
+                    </Link>
+                    <DeleteCoachButton id={coach.id} name={name} />
+                  </div>
                 </div>
               )
             })}

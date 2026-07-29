@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit, getSessionUser } from '@/lib/audit'
 
-type ActionState = { error: string } | null
+type ActionState = { error: string } | { done: true } | null
 
 export async function createCoach(_prev: ActionState, formData: FormData): Promise<ActionState> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,6 +16,7 @@ export async function createCoach(_prev: ActionState, formData: FormData): Promi
   const full_name = (formData.get('full_name') as string)?.trim()
   const email     = (formData.get('email') as string)?.trim()
   const password  = formData.get('password') as string
+  const cref      = (formData.get('cref') as string)?.trim() || null
 
   if (!full_name || !email || !password) return { error: 'Preencha todos os campos.' }
 
@@ -35,6 +36,7 @@ export async function createCoach(_prev: ActionState, formData: FormData): Promi
     full_name,
     email,
     role: 'coach',
+    cref,
   })
 
   await logAudit({
@@ -95,28 +97,29 @@ export async function resetPassword(
   return null
 }
 
-export async function updateCoach(id: string, formData: FormData): Promise<ActionState> {
+export async function updateCoach(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = (await createClient()) as any
+  const supabase = createAdminClient() as any
   const actor = await getSessionUser()
 
   const full_name = (formData.get('full_name') as string)?.trim()
+  const cref      = (formData.get('cref') as string)?.trim() || null
   if (!full_name) return { error: 'Nome é obrigatório.' }
 
   const { data: before } = await supabase
-    .from('profiles').select('full_name').eq('id', id).single()
+    .from('profiles').select('full_name, cref').eq('id', id).single()
 
-  await supabase.from('profiles').update({ full_name }).eq('id', id)
+  await supabase.from('profiles').update({ full_name, cref }).eq('id', id)
 
   await logAudit({
     userId: actor.id, userName: actor.name,
     action: 'editar', resource: 'treinador',
     resourceId: id, resourceLabel: full_name,
     before: before as Record<string, unknown>,
-    after: { full_name },
+    after: { full_name, cref },
   })
 
   revalidatePath('/coaches')
-  revalidatePath(`/coaches/${id}`)
-  redirect(`/coaches/${id}`)
+  revalidatePath(`/coaches/${id}/editar`)
+  return { done: true }
 }
