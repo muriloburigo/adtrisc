@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { X, Plus, CheckCircle, Loader, AlertCircle, Printer, Image as ImageIcon, Trash2 } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import { formatDate } from '@/lib/utils'
-import { criarMultiplosRegistros } from './actions'
+import { criarMultiplosRegistros, salvarResumoDiario } from './actions'
 import { setFotoDoDia, removerFotoDoDia, type FotoDoDia } from './fotoActions'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
@@ -263,8 +263,10 @@ export default function DiarioClientView({
         cref, cidade, processo, resumo,
       }))
 
-      if (entries.length > 0) {
-        try {
+      try {
+        await salvarResumoDiario(ano, mes, { cidade, processo, resumo }, targetCoachId)
+
+        if (entries.length > 0) {
           await criarMultiplosRegistros(
             entries.map((en) => ({
               data:        en.date,
@@ -276,12 +278,10 @@ export default function DiarioClientView({
             })),
             targetCoachId
           )
-          if (!cancelled) setSaveStatus('saved')
-        } catch {
-          if (!cancelled) setSaveStatus('error')
         }
-      } else {
-        if (!cancelled) setSaveStatus('idle')
+        if (!cancelled) setSaveStatus('saved')
+      } catch {
+        if (!cancelled) setSaveStatus('error')
       }
     }, 800)
 
@@ -394,9 +394,9 @@ export default function DiarioClientView({
         </div>
 
         {/* Resumo do mês */}
-        {resumo && (
-          <p style={{ textAlign: 'justify', marginBottom: 24, lineHeight: 1.9, textIndent: '2em' }}>{resumo}</p>
-        )}
+        {resumo && resumo.split(/\n+/).filter(Boolean).map((paragrafo, i) => (
+          <p key={i} style={{ textAlign: 'justify', marginBottom: 24, lineHeight: 1.9, textIndent: '2em' }}>{paragrafo}</p>
+        ))}
 
         {/* Aula entries */}
         {reportEntries.length === 0 ? (

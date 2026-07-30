@@ -164,6 +164,39 @@ export async function criarMultiplosRegistros(
   revalidatePath('/diario')
 }
 
+export async function salvarResumoDiario(
+  ano: number,
+  mes: number,
+  payload: { cidade: string; processo: string; resumo: string },
+  targetCoachId?: string
+): Promise<void> {
+  const actor = await requireStaff()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+
+  const role = await getRole(supabase, actor.id)
+  const coachId = (targetCoachId && role === 'admin') ? targetCoachId : actor.id
+
+  const { error } = await supabase
+    .from('diario_resumos')
+    .upsert(
+      {
+        coach_id:   coachId,
+        ano,
+        mes,
+        cidade:     payload.cidade   || null,
+        processo:   payload.processo || null,
+        resumo:     payload.resumo   || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'coach_id,ano,mes' }
+    )
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/diario')
+}
+
 export async function excluirRegistroAula(registroId: string): Promise<void> {
   const actor = await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

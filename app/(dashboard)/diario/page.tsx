@@ -23,9 +23,6 @@ export default async function DiarioPage({
   const mes      = Number(sp.mes)  || now.getMonth() + 1
   const ano      = Number(sp.ano)  || now.getFullYear()
   const cref     = sp.cref     ?? ''
-  const cidade   = sp.cidade   ?? ''
-  const processo = sp.processo ?? ''
-  const resumo   = sp.resumo   ?? ''
 
   const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`
   const dataFim    = new Date(ano, mes, 0).toLocaleDateString('en-CA')
@@ -142,6 +139,23 @@ export default async function DiarioPage({
         fotos: fotos.filter((f) => f.data === date).map(({ id, url, titulo, turma_id, storage_path }) => ({ id, url, titulo, turma_id, storage_path })),
       }))
     }
+  }
+
+  // ── Resumo do mês (persistido em diario_resumos) ─────────────────────────
+  let cidade = ''
+  let processo = ''
+  let resumo = ''
+  if (targetCoachId) {
+    const { data: resumoRow } = await supabase
+      .from('diario_resumos')
+      .select('cidade, processo, resumo')
+      .eq('coach_id', targetCoachId)
+      .eq('ano', ano)
+      .eq('mes', mes)
+      .maybeSingle()
+    cidade   = resumoRow?.cidade   ?? ''
+    processo = resumoRow?.processo ?? ''
+    resumo   = resumoRow?.resumo   ?? ''
   }
 
   // ── Documentos assinados do diário ──────────────────────────────────────
