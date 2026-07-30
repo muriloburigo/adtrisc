@@ -126,7 +126,7 @@ export async function criarMultiplosRegistros(
   const coachId = (targetCoachId && role === 'admin') ? targetCoachId : actor.id
 
   for (const entry of entries) {
-    if (!entry.data || entry.turmaIds.length === 0) continue
+    if (!entry.data) continue
 
     const { data: registro, error } = await supabase
       .from('registros_aula')
@@ -147,15 +147,18 @@ export async function criarMultiplosRegistros(
 
     if (error || !registro) continue
 
-    // Replace turma entries
+    // Replace turma entries — dia sem nenhuma turma marcada (ex: feriado) ainda
+    // salva o registro, só fica sem vínculo de turma nenhuma.
     await supabase.from('registro_aula_turmas').delete().eq('registro_aula_id', registro.id)
-    await supabase.from('registro_aula_turmas').insert(
-      entry.turmaIds.map((tid) => ({
-        registro_aula_id: registro.id,
-        turma_id:         tid,
-        descricao:        null,
-      }))
-    )
+    if (entry.turmaIds.length > 0) {
+      await supabase.from('registro_aula_turmas').insert(
+        entry.turmaIds.map((tid) => ({
+          registro_aula_id: registro.id,
+          turma_id:         tid,
+          descricao:        null,
+        }))
+      )
+    }
   }
 
   revalidatePath('/diario')

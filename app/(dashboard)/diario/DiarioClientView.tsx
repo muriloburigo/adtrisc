@@ -46,6 +46,11 @@ function diaSemana(dateStr: string) {
   return DIA_SEMANA[String(d.getDay())]
 }
 
+function turmaShortLabel(nome: string): string {
+  const m = nome.match(/Turma\s+(\d+)/i)
+  return m ? `T${m[1]}` : nome
+}
+
 // ── Types ───────────────────────────────────────────────────────────────────
 type TurmaBasic = { id: string; nome: string }
 type FotoBasic  = { id: string; url: string; titulo: string; turma_id: string; storage_path: string }
@@ -67,13 +72,13 @@ type DayEntry = {
   objetivo: string
   descricao: string
   observacoes: string
+  turmaIds: string[]
   fotos: FotoBasic[]
 }
 
 type DraftEntry = Omit<DayEntry, 'fotos'>
 
 type Draft = {
-  turmaIds: string[]
   entries: DraftEntry[]
   cref?: string
   cidade?: string
@@ -207,13 +212,6 @@ export default function DiarioClientView({
   const [resumo,   setResumo]   = useState(() => { const d = loadDraft(storageKey); return d?.resumo   ?? initialResumo })
 
   // ── Diary entries state ──────────────────────────────────────────────────
-  const [selectedTurmaIds, setSelectedTurmaIds] = useState<Set<string>>(() => {
-    const draft = loadDraft(storageKey)
-    if (draft?.turmaIds?.length) return new Set(draft.turmaIds)
-    const allIds = new Set(initialDays.flatMap((d) => d.turmaIds))
-    return allIds.size > 0 ? allIds : new Set(allTurmas.map((t) => t.id))
-  })
-
   const [entries, setEntries] = useState<DayEntry[]>(() => {
     const draft = loadDraft(storageKey)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -231,6 +229,7 @@ export default function DiarioClientView({
         objetivo:    de?.objetivo    ?? (isOldFormat ? de.descricao : undefined) ?? day.objetivo,
         descricao:   isOldFormat ? '' : (de?.descricao ?? day.descricao),
         observacoes: de?.observacoes ?? day.observacoes,
+        turmaIds:    de?.turmaIds ?? day.turmaIds,
         fotos:       day.fotos,
       }
     })
@@ -245,6 +244,7 @@ export default function DiarioClientView({
         objetivo:    e.objetivo    ?? e.descricao ?? '',
         descricao:   ('objetivo' in e) ? (e.descricao ?? '') : '',
         observacoes: e.observacoes ?? '',
+        turmaIds:    e.turmaIds ?? [],
         fotos:       [],
       }))
 
@@ -259,12 +259,11 @@ export default function DiarioClientView({
 
     const timer = setTimeout(async () => {
       localStorage.setItem(storageKey, JSON.stringify({
-        turmaIds: [...selectedTurmaIds],
         entries: entries.map(({ fotos: _f, ...rest }) => rest),
         cref, cidade, processo, resumo,
       }))
 
-      if (entries.length > 0 && selectedTurmaIds.size > 0) {
+      if (entries.length > 0) {
         try {
           await criarMultiplosRegistros(
             entries.map((en) => ({
@@ -273,7 +272,7 @@ export default function DiarioClientView({
               objetivo:    en.objetivo,
               descricao:   en.descricao,
               observacoes: en.observacoes,
-              turmaIds:    [...selectedTurmaIds],
+              turmaIds:    en.turmaIds,
             })),
             targetCoachId
           )
@@ -287,7 +286,7 @@ export default function DiarioClientView({
     }, 800)
 
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [entries, selectedTurmaIds, cref, cidade, processo, resumo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [entries, cref, cidade, processo, resumo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (saveStatus !== 'saved') return
@@ -296,13 +295,13 @@ export default function DiarioClientView({
   }, [saveStatus])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  function toggleTurma(turmaId: string) {
+  function toggleEntryTurma(entryKey: string, turmaId: string) {
     hasUserEdited.current = true
-    setSelectedTurmaIds((prev) => {
-      const next = new Set(prev)
-      next.has(turmaId) ? next.delete(turmaId) : next.add(turmaId)
-      return next
-    })
+    setEntries((prev) => prev.map((e) => {
+      if (e.key !== entryKey) return e
+      const has = e.turmaIds.includes(turmaId)
+      return { ...e, turmaIds: has ? e.turmaIds.filter((id) => id !== turmaId) : [...e.turmaIds, turmaId] }
+    }))
   }
 
   function update(key: string, patch: Partial<Pick<DayEntry, 'modalidade' | 'objetivo' | 'descricao' | 'observacoes'>>) {
@@ -316,8 +315,12 @@ export default function DiarioClientView({
     if (entries.some((e) => e.date === newDate)) { setAddError('Esta data já está na lista'); return }
     hasUserEdited.current = true
     const key = `manual-${newDate}-${++addCounter.current}`
+    // Facilita a entrada: já vem com as turmas do dia mais recente marcadas
+    // (ou todas, se ainda não há nenhum dia), só desmarca quem faltou.
+    const lastEntry = entries[entries.length - 1]
+    const defaultTurmaIds = lastEntry ? lastEntry.turmaIds : allTurmas.map((t) => t.id)
     setEntries((prev) =>
-      [...prev, { key, date: newDate, modalidade: '', objetivo: '', descricao: '', observacoes: '', fotos: [] }]
+      [...prev, { key, date: newDate, modalidade: '', objetivo: '', descricao: '', observacoes: '', turmaIds: defaultTurmaIds, fotos: [] }]
         .sort((a, b) => a.date.localeCompare(b.date))
     )
     setNewDate('')
@@ -341,7 +344,6 @@ export default function DiarioClientView({
   }
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const selectedTurmaNames = allTurmas.filter((t) => selectedTurmaIds.has(t.id)).map((t) => t.nome)
   const reportEntries = entries.filter((e) => e.modalidade || e.objetivo || e.descricao || e.observacoes)
 
   const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white'
@@ -406,19 +408,21 @@ export default function DiarioClientView({
             {idx > 0 && <hr style={{ borderColor: '#555', marginBottom: 16 }} />}
 
             <p style={{ fontWeight: 700, fontSize: 12, marginBottom: 2 }}>AULA Nº {idx + 1}</p>
-            <p style={{ marginBottom: 4 }}><strong>Data:</strong> {formatDataSimples(entry.date)}</p>
+            <p style={{ marginBottom: 4 }}><strong>Data:</strong> {formatDataSimples(entry.date)} – {diaSemana(entry.date)}</p>
 
             {entry.modalidade && (
               <p style={{ marginBottom: 4 }}>
-                <strong>Modalidade:</strong> {MODALIDADE_LABEL[entry.modalidade] ?? entry.modalidade} – {diaSemana(entry.date)}
+                <strong>Modalidade:</strong> {MODALIDADE_LABEL[entry.modalidade] ?? entry.modalidade}
               </p>
             )}
 
-            {selectedTurmaNames.length > 0 && (
+            {allTurmas.length > 0 && (
               <p style={{ marginBottom: 12 }}>
                 <strong>Turmas atendidas:</strong>{' '}
-                {selectedTurmaNames.map((n) => (
-                  <span key={n} style={{ marginRight: 16 }}>{n} ✔</span>
+                {allTurmas.map((t) => (
+                  <span key={t.id} style={{ marginRight: 16 }}>
+                    {t.nome} {entry.turmaIds.includes(t.id) ? '✔' : '✗'}
+                  </span>
                 ))}
               </p>
             )}
@@ -433,7 +437,18 @@ export default function DiarioClientView({
             {entry.descricao && (
               <>
                 <p style={{ fontWeight: 700, marginBottom: 4 }}>Descrição das Atividades / Metodologia</p>
-                <p style={{ marginBottom: 10, textAlign: 'justify', lineHeight: 1.8 }}>{entry.descricao}</p>
+                {entry.turmaIds.length > 0 ? (
+                  entry.turmaIds.map((tid) => {
+                    const t = allTurmas.find((x) => x.id === tid)
+                    return (
+                      <p key={tid} style={{ marginBottom: 8, textAlign: 'justify', lineHeight: 1.8 }}>
+                        <strong>{t ? turmaShortLabel(t.nome) : ''}:</strong> {entry.descricao}
+                      </p>
+                    )
+                  })
+                ) : (
+                  <p style={{ marginBottom: 10, textAlign: 'justify', lineHeight: 1.8 }}>{entry.descricao}</p>
+                )}
               </>
             )}
 
@@ -537,21 +552,6 @@ export default function DiarioClientView({
 
             <hr className="border-gray-100" />
 
-            {/* Global turma selector */}
-            <div>
-              <p className={labelCls}>Turmas</p>
-              <div className="flex flex-wrap gap-2">
-                {allTurmas.map((t) => (
-                  <label key={t.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-semibold select-none ${
-                    selectedTurmaIds.has(t.id) ? 'bg-sky-50 border-sky-300 text-sky-700' : 'bg-gray-50 border-gray-200 text-gray-400'
-                  }`}>
-                    <input type="checkbox" checked={selectedTurmaIds.has(t.id)} onChange={() => toggleTurma(t.id)} className="w-3 h-3 accent-sky-400" />
-                    {t.nome}
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {entries.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-2">
                 Nenhum registro neste mês. Adicione uma data abaixo.
@@ -567,6 +567,19 @@ export default function DiarioClientView({
                   </button>
                 </div>
                 <div className="px-4 py-4 space-y-4">
+                  <div>
+                    <label className={labelCls}>Turmas atendidas</label>
+                    <div className="flex flex-wrap gap-2">
+                      {allTurmas.map((t) => (
+                        <label key={t.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-semibold select-none ${
+                          entry.turmaIds.includes(t.id) ? 'bg-sky-50 border-sky-300 text-sky-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+                        }`}>
+                          <input type="checkbox" checked={entry.turmaIds.includes(t.id)} onChange={() => toggleEntryTurma(entry.key, t.id)} className="w-3 h-3 accent-sky-400" />
+                          {t.nome}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                   <div>
                     <label className={labelCls}>Modalidade</label>
                     <select value={entry.modalidade} onChange={(e) => update(entry.key, { modalidade: e.target.value })} className={inputCls}>
@@ -597,17 +610,17 @@ export default function DiarioClientView({
                   </div>
                   <div>
                     <label className={labelCls}>Fotos do dia</label>
-                    {selectedTurmaIds.size === 0 ? (
-                      <p className="text-xs text-gray-400">Selecione ao menos uma turma para adicionar fotos.</p>
+                    {entry.turmaIds.length === 0 ? (
+                      <p className="text-xs text-gray-400">Marque ao menos uma turma atendida para adicionar fotos.</p>
                     ) : (
                       <div className="flex flex-wrap gap-3">
-                        {[...selectedTurmaIds].map((turmaId) => (
+                        {entry.turmaIds.map((turmaId) => (
                           <FotoDoDiaSlot
                             key={turmaId}
                             entryKey={entry.key}
                             date={entry.date}
                             turmaId={turmaId}
-                            turmaLabel={selectedTurmaIds.size > 1 ? (allTurmas.find((t) => t.id === turmaId)?.nome ?? null) : null}
+                            turmaLabel={entry.turmaIds.length > 1 ? (allTurmas.find((t) => t.id === turmaId)?.nome ?? null) : null}
                             foto={entry.fotos.find((f) => f.turma_id === turmaId)}
                             onChange={(foto) => handleFotoChange(entry.key, turmaId, foto)}
                           />
