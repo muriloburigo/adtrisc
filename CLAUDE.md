@@ -211,7 +211,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 ### RLS Summary
 
 - `admin` and `coach` can read most tables.
-- Only `admin` can write alunos, responsaveis, turmas (delete), fichas, and user records.
+- Only `admin` can write alunos, responsaveis, turmas (delete), fichas, and user records — **except** `coach` may also remove (desligar) an athlete from their own turma (`alunos_coach_remove` policy in `supabase/alunos_coach_remove.sql`, scoped narrowly to the exact `turma_id = null, status = 'desligado'` update).
 - `pai` can only read their own children and related records (via `aluno_responsavel` join).
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
 
