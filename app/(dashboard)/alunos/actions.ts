@@ -180,45 +180,30 @@ export async function removerAlunoTurma(id: string) {
   const db = (await createClient()) as any
   const actor = await requireStaff()
 
-  const { data: before } = await db.from('alunos').select('nome, turma_id, status').eq('id', id).single()
-  if (!before) throw new Error('Atleta não encontrado')
-
-  const { error } = await db
-    .from('alunos')
-    .update({ turma_id: null, status: 'desligado' })
-    .eq('id', id)
+  // Roda como SECURITY DEFINER (supabase/alunos_coach_remove.sql): setar
+  // turma_id para null via UPDATE direto falha no RLS mesmo com uma policy
+  // permissiva, porque a linha resultante deixa de satisfazer a policy de
+  // SELECT do coach (que depende do turma_id). A função valida a permissão
+  // (admin ou coach da turma atual) e escreve alunos + historico_atleta
+  // atomicamente, contornando essa peculiaridade do RLS.
+  const { data, error } = await db
+    .rpc('remover_aluno_turma', { p_aluno_id: id })
+    .single()
 
   if (error) throw new Error(error.message)
-
-  const hoje = new Date().toISOString().slice(0, 10)
-
-  let turmaAnteriorNome: string | null = null
-  if (before.turma_id) {
-    const { data: t } = await db.from('turmas').select('nome').eq('id', before.turma_id).single()
-    turmaAnteriorNome = t?.nome ?? null
-  }
-
-  await db.from('historico_atleta').insert({
-    aluno_id: id,
-    tipo: 'desligamento',
-    data: hoje,
-    turma_id: null,
-    turma_nome: null,
-    turma_anterior_id: before.turma_id ?? null,
-    turma_anterior_nome: turmaAnteriorNome,
-  })
+  if (!data) throw new Error('Atleta não encontrado')
 
   await logAudit({
     userId: actor.id, userName: actor.name,
     action: 'status', resource: 'atleta',
-    resourceId: id, resourceLabel: before.nome,
-    before: { status: before.status, turma_id: before.turma_id } as Record<string, unknown>,
+    resourceId: id, resourceLabel: data.nome,
+    before: { status: data.status_anterior, turma_id: data.turma_anterior_id } as Record<string, unknown>,
     after: { status: 'desligado', turma_id: null } as Record<string, unknown>,
   })
 
   revalidatePath('/alunos')
   revalidatePath(`/alunos/${id}`)
-  if (before.turma_id) revalidatePath(`/turmas/${before.turma_id}`)
+  if (data.turma_anterior_id) revalidatePath(`/turmas/${data.turma_anterior_id}`)
 }
 
 export async function deleteAluno(id: string) {

@@ -211,7 +211,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 ### RLS Summary
 
 - `admin` and `coach` can read most tables.
-- Only `admin` can write alunos, responsaveis, turmas (delete), fichas, and user records — **except** `coach` may also remove (desligar) an athlete from their own turma (`alunos_coach_remove` policy in `supabase/alunos_coach_remove.sql`, scoped narrowly to the exact `turma_id = null, status = 'desligado'` update).
+- Only `admin` can write alunos, responsaveis, turmas (delete), fichas, and user records — **except** `coach` may also remove (desligar) an athlete from their own turma, via the `remover_aluno_turma()` SECURITY DEFINER RPC (`supabase/alunos_coach_remove.sql`), called from `removerAlunoTurma()` in `alunos/actions.ts`. A direct RLS policy doesn't work here: nulling `turma_id` makes the row fail the coach's own SELECT policy (`coach_has_turma(turma_id)`), and Postgres rejects an UPDATE whose result the caller can no longer see — even under a permissive UPDATE policy. The RPC validates admin/coach-of-turma manually and writes with elevated privilege instead.
 - `pai` can only read their own children and related records (via `aluno_responsavel` join).
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
 
