@@ -36,6 +36,53 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
     .map((r) => r.coach?.full_name)
     .filter((n): n is string => Boolean(n))
 
+  const alunosAtivos = alunos.filter((a) => a.status === 'ativo')
+  const alunosAtivosIds = alunosAtivos.map((a) => a.id)
+
+  let initialFichas: {
+    alunoId: string; nome: string; token: string; url: string
+    telefone: string | null; email: string | null; novo: boolean
+  }[] = []
+
+  if (alunosAtivosIds.length > 0) {
+    const [{ data: fichasRaw }, { data: respsRaw }] = await Promise.all([
+      supabase.from('fichas_inscricao').select('aluno_id, token').in('aluno_id', alunosAtivosIds).eq('status', 'pendente'),
+      supabase.from('responsaveis').select('*, aluno_responsavel!inner(aluno_id)').in('aluno_responsavel.aluno_id', alunosAtivosIds),
+    ])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const respsByAluno = new Map<string, any[]>()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const r of (respsRaw ?? []) as any[]) {
+      const links = Array.isArray(r.aluno_responsavel) ? r.aluno_responsavel : [r.aluno_responsavel]
+      for (const link of links) {
+        if (!link?.aluno_id) continue
+        if (!respsByAluno.has(link.aluno_id)) respsByAluno.set(link.aluno_id, [])
+        respsByAluno.get(link.aluno_id)!.push(r)
+      }
+    }
+
+    const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://adtrisc.vercel.app'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fichaByAluno = new Map<string, string>((fichasRaw ?? []).map((f: any) => [f.aluno_id, f.token]))
+
+    initialFichas = alunosAtivos.flatMap((aluno) => {
+      const token = fichaByAluno.get(aluno.id)
+      if (!token) return []
+      const resps = respsByAluno.get(aluno.id) ?? []
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mae = resps.find((r: any) => r.parentesco === 'mae')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pai = resps.find((r: any) => r.parentesco === 'pai')
+      return [{
+        alunoId: aluno.id, nome: aluno.nome, token, url: `${base}/ficha/${token}`,
+        telefone: mae?.telefone ?? pai?.telefone ?? aluno.telefone ?? null,
+        email: mae?.email ?? pai?.email ?? null,
+        novo: false,
+      }]
+    })
+  }
+
   return (
     <div className="p-4 sm:p-8">
       <BackButton />
@@ -111,7 +158,7 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h2 className="text-base font-semibold text-navy-500">Atletas da turma</h2>
         <div className="flex items-center gap-2">
-          <FichasTurmaButton turmaId={id} />
+          <FichasTurmaButton turmaId={id} initialResults={initialFichas} />
           <Link href={`/alunos/novo?turma=${id}`}>
             <Button size="sm"><Plus size={14} />Adicionar atleta</Button>
           </Link>
