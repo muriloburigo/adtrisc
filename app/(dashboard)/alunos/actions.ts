@@ -127,9 +127,19 @@ export async function updateAluno(id: string, formData: FormData): Promise<{ err
     foto_url:        (formData.get('foto_url') as string) || null,
   }
 
-  const { error } = await db.from('alunos').update(payload).eq('id', id)
+  // .select().single() é proposital: um UPDATE bloqueado por RLS não retorna
+  // error (0 linhas afetadas não é erro em SQL) — só assim detectamos que
+  // nada foi de fato salvo e evitamos reportar sucesso falso pro usuário.
+  const { data: updated, error } = await db
+    .from('alunos').update(payload).eq('id', id).select('id').single()
 
-  if (error) return { error: friendlyError(error, 'Erro ao salvar alterações.') }
+  if (error || !updated) {
+    return {
+      error: error
+        ? friendlyError(error, 'Erro ao salvar alterações.')
+        : 'Você não tem permissão para editar este atleta. Fale com um administrador.',
+    }
+  }
 
   await upsertResponsavel(db, id, formData, 'mae')
   await upsertResponsavel(db, id, formData, 'pai')
@@ -214,8 +224,16 @@ export async function deleteAluno(id: string): Promise<{ error?: string } | void
 
   const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
 
-  const { error } = await db.from('alunos').delete().eq('id', id)
-  if (error) return { error: friendlyError(error, 'Erro ao excluir aluno.') }
+  // .select().single() pelo mesmo motivo de updateAluno: DELETE bloqueado
+  // por RLS não retorna error, só 0 linhas afetadas.
+  const { data: deleted, error } = await db.from('alunos').delete().eq('id', id).select('id').single()
+  if (error || !deleted) {
+    return {
+      error: error
+        ? friendlyError(error, 'Erro ao excluir aluno.')
+        : 'Você não tem permissão para excluir este atleta. Fale com um administrador.',
+    }
+  }
 
   await logAudit({
     userId: actor.id, userName: actor.name,
