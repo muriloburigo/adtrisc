@@ -5,9 +5,10 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/audit'
 import { requireStaff, requireAdmin } from '@/lib/assert'
+import { friendlyError } from '@/lib/errors'
 import type { DiaSemana, TurmaModalidade, TurmaStatus } from '@/types/database'
 
-export async function createTurma(formData: FormData) {
+export async function createTurma(formData: FormData): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
   const actor = await requireAdmin()
@@ -36,7 +37,7 @@ export async function createTurma(formData: FormData) {
 
   const { data, error } = await supabase.from('turmas').insert(payload).select('id').single()
 
-  if (error) throw new Error(error.message)
+  if (error || !data) return { error: friendlyError(error, 'Erro ao criar turma.') }
 
   const coachIds = [...new Set(formData.getAll('coach_ids') as string[])]
     .filter((id) => id && id !== payload.coach_id)
@@ -59,7 +60,7 @@ export async function createTurma(formData: FormData) {
   redirect('/turmas')
 }
 
-export async function updateTurma(id: string, formData: FormData) {
+export async function updateTurma(id: string, formData: FormData): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
   const actor = await requireStaff()
@@ -88,9 +89,12 @@ export async function updateTurma(id: string, formData: FormData) {
     captacao_aberta: formData.get('captacao_aberta') === 'true',
   }
 
-  const { error } = await supabase.from('turmas').update(payload).eq('id', id)
+  // .select().single() detecta UPDATE bloqueado por RLS (coach editando
+  // turma que não é a dele) — sem isso, 0 linhas afetadas não vira error.
+  const { data: updated, error } = await supabase
+    .from('turmas').update(payload).eq('id', id).select('id').single()
 
-  if (error) throw new Error(error.message)
+  if (error || !updated) return { error: friendlyError(error, 'Erro ao salvar alterações.') }
 
   const coachIds = [...new Set(formData.getAll('coach_ids') as string[])]
     .filter((coachId) => coachId && coachId !== payload.coach_id)
@@ -115,15 +119,16 @@ export async function updateTurma(id: string, formData: FormData) {
   redirect('/turmas')
 }
 
-export async function deleteTurma(id: string) {
+export async function deleteTurma(id: string): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
   const actor = await requireStaff()
 
   const { data: before } = await supabase.from('turmas').select('*').eq('id', id).single()
 
-  const { error } = await supabase.from('turmas').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  const { data: deleted, error } = await supabase
+    .from('turmas').delete().eq('id', id).select('id').single()
+  if (error || !deleted) return { error: friendlyError(error, 'Erro ao excluir turma.') }
 
   await logAudit({
     userId: actor.id, userName: actor.name,

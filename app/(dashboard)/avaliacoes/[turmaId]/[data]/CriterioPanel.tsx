@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { saveAvaliacaoField } from '../../actions'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 
@@ -39,12 +39,17 @@ function CellInput({
   initialValue: number | null | undefined
 }) {
   const [, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
   const emCm = CAMPOS_CM_PARA_M.has(field)
   const displayValue = initialValue != null && emCm ? initialValue * 100 : initialValue
 
   function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
     const val = e.target.value
-    startTransition(() => saveAvaliacaoField(alunoId, data, field as string, val))
+    setError(null)
+    startTransition(async () => {
+      const res = await saveAvaliacaoField(alunoId, data, field as string, val)
+      if (res?.error) setError(res.error)
+    })
   }
 
   return (
@@ -53,7 +58,10 @@ function CellInput({
       step="any"
       defaultValue={displayValue ?? ''}
       onBlur={handleBlur}
-      className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400"
+      title={error ?? undefined}
+      className={`w-full border rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 ${
+        error ? 'border-red-400 bg-red-50' : 'border-gray-200'
+      }`}
       placeholder="—"
     />
   )

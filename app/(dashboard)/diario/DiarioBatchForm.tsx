@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { X, Plus, CheckCircle, Loader, AlertCircle } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { criarMultiplosRegistros } from './actions'
+import { friendlyError } from '@/lib/errors'
 
 const MODALIDADES = [
   { value: 'corrida',  label: 'Corrida' },
@@ -60,6 +61,7 @@ export default function DiarioBatchForm({
   const [newDate, setNewDate]     = useState('')
   const [addError, setAddError]   = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null)
   const isFirstRun = useRef(true)
   const addCounter = useRef(0)
 
@@ -109,7 +111,7 @@ export default function DiarioBatchForm({
       // Save to server when there's something to save
       if (entries.length > 0 && selectedTurmaIds.size > 0) {
         try {
-          await criarMultiplosRegistros(
+          const res = await criarMultiplosRegistros(
             entries.map((en) => ({
               data:        en.date,
               modalidade:  en.modalidade,
@@ -121,11 +123,19 @@ export default function DiarioBatchForm({
             targetCoachId
           )
           if (!cancelled) {
-            setSaveStatus('saved')
-            router.refresh()
+            if (res?.error) {
+              setSaveErrorMsg(res.error)
+              setSaveStatus('error')
+            } else {
+              setSaveStatus('saved')
+              router.refresh()
+            }
           }
-        } catch {
-          if (!cancelled) setSaveStatus('error')
+        } catch (err) {
+          if (!cancelled) {
+            setSaveErrorMsg(friendlyError(err instanceof Error ? err : String(err), 'Erro ao salvar — tente novamente.'))
+            setSaveStatus('error')
+          }
         }
       } else {
         if (!cancelled) setSaveStatus('idle')
@@ -304,7 +314,7 @@ export default function DiarioBatchForm({
         {saveStatus === 'error' && (
           <span className="flex items-center gap-1.5 text-xs text-red-500">
             <AlertCircle size={13} />
-            Erro ao salvar — tente novamente
+            {saveErrorMsg ?? 'Erro ao salvar — tente novamente'}
           </span>
         )}
       </div>

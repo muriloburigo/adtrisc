@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
+import { friendlyError } from '@/lib/errors'
 
 // Campos medidos em cm no formulário, mas guardados em metros no banco
 // (mesma escala de "estatura", já usada assim antes desta correção).
@@ -21,7 +22,7 @@ function calcularDerivados(massaCorporal: number | null, estaturaM: number | nul
   return { altura_cm, altura_ao_quadrado, imc, rce }
 }
 
-export async function saveAvaliacao(formData: FormData) {
+export async function saveAvaliacao(formData: FormData): Promise<{ id?: string; error?: string }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   const actor = await requireStaff()
@@ -62,7 +63,7 @@ export async function saveAvaliacao(formData: FormData) {
   const { data: result, error } = await db
     .from('avaliacoes_fisicas').insert(payload).select('id').single()
 
-  if (error) throw new Error(error.message)
+  if (error || !result) return { error: friendlyError(error, 'Erro ao salvar avaliação.') }
 
   await logAudit({
     userId: actor.id, userName: actor.name,
@@ -74,7 +75,7 @@ export async function saveAvaliacao(formData: FormData) {
   revalidatePath(`/alunos/${alunoId}`)
   revalidatePath('/avaliacoes')
 
-  return result?.id as string
+  return { id: result.id as string }
 }
 
 export async function saveAvaliacaoField(
@@ -82,7 +83,7 @@ export async function saveAvaliacaoField(
   data: string,
   field: string,
   value: string,
-) {
+): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   const actor = await requireStaff()
@@ -105,7 +106,9 @@ export async function saveAvaliacaoField(
     const estatura  = field === 'estatura'          ? numValue : existing.estatura
     const perimetro = field === 'perimetro_cintura' ? numValue : existing.perimetro_cintura
     Object.assign(update, calcularDerivados(massa, estatura, perimetro))
-    await db.from('avaliacoes_fisicas').update(update).eq('id', existing.id)
+    const { data: updated, error } = await db
+      .from('avaliacoes_fisicas').update(update).eq('id', existing.id).select('id').single()
+    if (error || !updated) return { error: friendlyError(error, 'Erro ao salvar.') }
   } else {
     const insert: Record<string, unknown> = {
       aluno_id: alunoId,
@@ -118,17 +121,20 @@ export async function saveAvaliacaoField(
         field === 'perimetro_cintura' ? numValue : null,
       ),
     }
-    await db.from('avaliacoes_fisicas').insert(insert)
+    const { error } = await db.from('avaliacoes_fisicas').insert(insert)
+    if (error) return { error: friendlyError(error, 'Erro ao salvar.') }
   }
 
   revalidatePath('/avaliacoes')
 }
 
-export async function deleteAvaliacao(id: string, alunoId: string) {
+export async function deleteAvaliacao(id: string, alunoId: string): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   await requireStaff()
-  await db.from('avaliacoes_fisicas').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+  const { data: updated, error } = await db
+    .from('avaliacoes_fisicas').update({ deleted_at: new Date().toISOString() }).eq('id', id).select('id').single()
+  if (error || !updated) return { error: friendlyError(error, 'Erro ao excluir avaliação.') }
   revalidatePath(`/alunos/${alunoId}`)
   revalidatePath('/avaliacoes')
 }
@@ -156,7 +162,7 @@ export async function deleteAvaliacoes(
     .eq('data', data)
     .is('deleted_at', null)
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError(error, 'Erro ao excluir avaliações.') }
 
   await logAudit({
     userId: actor.id, userName: actor.name,

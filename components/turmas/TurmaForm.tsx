@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useActionState } from 'react'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import Button from '@/components/ui/Button'
@@ -40,16 +40,19 @@ export default function TurmaForm({
   auxiliaryCoachIds = [],
   submitLabel = 'Salvar',
 }: {
-  action: (formData: FormData) => Promise<void>
+  action: (formData: FormData) => Promise<{ error?: string } | void>
   turma?: Turma
   coaches: Coach[]
   auxiliaryCoachIds?: string[]
   submitLabel?: string
 }) {
-  const formRef = useRef<HTMLFormElement>(null)
+  const [state, formAction, isPending] = useActionState(
+    async (_prevState: { error?: string } | void, formData: FormData) => action(formData),
+    undefined,
+  )
 
   return (
-    <form ref={formRef} action={action} className="space-y-6">
+    <form action={formAction} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <Input
@@ -240,8 +243,14 @@ export default function TurmaForm({
         </label>
       </div>
 
+      {state?.error && (
+        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+          {state.error}
+        </p>
+      )}
+
       <div className="flex gap-3">
-        <Button type="submit">{submitLabel}</Button>
+        <Button type="submit" disabled={isPending}>{isPending ? 'Salvando…' : submitLabel}</Button>
         <Button type="button" variant="secondary" onClick={() => history.back()}>
           Cancelar
         </Button>

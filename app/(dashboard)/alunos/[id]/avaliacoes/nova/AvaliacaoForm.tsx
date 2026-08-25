@@ -13,6 +13,7 @@ export default function AvaliacaoForm({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
   const [massa, setMassa] = useState('')
   const [alt, setAlt] = useState('')
 
@@ -24,8 +25,10 @@ export default function AvaliacaoForm({
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
     fd.set('aluno_nome', alunoNome)
+    setError(null)
     startTransition(async () => {
-      await saveAvaliacao(fd)
+      const res = await saveAvaliacao(fd)
+      if (res.error) { setError(res.error); return }
       router.push(`/alunos/${alunoId}/avaliacoes`)
     })
   }
@@ -152,6 +155,12 @@ export default function AvaliacaoForm({
           className={inputClass}
         />
       </div>
+
+      {error && (
+        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+          {error}
+        </p>
+      )}
 
       <div className="flex gap-3 pt-2">
         <button

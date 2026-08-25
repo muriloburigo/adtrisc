@@ -20,13 +20,13 @@ export default function DeleteAvaliacaoIndividualButton({
   function handleDelete() {
     setError(null)
     startTransition(async () => {
-      try {
-        await deleteAvaliacao(avaliacaoId, alunoId)
-        router.push(`/alunos/${alunoId}`)
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Erro ao excluir')
+      const res = await deleteAvaliacao(avaliacaoId, alunoId)
+      if (res?.error) {
+        setError(res.error)
         setConfirming(false)
+        return
       }
+      router.push(`/alunos/${alunoId}`)
     })
   }
 

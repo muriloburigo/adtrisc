@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { criarRegistroAula, atualizarRegistroAula } from './actions'
+import { friendlyError } from '@/lib/errors'
 
 export const MODALIDADES = [
   { value: 'corrida',  label: 'Corrida' },
@@ -71,7 +72,7 @@ export default function DiarioAulaForm({
         }
         router.push('/diario')
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao salvar')
+        setError(friendlyError(err instanceof Error ? err : String(err), 'Erro ao salvar.'))
       }
     })
   }

@@ -3,6 +3,7 @@
 import { requireStaff } from '@/lib/assert'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { friendlyError } from '@/lib/errors'
 
 type TurmaPayload = { turma_id: string; descricao: string }
 
@@ -38,7 +39,7 @@ export async function criarRegistroAula(payload: {
     .select('id')
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error || !registro) throw new Error(error?.message ?? 'Erro ao criar registro.')
 
   if (payload.turmas.length > 0) {
     const { error: tErr } = await supabase
@@ -77,7 +78,7 @@ export async function atualizarRegistroAula(
   const role = await getRole(supabase, actor.id)
   if (existing.coach_id !== actor.id && role !== 'admin') throw new Error('Acesso negado')
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('registros_aula')
     .update({
       data:        payload.data,
@@ -87,8 +88,10 @@ export async function atualizarRegistroAula(
       updated_at:  new Date().toISOString(),
     })
     .eq('id', registroId)
+    .select('id')
+    .single()
 
-  if (error) throw new Error(error.message)
+  if (error || !updated) throw new Error(error?.message ?? 'Erro ao salvar registro.')
 
   // Replace turma entries
   await supabase.from('registro_aula_turmas').delete().eq('registro_aula_id', registroId)
@@ -117,13 +120,15 @@ export async function criarMultiplosRegistros(
     turmaIds: string[]
   }>,
   targetCoachId?: string
-): Promise<void> {
+): Promise<{ error?: string } | void> {
   const actor = await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
   const role = await getRole(supabase, actor.id)
   const coachId = (targetCoachId && role === 'admin') ? targetCoachId : actor.id
+
+  let lastError: unknown = null
 
   for (const entry of entries) {
     if (!entry.data) continue
@@ -145,7 +150,10 @@ export async function criarMultiplosRegistros(
       .select('id')
       .single()
 
-    if (error || !registro) continue
+    // Não interrompe o loop num dia com erro — ainda tenta salvar os
+    // demais dias do batch — mas guarda pra reportar no fim em vez de
+    // engolir a falha em silêncio.
+    if (error || !registro) { lastError = error; continue }
 
     // Replace turma entries — dia sem nenhuma turma marcada (ex: feriado) ainda
     // salva o registro, só fica sem vínculo de turma nenhuma.
@@ -160,6 +168,8 @@ export async function criarMultiplosRegistros(
       )
     }
   }
+
+  if (lastError) return { error: friendlyError(lastError, 'Alguns dias não foram salvos.') }
 
   revalidatePath('/diario')
 }
@@ -210,6 +220,9 @@ export async function excluirRegistroAula(registroId: string): Promise<void> {
   const role = await getRole(supabase, actor.id)
   if (existing.coach_id !== actor.id && role !== 'admin') throw new Error('Acesso negado')
 
-  await supabase.from('registros_aula').delete().eq('id', registroId)
+  const { data: deleted, error } = await supabase
+    .from('registros_aula').delete().eq('id', registroId).select('id').single()
+  if (error || !deleted) throw new Error(error?.message ?? 'Erro ao excluir registro.')
+
   revalidatePath('/diario')
 }

@@ -28,19 +28,14 @@ export default function DeleteAvaliacaoButton({
   function handleDelete() {
     setError(null)
     startTransition(async () => {
-      try {
-        const result = await deleteAvaliacoes(turmaId, data, turmaNome)
-        if (result?.error) {
-          setError(result.error)
-          setConfirming(false)
-        } else if (onSuccess) {
-          onSuccess()
-        } else {
-          router.push('/avaliacoes')
-        }
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Erro ao excluir')
+      const result = await deleteAvaliacoes(turmaId, data, turmaNome)
+      if (result?.error) {
+        setError(result.error)
         setConfirming(false)
+      } else if (onSuccess) {
+        onSuccess()
+      } else {
+        router.push('/avaliacoes')
       }
     })
   }

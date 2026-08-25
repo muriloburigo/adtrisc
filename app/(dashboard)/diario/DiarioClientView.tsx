@@ -5,6 +5,7 @@ import { X, Plus, CheckCircle, Loader, AlertCircle, Printer, Image as ImageIcon,
 import Card from '@/components/ui/Card'
 import { formatDate } from '@/lib/utils'
 import { criarMultiplosRegistros, salvarResumoDiario } from './actions'
+import { friendlyError } from '@/lib/errors'
 import { setFotoDoDia, removerFotoDoDia, type FotoDoDia } from './fotoActions'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
@@ -204,6 +205,7 @@ export default function DiarioClientView({
   const [newDate,    setNewDate]    = useState('')
   const [addError,   setAddError]   = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null)
 
   // ── Report metadata state ────────────────────────────────────────────────
   const [cref,     setCref]     = useState(() => { const d = loadDraft(storageKey); return d?.cref     ?? initialCref })
@@ -266,8 +268,9 @@ export default function DiarioClientView({
       try {
         await salvarResumoDiario(ano, mes, { cidade, processo, resumo }, targetCoachId)
 
+        let res: { error?: string } | void = undefined
         if (entries.length > 0) {
-          await criarMultiplosRegistros(
+          res = await criarMultiplosRegistros(
             entries.map((en) => ({
               data:        en.date,
               modalidade:  en.modalidade,
@@ -279,9 +282,19 @@ export default function DiarioClientView({
             targetCoachId
           )
         }
-        if (!cancelled) setSaveStatus('saved')
-      } catch {
-        if (!cancelled) setSaveStatus('error')
+        if (!cancelled) {
+          if (res?.error) {
+            setSaveErrorMsg(res.error)
+            setSaveStatus('error')
+          } else {
+            setSaveStatus('saved')
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSaveErrorMsg(friendlyError(err instanceof Error ? err : String(err), 'Erro ao salvar — tente novamente.'))
+          setSaveStatus('error')
+        }
       }
     }, 800)
 
@@ -661,7 +674,7 @@ export default function DiarioClientView({
               )}
               {saveStatus === 'error' && (
                 <span className="flex items-center gap-1.5 text-xs text-red-500">
-                  <AlertCircle size={13} /> Erro ao salvar — tente novamente
+                  <AlertCircle size={13} /> {saveErrorMsg ?? 'Erro ao salvar — tente novamente'}
                 </span>
               )}
             </div>
