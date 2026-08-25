@@ -211,6 +211,49 @@ export async function removerAlunoTurma(id: string): Promise<{ error?: string } 
   if (data.turma_anterior_id) revalidatePath(`/turmas/${data.turma_anterior_id}`)
 }
 
+export async function atribuirAtletaTurma(alunoId: string, turmaId: string): Promise<{ error?: string } | void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = (await createClient()) as any
+  const actor = await requireStaff()
+
+  const [{ data: before }, { data: turma }] = await Promise.all([
+    db.from('alunos').select('nome, turma_id, status').eq('id', alunoId).single(),
+    db.from('turmas').select('nome').eq('id', turmaId).single(),
+  ])
+
+  if (!before) return { error: 'Atleta não encontrado.' }
+  if (before.turma_id) return { error: 'Este atleta já está em uma turma.' }
+
+  const { data: updated, error } = await db
+    .from('alunos')
+    .update({ turma_id: turmaId, status: 'ativo' })
+    .eq('id', alunoId)
+    .select('id')
+    .single()
+
+  if (error || !updated) return { error: friendlyError(error, 'Erro ao adicionar atleta à turma.') }
+
+  await db.from('historico_atleta').insert({
+    aluno_id: alunoId,
+    tipo: before.status !== 'ativo' ? 'reativacao' : 'matricula',
+    data: new Date().toISOString().slice(0, 10),
+    turma_id: turmaId,
+    turma_nome: turma?.nome ?? null,
+  })
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'status', resource: 'atleta',
+    resourceId: alunoId, resourceLabel: before.nome,
+    before: { turma_id: null, status: before.status } as Record<string, unknown>,
+    after: { turma_id: turmaId, status: 'ativo' } as Record<string, unknown>,
+  })
+
+  revalidatePath('/alunos')
+  revalidatePath(`/alunos/${alunoId}`)
+  revalidatePath(`/turmas/${turmaId}`)
+}
+
 export async function deleteAluno(id: string): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any

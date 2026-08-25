@@ -9,8 +9,9 @@ import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import Avatar from '@/components/ui/Avatar'
 import FichasTurmaButton from './FichasTurmaButton'
+import AdicionarAtletaButton from './AdicionarAtletaButton'
 import AlunoActionsMenu from '@/app/(dashboard)/alunos/AlunoActionsMenu'
-import { Users, Pencil, Clock, Plus, FileDown } from 'lucide-react'
+import { Users, Pencil, FileDown } from 'lucide-react'
 import { formatarDiasSemana, formatarHorario, calcularIdade, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
 import type { TurmaRow, DiaSemana } from '@/types/database'
 
@@ -22,10 +23,11 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
-  const [{ data: turmaRaw }, { data: alunosRaw }, { data: auxRaw }] = await Promise.all([
+  const [{ data: turmaRaw }, { data: alunosRaw }, { data: auxRaw }, { data: semTurmaRaw }] = await Promise.all([
     supabase.from('turmas').select('*, coaches:coach_id ( full_name )').eq('id', id).single(),
     supabase.from('alunos').select('id, nome, sexo, data_nascimento, status, foto_url, telefone').eq('turma_id', id).order('nome'),
     supabase.from('turma_coaches').select('coach:profiles(full_name)').eq('turma_id', id),
+    supabase.from('alunos').select('id, nome, sexo, data_nascimento').is('turma_id', null).order('nome'),
   ])
 
   if (!turmaRaw) notFound()
@@ -35,6 +37,8 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
   const auxiliaryCoachNames = ((auxRaw ?? []) as { coach: { full_name: string | null } | null }[])
     .map((r) => r.coach?.full_name)
     .filter((n): n is string => Boolean(n))
+
+  const semTurma = (semTurmaRaw ?? []) as { id: string; nome: string; sexo: string | null; data_nascimento: string | null }[]
 
   const alunosAtivos = alunos.filter((a) => a.status === 'ativo')
   const alunosAtivosIds = alunosAtivos.map((a) => a.id)
@@ -159,9 +163,7 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
         <h2 className="text-base font-semibold text-navy-500">Atletas da turma</h2>
         <div className="flex items-center gap-2">
           <FichasTurmaButton turmaId={id} initialResults={initialFichas} />
-          <Link href={`/alunos/novo?turma=${id}`}>
-            <Button size="sm"><Plus size={14} />Adicionar atleta</Button>
-          </Link>
+          <AdicionarAtletaButton turmaId={id} semTurma={semTurma} />
         </div>
       </div>
 
