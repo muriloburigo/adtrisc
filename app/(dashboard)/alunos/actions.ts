@@ -56,7 +56,7 @@ export async function createAluno(formData: FormData): Promise<{ error?: string 
   const actor = await requireStaff()
 
   const payload = {
-    turma_id:        formData.get('turma_id') as string,
+    turma_id:        (formData.get('turma_id') as string) || null,
     nome:            formData.get('nome') as string,
     telefone:        (formData.get('telefone') as string) || null,
     sexo:            (formData.get('sexo') as SexoEnum) || null,
