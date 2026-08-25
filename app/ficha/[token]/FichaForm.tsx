@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { submitFicha } from './actions'
 import Image from 'next/image'
 import { CheckCircle, Pen, RotateCcw } from 'lucide-react'
+import { TERMOS_INSCRICAO } from '@/lib/termos'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Ficha = Record<string, any>
@@ -305,8 +306,25 @@ export default function FichaForm({ ficha, token }: { ficha: Ficha; token: strin
         </Row>
       </Section>
 
+      {/* Termos */}
+      <Section n={5} title="Termos e Condições">
+        <p className="text-sm text-gray-600 leading-relaxed">
+          Eu, responsável legal pelo(a) participante, declaro que li, compreendi e concordo com os termos abaixo:
+        </p>
+        <ol className="space-y-3">
+          {TERMOS_INSCRICAO.map((t, i) => (
+            <li key={i} className="flex gap-3 text-sm text-gray-600">
+              <span className="flex-shrink-0 w-5 h-5 bg-sky-100 text-sky-600 rounded-full text-[11px] font-bold flex items-center justify-center mt-0.5">
+                {i + 1}
+              </span>
+              <span className="leading-relaxed">{t}</span>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
       {/* Autorização */}
-      <Section n={5} title="Autorização e Assinatura">
+      <Section n={6} title="Autorização e Assinatura">
         <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 leading-relaxed border border-gray-100">
           <p>
             Eu, <strong>[nome abaixo]</strong>, autorizo o(a) participante a frequentar as atividades esportivas conforme informado acima.
