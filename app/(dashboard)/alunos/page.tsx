@@ -44,7 +44,8 @@ export default async function AlunosPage({
     .order('nome')
 
   if (status) query = query.eq('status', status)
-  if (turma) query = query.eq('turma_id', turma)
+  if (turma === 'sem-turma') query = query.is('turma_id', null)
+  else if (turma) query = query.eq('turma_id', turma)
   if (turmaIdsCoach) query = query.in('turma_id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
 
   let turmasQuery = supabase.from('turmas').select('id, nome').order('nome')
@@ -72,6 +73,13 @@ export default async function AlunosPage({
     value: t.id,
     label: t.nome,
   }))
+
+  // "Sem turma" só existe pra admin: pela RLS, coach não enxerga atleta com
+  // turma_id nulo (coach_has_turma(null) nunca é verdadeiro), então esse
+  // filtro sempre voltaria vazio pra ele.
+  if (!turmaIdsCoach) {
+    turmaOptions.unshift({ value: 'sem-turma', label: 'Sem turma' })
+  }
 
   const filterFields = [
     { type: 'search' as const, key: 'q', placeholder: 'Buscar atleta...' },
