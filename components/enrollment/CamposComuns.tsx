@@ -144,10 +144,14 @@ export type SaudeDefaults = {
   autorizacao_medica?: boolean | null
 }
 
+function ynDefault(v: boolean | null | undefined): string {
+  return v == null ? '' : v ? 'sim' : 'nao'
+}
+
 export function SaudeSection({ n, defaults }: { n: number; defaults?: SaudeDefaults }) {
-  const [condicaoMedica, setCondicaoMedica] = useState(defaults?.condicao_medica ? 'sim' : 'nao')
-  const [tratamento, setTratamento] = useState(defaults?.tratamento_medico ? 'sim' : 'nao')
-  const [alergia, setAlergia] = useState(defaults?.alergia ? 'sim' : 'nao')
+  const [condicaoMedica, setCondicaoMedica] = useState(ynDefault(defaults?.condicao_medica))
+  const [tratamento, setTratamento] = useState(ynDefault(defaults?.tratamento_medico))
+  const [alergia, setAlergia] = useState(ynDefault(defaults?.alergia))
 
   return (
     <Section n={n} title="Informações de Saúde">
@@ -182,7 +186,8 @@ export function SaudeSection({ n, defaults }: { n: number; defaults?: SaudeDefau
         label="O aluno possui autorização médica para a prática esportiva?"
         hint="Orientamos fortemente que todos os alunos realizem o exame pré-participação com médico do esporte ou cardiologista."
       >
-        <select name="autorizacao_medica" defaultValue={defaults?.autorizacao_medica ? 'sim' : 'nao'} className={inputCls}>
+        <select name="autorizacao_medica" defaultValue={ynDefault(defaults?.autorizacao_medica)} className={inputCls}>
+          <option value="">Selecione...</option>
           <option value="nao">Não</option>
           <option value="sim">Sim</option>
         </select>
@@ -201,13 +206,15 @@ export function HistoricoEsportivoSection({
   return (
     <Section n={n} title="Histórico Esportivo">
       <Field label="O aluno já praticou triathlon ou alguma das modalidades (natação, ciclismo, corrida) anteriormente?">
-        <select name="praticou_modalidade" defaultValue={defaults?.praticou_modalidade ? 'sim' : 'nao'} className={inputCls}>
+        <select name="praticou_modalidade" defaultValue={ynDefault(defaults?.praticou_modalidade)} className={inputCls}>
+          <option value="">Selecione...</option>
           <option value="nao">Não</option>
           <option value="sim">Sim</option>
         </select>
       </Field>
       <Field label="O aluno tem interesse em participar de eventos e festivais esportivos promovidos pelo projeto?">
-        <select name="interesse_eventos" defaultValue={defaults?.interesse_eventos === false ? 'nao' : 'sim'} className={inputCls}>
+        <select name="interesse_eventos" defaultValue={ynDefault(defaults?.interesse_eventos)} className={inputCls}>
+          <option value="">Selecione...</option>
           <option value="sim">Sim</option>
           <option value="nao">Não</option>
         </select>
@@ -252,7 +259,8 @@ export function EquipamentosSection({ n, defaults }: { n: number; defaults?: { t
   return (
     <Section n={n} title="Equipamentos e Uniforme">
       <Field label="Possui bicicleta em condições de uso e segurança?" hint="Manutenções frequentes, freios funcionando, pedais íntegros...">
-        <select name="tem_bicicleta" defaultValue={defaults?.tem_bicicleta ? 'sim' : 'nao'} className={inputCls}>
+        <select name="tem_bicicleta" defaultValue={ynDefault(defaults?.tem_bicicleta)} className={inputCls}>
+          <option value="">Selecione...</option>
           <option value="nao">Não</option>
           <option value="sim">Sim</option>
         </select>
