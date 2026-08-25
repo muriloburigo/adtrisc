@@ -133,13 +133,7 @@ export async function updateAluno(id: string, formData: FormData): Promise<{ err
   const { data: updated, error } = await db
     .from('alunos').update(payload).eq('id', id).select('id').single()
 
-  if (error || !updated) {
-    return {
-      error: error
-        ? friendlyError(error, 'Erro ao salvar alterações.')
-        : 'Você não tem permissão para editar este atleta. Fale com um administrador.',
-    }
-  }
+  if (error || !updated) return { error: friendlyError(error, 'Erro ao salvar alterações.') }
 
   await upsertResponsavel(db, id, formData, 'mae')
   await upsertResponsavel(db, id, formData, 'pai')
@@ -227,13 +221,7 @@ export async function deleteAluno(id: string): Promise<{ error?: string } | void
   // .select().single() pelo mesmo motivo de updateAluno: DELETE bloqueado
   // por RLS não retorna error, só 0 linhas afetadas.
   const { data: deleted, error } = await db.from('alunos').delete().eq('id', id).select('id').single()
-  if (error || !deleted) {
-    return {
-      error: error
-        ? friendlyError(error, 'Erro ao excluir aluno.')
-        : 'Você não tem permissão para excluir este atleta. Fale com um administrador.',
-    }
-  }
+  if (error || !deleted) return { error: friendlyError(error, 'Erro ao excluir aluno.') }
 
   await logAudit({
     userId: actor.id, userName: actor.name,

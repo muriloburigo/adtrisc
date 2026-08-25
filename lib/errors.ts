@@ -12,6 +12,12 @@ export function friendlyError(error: ErrorLike, fallback: string = DEFAULT_FALLB
   if (code === '42501' || /row-level security policy/i.test(message) || /permission denied/i.test(message)) {
     return 'Você não tem permissão para realizar esta ação. Fale com um administrador.'
   }
+  // PGRST116: .single() não achou linha — em um update/delete por id que
+  // antes confirmou a linha existir, isso normalmente é RLS filtrando (sem
+  // permissão), não "não encontrado".
+  if (code === 'PGRST116') {
+    return 'Você não tem permissão para realizar esta ação. Fale com um administrador.'
+  }
   if (message === 'Acesso negado') {
     return 'Você não tem permissão para realizar esta ação.'
   }
