@@ -154,6 +154,24 @@ export type CandidatoRow = {
   tem_bicicleta: boolean
   tamanho_camiseta: string | null
   observacoes_internas: string | null
+  telefone: string | null
+  rua: string | null
+  numero: string | null
+  bairro: string | null
+  cep: string | null
+  cidade: string | null
+  mae_nome: string | null
+  mae_cpf: string | null
+  mae_rg: string | null
+  mae_email: string | null
+  mae_telefone: string | null
+  pai_nome: string | null
+  pai_cpf: string | null
+  pai_rg: string | null
+  pai_email: string | null
+  pai_telefone: string | null
+  responsavel_assina: string | null
+  assinatura_data: string | null
   created_at: string
 }
 

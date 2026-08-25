@@ -33,21 +33,45 @@ export async function submitFicha(
   }
 
   const str = (key: string) => String(formData.get(key) ?? '').trim() || null
+  const yn  = (key: string) => formData.get(key) === 'sim'
 
   const { error } = await db
     .from('fichas_inscricao')
     .update({
       status:            'preenchida',
       preenchido_em:     new Date().toISOString(),
+
+      // Participante
       p_nome:            str('p_nome'),
       p_telefone:        str('p_telefone'),
       p_sexo:            str('p_sexo'),
       p_data_nascimento: str('p_data_nascimento'),
+      p_cpf:             str('p_cpf'),
       p_rua:             str('p_rua'),
       p_numero:          str('p_numero'),
       p_bairro:          str('p_bairro'),
       p_cep:             str('p_cep'),
       p_cidade:          str('p_cidade'),
+
+      // Escola
+      escola_nome_endereco: str('escola_nome_endereco'),
+      serie_escolar:         str('serie_escolar'),
+
+      // Saúde
+      condicao_medica:             yn('condicao_medica'),
+      condicao_medica_descricao:   str('condicao_medica_descricao'),
+      tratamento_medico:           yn('tratamento_medico'),
+      tratamento_medico_descricao: str('tratamento_medico_descricao'),
+      alergia:                     yn('alergia'),
+      alergia_descricao:           str('alergia_descricao'),
+      autorizacao_medica:          yn('autorizacao_medica'),
+
+      // Histórico esportivo
+      praticou_modalidade: yn('praticou_modalidade'),
+      interesse_eventos:   yn('interesse_eventos'),
+      como_soube:          str('como_soube'),
+
+      // Filiação
       mae_nome:          str('mae_nome'),
       mae_cpf:           str('mae_cpf'),
       mae_rg:            str('mae_rg'),
@@ -58,6 +82,12 @@ export async function submitFicha(
       pai_rg:            str('pai_rg'),
       pai_email:         str('pai_email'),
       pai_telefone:      str('pai_telefone'),
+
+      // Equipamentos
+      tem_bicicleta:    yn('tem_bicicleta'),
+      tamanho_camiseta: str('tamanho_camiseta'),
+
+      // Autorização
       responsavel_assina: responsavelAssina,
       aceite_termos:      true,
       assinatura_data:    assinaturaData,

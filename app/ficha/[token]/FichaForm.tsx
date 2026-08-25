@@ -1,155 +1,23 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { submitFicha } from './actions'
 import Image from 'next/image'
-import { CheckCircle, Pen, RotateCcw } from 'lucide-react'
-import { TERMOS_INSCRICAO } from '@/lib/termos'
+import { CheckCircle } from 'lucide-react'
+import {
+  Section,
+  DadosParticipanteSection,
+  DadosEscolaresSection,
+  SaudeSection,
+  HistoricoEsportivoSection,
+  FiliacaoSection,
+  EquipamentosSection,
+  TermosSection,
+  AutorizacaoAssinaturaSection,
+} from '@/components/enrollment/CamposComuns'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Ficha = Record<string, any>
-
-function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 flex items-center gap-3" style={{ background: '#0C143D' }}>
-        <span className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white" style={{ background: '#2AABE1' }}>{n}</span>
-        <h2 className="text-white font-semibold text-sm">{title}</h2>
-      </div>
-      <div className="p-4 sm:p-5 space-y-4">{children}</div>
-    </div>
-  )
-}
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-xs font-medium text-gray-600">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
-      </label>
-      {children}
-    </div>
-  )
-}
-
-const inputCls = "w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 bg-white outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10 transition-all"
-
-function Row({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
-}
-
-function SignaturePad({ onChange }: { onChange: (data: string | null) => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const isDrawingRef = useRef(false)
-  const [hasSigned, setHasSigned] = useState(false)
-  const hasSignedRef = useRef(false)
-
-  const getPoint = useCallback((e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement): [number, number] => {
-    const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
-    if ('touches' in e && e.touches.length > 0) {
-      return [
-        (e.touches[0].clientX - rect.left) * scaleX,
-        (e.touches[0].clientY - rect.top) * scaleY,
-      ]
-    }
-    const me = e as MouseEvent
-    return [(me.clientX - rect.left) * scaleX, (me.clientY - rect.top) * scaleY]
-  }, [])
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')!
-    ctx.strokeStyle = '#0C143D'
-    ctx.lineWidth = 2.5
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-
-    const startDraw = (e: MouseEvent | TouchEvent) => {
-      e.preventDefault()
-      isDrawingRef.current = true
-      ctx.beginPath()
-      const [x, y] = getPoint(e, canvas)
-      ctx.moveTo(x, y)
-    }
-    const draw = (e: MouseEvent | TouchEvent) => {
-      if (!isDrawingRef.current) return
-      e.preventDefault()
-      const [x, y] = getPoint(e, canvas)
-      ctx.lineTo(x, y)
-      ctx.stroke()
-      if (!hasSignedRef.current) {
-        hasSignedRef.current = true
-        setHasSigned(true)
-        onChange(canvas.toDataURL('image/png'))
-      } else {
-        onChange(canvas.toDataURL('image/png'))
-      }
-    }
-    const endDraw = () => { isDrawingRef.current = false }
-
-    canvas.addEventListener('mousedown', startDraw)
-    canvas.addEventListener('mousemove', draw)
-    canvas.addEventListener('mouseup', endDraw)
-    canvas.addEventListener('mouseleave', endDraw)
-    canvas.addEventListener('touchstart', startDraw, { passive: false })
-    canvas.addEventListener('touchmove', draw, { passive: false })
-    canvas.addEventListener('touchend', endDraw)
-
-    return () => {
-      canvas.removeEventListener('mousedown', startDraw)
-      canvas.removeEventListener('mousemove', draw)
-      canvas.removeEventListener('mouseup', endDraw)
-      canvas.removeEventListener('mouseleave', endDraw)
-      canvas.removeEventListener('touchstart', startDraw)
-      canvas.removeEventListener('touchmove', draw)
-      canvas.removeEventListener('touchend', endDraw)
-    }
-  }, [getPoint, onChange])
-
-  const clear = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height)
-    hasSignedRef.current = false
-    setHasSigned(false)
-    onChange(null)
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="relative rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50" style={{ minHeight: 120 }}>
-        <canvas
-          ref={canvasRef}
-          width={700}
-          height={160}
-          className="w-full touch-none cursor-crosshair block"
-          style={{ display: 'block' }}
-        />
-        {!hasSigned && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-2 text-gray-400">
-              <Pen size={16} />
-              <span className="text-sm">Assine aqui</span>
-            </div>
-          </div>
-        )}
-      </div>
-      {hasSigned && (
-        <button
-          type="button"
-          onClick={clear}
-          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-500 transition-colors"
-        >
-          <RotateCcw size={13} />
-          Limpar assinatura
-        </button>
-      )}
-    </div>
-  )
-}
 
 function SuccessScreen({ nome }: { nome: string }) {
   return (
@@ -178,8 +46,6 @@ export default function FichaForm({ ficha, token }: { ficha: Ficha; token: strin
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
-
-  const hoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -218,150 +84,33 @@ export default function FichaForm({ ficha, token }: { ficha: Ficha; token: strin
         </div>
       </Section>
 
-      {/* Participante */}
-      <Section n={2} title="Dados do Participante">
-        <Field label="Nome completo" required>
-          <input name="p_nome" defaultValue={ficha.p_nome ?? ''} required className={inputCls} placeholder="Nome completo" />
-        </Field>
-        <Row>
-          <Field label="Telefone">
-            <input name="p_telefone" defaultValue={ficha.p_telefone ?? ''} className={inputCls} placeholder="(47) 99999-0000" />
-          </Field>
-          <Field label="Sexo">
-            <select name="p_sexo" defaultValue={ficha.p_sexo ?? ''} className={inputCls}>
-              <option value="">Selecione</option>
-              <option value="M">Masculino</option>
-              <option value="F">Feminino</option>
-              <option value="outro">Outro</option>
-            </select>
-          </Field>
-        </Row>
-        <Field label="Data de nascimento" required>
-          <input name="p_data_nascimento" type="date" defaultValue={ficha.p_data_nascimento ?? ''} required className={inputCls} />
-        </Field>
-        <Row>
-          <Field label="Rua">
-            <input name="p_rua" defaultValue={ficha.p_rua ?? ''} className={inputCls} placeholder="Nome da rua" />
-          </Field>
-          <Field label="Número">
-            <input name="p_numero" defaultValue={ficha.p_numero ?? ''} className={inputCls} placeholder="Nº" />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="Bairro">
-            <input name="p_bairro" defaultValue={ficha.p_bairro ?? ''} className={inputCls} placeholder="Bairro" />
-          </Field>
-          <Field label="CEP">
-            <input name="p_cep" defaultValue={ficha.p_cep ?? ''} className={inputCls} placeholder="00000-000" />
-          </Field>
-        </Row>
-        <Field label="Cidade">
-          <input name="p_cidade" defaultValue={ficha.p_cidade ?? ''} className={inputCls} placeholder="Cidade" />
-        </Field>
-      </Section>
-
-      {/* Filiação — Mãe */}
-      <Section n={3} title="Filiação — Mãe">
-        <Field label="Nome completo da mãe">
-          <input name="mae_nome" defaultValue={ficha.mae_nome ?? ''} className={inputCls} placeholder="Nome completo" />
-        </Field>
-        <Row>
-          <Field label="CPF">
-            <input name="mae_cpf" defaultValue={ficha.mae_cpf ?? ''} className={inputCls} placeholder="000.000.000-00" />
-          </Field>
-          <Field label="RG">
-            <input name="mae_rg" defaultValue={ficha.mae_rg ?? ''} className={inputCls} placeholder="RG" />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="E-mail">
-            <input name="mae_email" type="email" defaultValue={ficha.mae_email ?? ''} className={inputCls} placeholder="email@exemplo.com" />
-          </Field>
-          <Field label="Telefone">
-            <input name="mae_telefone" defaultValue={ficha.mae_telefone ?? ''} className={inputCls} placeholder="(47) 99999-0000" />
-          </Field>
-        </Row>
-      </Section>
-
-      {/* Filiação — Pai */}
-      <Section n={4} title="Filiação — Pai">
-        <Field label="Nome completo do pai">
-          <input name="pai_nome" defaultValue={ficha.pai_nome ?? ''} className={inputCls} placeholder="Nome completo" />
-        </Field>
-        <Row>
-          <Field label="CPF">
-            <input name="pai_cpf" defaultValue={ficha.pai_cpf ?? ''} className={inputCls} placeholder="000.000.000-00" />
-          </Field>
-          <Field label="RG">
-            <input name="pai_rg" defaultValue={ficha.pai_rg ?? ''} className={inputCls} placeholder="RG" />
-          </Field>
-        </Row>
-        <Row>
-          <Field label="E-mail">
-            <input name="pai_email" type="email" defaultValue={ficha.pai_email ?? ''} className={inputCls} placeholder="email@exemplo.com" />
-          </Field>
-          <Field label="Telefone">
-            <input name="pai_telefone" defaultValue={ficha.pai_telefone ?? ''} className={inputCls} placeholder="(47) 99999-0000" />
-          </Field>
-        </Row>
-      </Section>
-
-      {/* Termos */}
-      <Section n={5} title="Termos e Condições">
-        <p className="text-sm text-gray-600 leading-relaxed">
-          Eu, responsável legal pelo(a) participante, declaro que li, compreendi e concordo com os termos abaixo:
-        </p>
-        <ol className="space-y-3">
-          {TERMOS_INSCRICAO.map((t, i) => (
-            <li key={i} className="flex gap-3 text-sm text-gray-600">
-              <span className="flex-shrink-0 w-5 h-5 bg-sky-100 text-sky-600 rounded-full text-[11px] font-bold flex items-center justify-center mt-0.5">
-                {i + 1}
-              </span>
-              <span className="leading-relaxed">{t}</span>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      {/* Autorização */}
-      <Section n={6} title="Autorização e Assinatura">
-        <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-600 leading-relaxed border border-gray-100">
-          <p>
-            Eu, <strong>[nome abaixo]</strong>, autorizo o(a) participante a frequentar as atividades esportivas conforme informado acima.
-            Declaro que o(a) participante está em boas condições de saúde, apto(a) à prática de atividades físicas, e isento a ADTRISC,
-            seus profissionais e parceiros de qualquer responsabilidade por acidentes ou complicações decorrentes da prática esportiva,
-            inclusive por doenças preexistentes. Autorizo, gratuitamente, o uso da imagem do(a) participante em fotos, vídeos e outros
-            registros feitos durante as atividades, para fins de divulgação institucional e promocional em mídias impressas, digitais e
-            redes sociais. Estou ciente dos riscos inerentes à atividade esportiva e das regras de participação do projeto.
-          </p>
-          <p className="mt-3 text-gray-500 italic text-[11px]">
-            * Orienta-se fortemente que cada participante seja avaliado anualmente por um médico especialista em exercícios físicos na infância e adolescência.
-          </p>
-        </div>
-
-        <p className="text-xs text-gray-500">São José, {hoje}.</p>
-
-        <Field label="Nome do responsável legal (quem assina)" required>
-          <input name="responsavel_assina" required className={inputCls} placeholder="Nome completo do responsável" />
-        </Field>
-
-        <label className="flex items-start gap-3 cursor-pointer group">
-          <input
-            type="checkbox"
-            checked={aceite}
-            onChange={(e) => setAceite(e.target.checked)}
-            className="mt-0.5 w-4 h-4 rounded border-gray-300 accent-sky-500 cursor-pointer flex-shrink-0"
-          />
-          <span className="text-xs text-gray-600 leading-relaxed group-hover:text-gray-800 transition-colors">
-            Li e concordo com os termos acima, declarando que as informações prestadas são verdadeiras.
-          </span>
-        </label>
-
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-gray-600">Assinatura do responsável <span className="text-red-400">*</span></p>
-          <SignaturePad onChange={setSigData} />
-        </div>
-      </Section>
+      <DadosParticipanteSection
+        n={2}
+        title="Dados do Participante"
+        defaults={{
+          nome: ficha.p_nome, telefone: ficha.p_telefone, sexo: ficha.p_sexo, data_nascimento: ficha.p_data_nascimento,
+          cpf: ficha.p_cpf, rua: ficha.p_rua, numero: ficha.p_numero, bairro: ficha.p_bairro, cep: ficha.p_cep, cidade: ficha.p_cidade,
+        }}
+      />
+      <DadosEscolaresSection n={3} defaults={{ escola_nome_endereco: ficha.escola_nome_endereco, serie_escolar: ficha.serie_escolar }} />
+      <SaudeSection
+        n={4}
+        defaults={{
+          condicao_medica: ficha.condicao_medica, condicao_medica_descricao: ficha.condicao_medica_descricao,
+          tratamento_medico: ficha.tratamento_medico, tratamento_medico_descricao: ficha.tratamento_medico_descricao,
+          alergia: ficha.alergia, alergia_descricao: ficha.alergia_descricao,
+          autorizacao_medica: ficha.autorizacao_medica,
+        }}
+      />
+      <HistoricoEsportivoSection
+        n={5}
+        defaults={{ praticou_modalidade: ficha.praticou_modalidade, interesse_eventos: ficha.interesse_eventos, como_soube: ficha.como_soube }}
+      />
+      <FiliacaoSection n={6} parent="mae" defaults={{ nome: ficha.mae_nome, cpf: ficha.mae_cpf, rg: ficha.mae_rg, email: ficha.mae_email, telefone: ficha.mae_telefone }} />
+      <FiliacaoSection n={7} parent="pai" defaults={{ nome: ficha.pai_nome, cpf: ficha.pai_cpf, rg: ficha.pai_rg, email: ficha.pai_email, telefone: ficha.pai_telefone }} />
+      <EquipamentosSection n={8} defaults={{ tem_bicicleta: ficha.tem_bicicleta, tamanho_camiseta: ficha.tamanho_camiseta }} />
+      <TermosSection n={9} aceite={aceite} onChange={setAceite} />
+      <AutorizacaoAssinaturaSection n={10} onSigChange={setSigData} defaultResponsavelAssina={ficha.responsavel_assina} />
 
       {errorMsg && (
         <div className="flex items-start gap-2 px-4 py-3 rounded-xl text-sm" style={{ background: 'rgba(235,33,39,0.07)', color: '#EB2127' }}>

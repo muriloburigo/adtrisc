@@ -92,6 +92,7 @@ export default async function CandidatoDetailPage({
           <Row label="Data de nascimento" value={c.data_nascimento ? formatDate(c.data_nascimento) : null} />
           <Row label="Sexo biológico" value={c.sexo === 'M' ? 'Masculino' : c.sexo === 'F' ? 'Feminino' : c.sexo} />
           <Row label="CPF" value={c.cpf} />
+          <Row label="Telefone / WhatsApp" value={c.telefone ? formatTelefone(c.telefone) : null} />
           <Row label="Endereço" value={c.endereco_completo} />
           <Row label="Turma pretendida" value={c.turmas?.nome} />
           <Row label="Tamanho da camiseta" value={c.tamanho_camiseta} />
@@ -119,11 +120,40 @@ export default async function CandidatoDetailPage({
           <Row label="Como soube do projeto" value={c.como_soube} />
         </Section>
 
-        <Section icon={UserCheck} title="Responsável Legal">
-          <Row label="Nome" value={c.responsavel_nome} />
-          <Row label="Telefone / WhatsApp" value={formatTelefone(c.responsavel_telefone)} />
-          <Row label="E-mail do responsável" value={c.responsavel_email} />
+        <Section icon={UserCheck} title="Filiação — Mãe">
+          <Row label="Nome" value={c.mae_nome} />
+          <Row label="CPF" value={c.mae_cpf} />
+          <Row label="RG" value={c.mae_rg} />
+          <Row label="Telefone / WhatsApp" value={c.mae_telefone ? formatTelefone(c.mae_telefone) : null} />
+          <Row label="E-mail" value={c.mae_email} />
+        </Section>
+
+        <Section icon={UserCheck} title="Filiação — Pai">
+          <Row label="Nome" value={c.pai_nome} />
+          <Row label="CPF" value={c.pai_cpf} />
+          <Row label="RG" value={c.pai_rg} />
+          <Row label="Telefone / WhatsApp" value={c.pai_telefone ? formatTelefone(c.pai_telefone) : null} />
+          <Row label="E-mail" value={c.pai_email} />
+        </Section>
+
+        {!c.mae_nome && !c.pai_nome && (c.responsavel_nome || c.responsavel_telefone || c.responsavel_email) && (
+          <Section icon={UserCheck} title="Responsável Legal">
+            <Row label="Nome" value={c.responsavel_nome} />
+            <Row label="Telefone / WhatsApp" value={c.responsavel_telefone ? formatTelefone(c.responsavel_telefone) : null} />
+            <Row label="E-mail do responsável" value={c.responsavel_email} />
+          </Section>
+        )}
+
+        <Section icon={UserCheck} title="Autorização e Assinatura">
+          <Row label="Assinado por" value={c.responsavel_assina} />
           <Row label="E-mail de inscrição" value={c.email_responsavel} />
+          {c.assinatura_data && (
+            <div className="pt-2">
+              <p className="text-xs text-gray-400 mb-1">Assinatura digital</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={c.assinatura_data} alt="Assinatura" className="border border-gray-200 rounded bg-white" style={{ maxHeight: 120, maxWidth: '100%' }} />
+            </div>
+          )}
         </Section>
 
         {c.observacoes_internas && (

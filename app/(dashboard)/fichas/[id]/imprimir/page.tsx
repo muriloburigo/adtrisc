@@ -87,10 +87,39 @@ export default async function ImprimirFichaPage({ params }: { params: Promise<{ 
             <Row label="Sexo" value={ficha.p_sexo === 'M' ? 'Masculino' : ficha.p_sexo === 'F' ? 'Feminino' : ficha.p_sexo} />
             <Row label="Data de Nascimento" value={fmt(ficha.p_data_nascimento)} />
             <Row label="Telefone" value={ficha.p_telefone} />
+            <Row label="CPF" value={ficha.p_cpf} />
             <Row label="Endereço" value={[ficha.p_rua, ficha.p_numero].filter(Boolean).join(', ') || null} />
             <Row label="Bairro" value={ficha.p_bairro} />
             <Row label="Cidade" value={ficha.p_cidade} />
             <Row label="CEP" value={ficha.p_cep} />
+          </Section>
+
+          {(ficha.escola_nome_endereco || ficha.serie_escolar) && (
+            <Section title="Dados Escolares">
+              <Row label="Escola" value={ficha.escola_nome_endereco} />
+              <Row label="Série/Ano" value={ficha.serie_escolar} />
+            </Section>
+          )}
+
+          <Section title="Saúde">
+            <Row label="Condição médica" value={ficha.condicao_medica ? 'Sim' : 'Não'} />
+            {ficha.condicao_medica && <Row label="Descrição" value={ficha.condicao_medica_descricao} />}
+            <Row label="Tratamento médico" value={ficha.tratamento_medico ? 'Sim' : 'Não'} />
+            {ficha.tratamento_medico && <Row label="Descrição" value={ficha.tratamento_medico_descricao} />}
+            <Row label="Alergia" value={ficha.alergia ? 'Sim' : 'Não'} />
+            {ficha.alergia && <Row label="Descrição" value={ficha.alergia_descricao} />}
+            <Row label="Autorização médica" value={ficha.autorizacao_medica ? 'Sim' : 'Não'} />
+          </Section>
+
+          <Section title="Histórico Esportivo">
+            <Row label="Já praticou modalidade" value={ficha.praticou_modalidade ? 'Sim' : 'Não'} />
+            <Row label="Interesse em eventos" value={ficha.interesse_eventos ? 'Sim' : 'Não'} />
+            <Row label="Como soube do projeto" value={ficha.como_soube} />
+          </Section>
+
+          <Section title="Equipamentos e Uniforme">
+            <Row label="Possui bicicleta" value={ficha.tem_bicicleta ? 'Sim' : 'Não'} />
+            <Row label="Tamanho da camiseta" value={ficha.tamanho_camiseta} />
           </Section>
 
           {(ficha.mae_nome || ficha.pai_nome) && (
