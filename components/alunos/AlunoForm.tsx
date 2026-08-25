@@ -37,6 +37,7 @@ export default function AlunoForm({
   pai,
   submitLabel = 'Salvar',
   showStatus = false,
+  defaultTurmaId,
 }: {
   action: (fd: FormData) => Promise<void> | void
   aluno?: AlunoData
@@ -45,6 +46,7 @@ export default function AlunoForm({
   pai?: RespData
   submitLabel?: string
   showStatus?: boolean
+  defaultTurmaId?: string
 }) {
   const [pending, startTransition] = useTransition()
   const [fotoUrl, setFotoUrl] = useState(aluno?.foto_url ?? '')
@@ -113,7 +115,7 @@ export default function AlunoForm({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Turma</label>
-            <select name="turma_id" defaultValue={aluno?.turma_id ?? ''} className={inputClass}>
+            <select name="turma_id" defaultValue={aluno?.turma_id ?? defaultTurmaId ?? ''} className={inputClass}>
               <option value="">Sem turma</option>
               {turmas.map((t) => (
                 <option key={t.id} value={t.id}>{t.nome}</option>

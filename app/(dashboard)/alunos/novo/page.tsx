@@ -33,7 +33,12 @@ export default async function NovoAlunoPage({
     <div className="p-4 sm:p-8 max-w-3xl">
       <BackButton />
       <PageHeader title="Novo(a) Atleta" subtitle="Preencha a ficha de inscrição completa" />
-      <AlunoForm action={actionComTurma} turmas={turmas} submitLabel="Cadastrar Atleta" />
+      <AlunoForm
+        action={actionComTurma}
+        turmas={turmas}
+        submitLabel="Cadastrar Atleta"
+        defaultTurmaId={turmaPreSelecionada}
+      />
     </div>
   )
 }
