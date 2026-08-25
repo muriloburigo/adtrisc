@@ -39,7 +39,7 @@ export default function AlunoForm({
   showStatus = false,
   defaultTurmaId,
 }: {
-  action: (fd: FormData) => Promise<void> | void
+  action: (fd: FormData) => Promise<{ error?: string } | void>
   aluno?: AlunoData
   turmas: Turma[]
   mae?: RespData
@@ -50,11 +50,16 @@ export default function AlunoForm({
 }) {
   const [pending, startTransition] = useTransition()
   const [fotoUrl, setFotoUrl] = useState(aluno?.foto_url ?? '')
+  const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    startTransition(async () => { await action(fd) })
+    setError(null)
+    startTransition(async () => {
+      const res = await action(fd)
+      if (res?.error) setError(res.error)
+    })
   }
 
   const labelClass = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5'
@@ -200,6 +205,12 @@ export default function AlunoForm({
           className={inputClass}
         />
       </div>
+
+      {error && (
+        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
+          {error}
+        </p>
+      )}
 
       <button
         type="submit"

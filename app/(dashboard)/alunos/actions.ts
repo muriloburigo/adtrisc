@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/audit'
 import { requireStaff } from '@/lib/assert'
+import { friendlyError } from '@/lib/errors'
 import type { AlunoStatus, Parentesco, SexoEnum } from '@/types/database'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,7 +50,7 @@ async function upsertResponsavel(db: any, alunoId: string, formData: FormData, p
   }
 }
 
-export async function createAluno(formData: FormData) {
+export async function createAluno(formData: FormData): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   const actor = await requireStaff()
@@ -73,7 +74,7 @@ export async function createAluno(formData: FormData) {
   const { data: aluno, error } = await db
     .from('alunos').insert(payload).select('id').single()
 
-  if (error || !aluno) throw new Error(error?.message ?? 'Erro ao criar aluno')
+  if (error || !aluno) return { error: friendlyError(error, 'Erro ao criar aluno.') }
 
   await upsertResponsavel(db, aluno.id, formData, 'mae')
   await upsertResponsavel(db, aluno.id, formData, 'pai')
@@ -103,7 +104,7 @@ export async function createAluno(formData: FormData) {
   redirect('/alunos')
 }
 
-export async function updateAluno(id: string, formData: FormData) {
+export async function updateAluno(id: string, formData: FormData): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   const actor = await requireStaff()
@@ -128,7 +129,7 @@ export async function updateAluno(id: string, formData: FormData) {
 
   const { error } = await db.from('alunos').update(payload).eq('id', id)
 
-  if (error) throw new Error(error.message)
+  if (error) return { error: friendlyError(error, 'Erro ao salvar alterações.') }
 
   await upsertResponsavel(db, id, formData, 'mae')
   await upsertResponsavel(db, id, formData, 'pai')
@@ -175,7 +176,7 @@ export async function updateAluno(id: string, formData: FormData) {
   redirect(`/alunos/${id}`)
 }
 
-export async function removerAlunoTurma(id: string) {
+export async function removerAlunoTurma(id: string): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   const actor = await requireStaff()
@@ -190,8 +191,8 @@ export async function removerAlunoTurma(id: string) {
     .rpc('remover_aluno_turma', { p_aluno_id: id })
     .single()
 
-  if (error) throw new Error(error.message)
-  if (!data) throw new Error('Atleta não encontrado')
+  if (error) return { error: friendlyError(error, 'Erro ao remover atleta da turma.') }
+  if (!data) return { error: 'Atleta não encontrado.' }
 
   await logAudit({
     userId: actor.id, userName: actor.name,
@@ -206,7 +207,7 @@ export async function removerAlunoTurma(id: string) {
   if (data.turma_anterior_id) revalidatePath(`/turmas/${data.turma_anterior_id}`)
 }
 
-export async function deleteAluno(id: string) {
+export async function deleteAluno(id: string): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   const actor = await requireStaff()
@@ -214,7 +215,7 @@ export async function deleteAluno(id: string) {
   const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
 
   const { error } = await db.from('alunos').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  if (error) return { error: friendlyError(error, 'Erro ao excluir aluno.') }
 
   await logAudit({
     userId: actor.id, userName: actor.name,

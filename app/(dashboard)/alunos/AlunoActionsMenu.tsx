@@ -15,6 +15,7 @@ export default function AlunoActionsMenu({
   turmaId: string | null
 }) {
   const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -62,8 +63,15 @@ export default function AlunoActionsMenu({
                   e.preventDefault()
                   e.stopPropagation()
                   setOpen(false)
+                  setError(null)
                   if (!confirm(`Remover "${alunoNome}" da turma?\n\nO atleta ficará como desligado e poderá ser matriculado novamente no futuro.`)) return
-                  startTransition(() => removerAlunoTurma(alunoId))
+                  startTransition(async () => {
+                    const res = await removerAlunoTurma(alunoId)
+                    if (res?.error) {
+                      setError(res.error)
+                      setTimeout(() => setError(null), 5000)
+                    }
+                  })
                 }}
                 className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
               >
@@ -73,6 +81,12 @@ export default function AlunoActionsMenu({
             </>
           )}
         </div>
+      )}
+
+      {error && (
+        <p className="absolute right-0 top-9 z-50 w-56 text-xs text-red-500 bg-white border border-red-100 rounded-xl shadow-lg px-3 py-2">
+          {error}
+        </p>
       )}
     </div>
   )
