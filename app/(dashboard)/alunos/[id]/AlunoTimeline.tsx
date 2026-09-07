@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { formatDate } from '@/lib/utils'
-import { UserPlus, ArrowRight, UserMinus, RefreshCw, Dumbbell } from 'lucide-react'
+import { formatDate, secondsToMmss } from '@/lib/utils'
+import { UserPlus, ArrowRight, UserMinus, RefreshCw, Dumbbell, Trophy } from 'lucide-react'
 import type { HistoricoAtletaRow } from '@/types/database'
 
-type EventoTipo = HistoricoAtletaRow['tipo'] | 'avaliacao'
+type EventoTipo = HistoricoAtletaRow['tipo'] | 'avaliacao' | 'prova'
 
 type Evento = {
   key: string
@@ -26,6 +26,7 @@ const CONFIG: Record<EventoTipo, {
   desligamento:  { icon: UserMinus,   bg: 'bg-red-100',     fg: 'text-red-500',     label: 'Desligamento'      },
   reativacao:    { icon: RefreshCw,   bg: 'bg-emerald-100', fg: 'text-emerald-600', label: 'Reativação'        },
   avaliacao:     { icon: Dumbbell,    bg: 'bg-violet-100',  fg: 'text-violet-600',  label: 'Avaliação Física'  },
+  prova:         { icon: Trophy,      bg: 'bg-amber-100',   fg: 'text-amber-600',   label: 'Prova'             },
 }
 
 export default async function AlunoTimeline({
@@ -38,7 +39,7 @@ export default async function AlunoTimeline({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
-  const [{ data: historico }, { data: avaliacoes }] = await Promise.all([
+  const [{ data: historico }, { data: avaliacoes }, { data: resultados }] = await Promise.all([
     supabase
       .from('historico_atleta')
       .select('*')
@@ -51,6 +52,10 @@ export default async function AlunoTimeline({
       .eq('aluno_id', alunoId)
       .is('deleted_at', null)
       .order('data', { ascending: false }),
+    supabase
+      .from('resultados_prova')
+      .select('id, colocacao_geral, colocacao_categoria, tempo_total_segundos, prova:prova_id ( id, nome, data ), categoria:categoria_id ( nome )')
+      .eq('aluno_id', alunoId),
   ])
 
   const eventos: Evento[] = []
@@ -87,6 +92,32 @@ export default async function AlunoTimeline({
       data,
       titulo: 'Avaliação Física',
       href:   turmaId ? `/avaliacoes/${turmaId}/${data}` : undefined,
+    })
+  }
+
+  // Eventos de resultados de provas
+  type ResultadoJoined = {
+    id: string
+    colocacao_geral: number | null
+    colocacao_categoria: number | null
+    tempo_total_segundos: number | null
+    prova: { id: string; nome: string; data: string } | null
+    categoria: { nome: string } | null
+  }
+  for (const r of ((resultados ?? []) as unknown as ResultadoJoined[])) {
+    if (!r.prova) continue
+    const partes: string[] = []
+    if (r.categoria?.nome) partes.push(r.categoria.nome)
+    if (r.tempo_total_segundos != null) partes.push(secondsToMmss(r.tempo_total_segundos))
+    if (r.colocacao_geral != null) partes.push(`${r.colocacao_geral}º geral`)
+    if (r.colocacao_categoria != null) partes.push(`${r.colocacao_categoria}º categoria`)
+    eventos.push({
+      key:       `prova__${r.id}`,
+      tipo:      'prova',
+      data:      r.prova.data,
+      titulo:    r.prova.nome,
+      descricao: partes.join(' • '),
+      href:      `/provas/${r.prova.id}`,
     })
   }
 
