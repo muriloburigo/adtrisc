@@ -155,3 +155,20 @@ export async function invalidarFicha(fichaId: string, alunoId: string): Promise<
   revalidatePath(`/alunos/${alunoId}`)
   return {}
 }
+
+export async function excluirFicha(fichaId: string, alunoId: string): Promise<{ error?: string }> {
+  await requireStaff()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createAdminClient() as any
+
+  const { data: ficha } = await db
+    .from('fichas_inscricao').select('status, expires_at').eq('id', fichaId).single()
+
+  const isExpired = ficha?.status === 'expirada' || (ficha?.expires_at && new Date(ficha.expires_at) < new Date())
+  if (!ficha || !isExpired) return { error: 'Só é possível excluir fichas expiradas.' }
+
+  const { error } = await db.from('fichas_inscricao').delete().eq('id', fichaId)
+  if (error) return { error: error.message }
+  revalidatePath(`/alunos/${alunoId}`)
+  return {}
+}

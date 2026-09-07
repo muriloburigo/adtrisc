@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { FileText, Link as LinkIcon, Check, Plus, X, Mail, MessageCircle, Download } from 'lucide-react'
-import { criarFicha, invalidarFicha } from '@/app/(dashboard)/fichas/actions'
+import { criarFicha, invalidarFicha, excluirFicha } from '@/app/(dashboard)/fichas/actions'
+import ConfirmDeleteButton from '@/components/ui/ConfirmDeleteButton'
 
 type ResponsavelContact = { nome: string; telefone: string | null; email: string | null }
 
@@ -29,6 +30,10 @@ const statusStyle: Record<string, string> = {
 
 function fmt(d: string) {
   return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function isExpirada(f: FichaRow) {
+  return f.status === 'expirada' || (f.status === 'pendente' && new Date(f.expires_at) < new Date())
 }
 
 function toWaNumber(phone: string) {
@@ -153,15 +158,15 @@ export default function FichaSection({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${statusStyle[f.status]}`}>
-                      {statusLabel[f.status]}
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${isExpirada(f) ? statusStyle.expirada : statusStyle[f.status]}`}>
+                      {isExpirada(f) ? statusLabel.expirada : statusLabel[f.status]}
                     </span>
                     <span className="text-[11px] text-gray-400">Gerada em {fmt(f.gerado_em)}</span>
                     {f.preenchido_em && (
                       <span className="text-[11px] text-gray-400">· Preenchida em {fmt(f.preenchido_em)}</span>
                     )}
                   </div>
-                  {f.status === 'pendente' && (
+                  {f.status === 'pendente' && !isExpirada(f) && (
                     <p className="text-[11px] text-gray-400 mt-1">
                       Expira em {fmt(f.expires_at)}
                     </p>
@@ -177,7 +182,7 @@ export default function FichaSection({
                     <Download size={14} />
                   </a>
                 )}
-                {f.status === 'pendente' && (
+                {f.status === 'pendente' && !isExpirada(f) && (
                   <>
                     <button
                       onClick={() => copyToClipboard(fichaUrl(f.token), f.id)}
@@ -215,6 +220,13 @@ export default function FichaSection({
                       <X size={14} />
                     </button>
                   </>
+                )}
+                {isExpirada(f) && (
+                  <ConfirmDeleteButton
+                    title="Excluir ficha expirada"
+                    action={() => excluirFicha(f.id, alunoId)}
+                    onSuccess={() => setFichas((prev) => prev.filter((x) => x.id !== f.id))}
+                  />
                 )}
                 </div>
               </div>
