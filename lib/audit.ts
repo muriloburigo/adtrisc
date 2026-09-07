@@ -7,7 +7,7 @@ export type AuditAction =
   | 'criar' | 'editar' | 'excluir' | 'senha' | 'status' | 'sorteio'
 
 export type AuditResource =
-  | 'turma' | 'atleta' | 'treinador' | 'candidato' | 'usuario' | 'presenca'
+  | 'turma' | 'atleta' | 'treinador' | 'candidato' | 'usuario' | 'presenca' | 'prova'
 
 export interface AuditParams {
   userId:        string

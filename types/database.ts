@@ -7,6 +7,7 @@ export type AlunoStatus = 'ativo' | 'inativo' | 'desligado'
 export type SexoEnum = 'M' | 'F'
 export type Parentesco = 'mae' | 'pai' | 'outro'
 export type UserRole = 'admin' | 'coach' | 'aluno' | 'pai'
+export type EtapaModalidade = 'natacao' | 'ciclismo' | 'corrida'
 
 // ── Tables ────────────────────────────────────────────────────────────────────
 
@@ -205,6 +206,46 @@ export type DocumentoAssinadoRow = {
   storage_path: string
   enviado_por: string | null
   enviado_em: string
+}
+
+export type EtapaProva = {
+  modalidade: EtapaModalidade
+  distancia_metros: number
+}
+
+export type ProvaRow = {
+  id: string
+  nome: string
+  local: string
+  data: string
+  observacoes: string | null
+  criado_por: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ProvaCategoriaRow = {
+  id: string
+  prova_id: string
+  nome: string
+  idade_min: number | null
+  idade_max: number | null
+  etapas: EtapaProva[]
+  ordem: number
+  created_at: string
+  updated_at: string
+}
+
+export type ResultadoProvaRow = {
+  id: string
+  prova_id: string
+  categoria_id: string
+  aluno_id: string
+  tempo_total_segundos: number | null
+  colocacao_geral: number | null
+  colocacao_categoria: number | null
+  created_at: string
+  updated_at: string
 }
 
 export type ProfileRow = {

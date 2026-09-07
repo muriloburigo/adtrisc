@@ -70,6 +70,7 @@ adtrisc/
 │   │   ├── turmas/                 # Class CRUD + photo gallery + reports
 │   │   ├── presencas/              # Attendance tracking + export
 │   │   ├── avaliacoes/             # Fitness assessment grids by class/date
+│   │   ├── provas/                 # External competitions: categories + athlete results
 │   │   ├── candidatos/             # Enrollment applicants queue
 │   │   ├── coaches/                # Coach user management (admin only)
 │   │   ├── configuracoes/          # User management (admin only)
@@ -105,6 +106,7 @@ adtrisc/
 │   ├── schema.sql                  # v1 schema (legacy — do not re-run)
 │   ├── schema_v2.sql               # v2 schema with turmas, alunos, responsaveis
 │   ├── fichas_inscricao.sql        # fichas_inscricao table migration
+│   ├── provas.sql                  # provas / prova_categorias / resultados_prova tables
 │   └── soft_delete.sql             # Adds deleted_at to presencas & avaliacoes_fisicas
 ├── middleware.ts                   # Auth gate + public route exceptions
 ├── next.config.ts                  # Minimal (no custom config needed)
@@ -205,6 +207,16 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 **`fichas_inscricao`** — digital enrollment forms sent to parents
 - `id`, `token` (uuid, unique — used in public URL `/ficha/{token}`), `aluno_id`, `status` (pendente/preenchida/expirada), pre-filled participant fields (`p_nome`, `p_telefone`, `p_sexo`, `p_data_nascimento`, address), parent fields (`mae_*`, `pai_*`), `responsavel_assina`, `aceite_termos`, `assinatura_data` (base64 PNG), `gerado_por`, `expires_at` (default 30 days from creation)
 
+**`provas`** — external competitions (e.g. a city duathlon) the athletes take part in
+- `id`, `nome`, `local`, `data`, `observacoes`, `criado_por` (FK → profiles)
+
+**`prova_categorias`** — age-based categories within a prova, each with its own leg distances
+- `id`, `prova_id` (FK → provas), `nome`, `idade_min`, `idade_max`, `etapas` (jsonb array of `{modalidade, distancia_metros}`, in race order), `ordem`
+
+**`resultados_prova`** — one result row per athlete per prova
+- `id`, `prova_id`, `categoria_id` (FK → prova_categorias), `aluno_id` (FK → alunos), `tempo_total_segundos`, `colocacao_geral`, `colocacao_categoria`
+- Unique constraint on `(prova_id, aluno_id)` — upserted on save
+
 **`audit_logs`** — all admin/coach write actions
 - `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB)
 
@@ -213,6 +225,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `admin` and `coach` can read most tables.
 - Only `admin` can write alunos, responsaveis, turmas (delete), fichas, and user records — **except** `coach` may also remove (desligar) an athlete from their own turma, via the `remover_aluno_turma()` SECURITY DEFINER RPC (`supabase/alunos_coach_remove.sql`), called from `removerAlunoTurma()` in `alunos/actions.ts`. A direct RLS policy doesn't work here: nulling `turma_id` makes the row fail the coach's own SELECT policy (`coach_has_turma(turma_id)`), and Postgres rejects an UPDATE whose result the caller can no longer see — even under a permissive UPDATE policy. The RPC validates admin/coach-of-turma manually and writes with elevated privilege instead.
 - `pai` can only read their own children and related records (via `aluno_responsavel` join).
+- `provas`/`prova_categorias` are shared event data (not tied to one turma) — any staff (admin or coach) can read/write them. `resultados_prova` is scoped like `avaliacoes_fisicas`: a coach can only read/write results for athletes in a turma they coach (`coach_has_turma()`), admin unrestricted.
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
 
 ### Helper DB Function
@@ -245,6 +258,9 @@ Staff selects a class and date, then marks each athlete present/absent/excused. 
 
 ### Fitness Assessments (`/avaliacoes`)
 Grid view per class and date. Fields: body mass (kg), height (m), IMC (auto-computed), 6-min run (meters), abdominal strength (reps), wingspan (cm), vertical jump (cm), 20m sprint time (seconds, stored as mm:ss.cc), flexibility (cm). Soft-deleted via `deleted_at`. Individual assessments also accessible from athlete detail page.
+
+### Competitions & Results (`/provas`)
+Staff registers external competitions (nome, local, data, observações) with one or more age-based categories, each defining an ordered list of leg distances (`etapas`: natação/ciclismo/corrida + distância em metros). Results are logged per athlete against a category: total time (stored in seconds, entered/displayed as `MM:SS` via `mmssToSeconds()`/`secondsToMmss()`), plus overall and category placement. One result per athlete per prova (upserted). Deleting a categoria cascades its results — confirmed with a warning showing the affected count.
 
 ### Digital Enrollment Forms (`/ficha/[token]`)
 Staff generates a tokenized link per athlete (or in bulk per class). Parents open the public URL, review pre-filled data, add guardian details, and sign digitally (base64 PNG signature). The form is fully unauthenticated — uses service role client. Admin can invalidate (expire) a form from the athlete detail page.
