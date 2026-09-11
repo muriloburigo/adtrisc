@@ -113,7 +113,9 @@ adtrisc/
 │   ├── documentosAssinados.ts      # Signed-PDF upload/delete (bucket `documentos`)
 │   ├── errors.ts                   # friendlyError() — translates Supabase/RLS errors for the UI
 │   ├── faltasAlerta.ts             # Computes attendance-alert thresholds per athlete
-│   ├── linkPreview.ts              # Open Graph scraper + slug-based title fallback (Imprensa)
+│   ├── linkPreview.ts              # Open Graph scraper + slug-based title fallback (Imprensa).
+│                                   #   Resolves DNS and blocks private/loopback/link-local IPs
+│                                   #   (incl. on every redirect hop) — SSRF guard, don't remove.
 │   ├── password.ts                 # Password validation rules
 │   ├── provas.ts                   # Etapa/status labels + helpers for the Provas feature
 │   ├── termos.ts                   # Enrollment terms & conditions text (shared by inscricao/ficha)
@@ -136,7 +138,8 @@ adtrisc/
 │   ├── backup-storage.mjs          # Downloads every Storage bucket, called by backup.sh
 │   └── restore-storage.mjs         # Re-uploads a backup's storage/ dir back into Supabase
 ├── proxy.ts                        # Auth gate + public route exceptions (Next.js 16 "middleware")
-├── next.config.ts                  # Minimal (no custom config needed)
+├── next.config.ts                  # headers(): X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy
+│                                   #   (no CSP — Imprensa loads preview images from arbitrary news sites)
 ├── tsconfig.json                   # Path alias: @/* → ./*
 └── vercel.json                     # Build/dev/install commands
 ```
@@ -308,7 +311,7 @@ CRUD for turmas. Each class has a photo gallery (Supabase Storage bucket `fotos`
 Full CRUD for athletes. Each athlete has:
 - Parents/guardians (responsaveis) managed inline on the same form.
 - Timeline showing enrollment history, class changes, deactivations, and fitness assessments.
-- Avatar upload (Supabase Storage bucket `avatars`, max 3 MB).
+- Avatar upload (Supabase Storage bucket `avatars`, max 3 MB, JPEG/PNG/WebP only — exact allowlist, not a `startsWith('image/')` prefix check, since that would also accept `image/svg+xml` and SVGs can carry `<script>`).
 
 ### Attendance (`/presencas`)
 Staff selects a class and date, then marks each athlete present/absent/excused. Records are upserted by `(turma_id, aluno_id, data)`. Supports export/print view.
@@ -506,7 +509,7 @@ This is the unlikely worst case. Steps, roughly in order:
 ## Important Conventions
 
 - **Server Actions** are used for all mutations — no API routes for CRUD. Every action file starts with `'use server'`.
-- **`requireStaff()` / `requireAdmin()`** must be called at the top of any Server Action that writes data. They throw `Error('Acesso negado')` if the session lacks the required role.
+- **`requireStaff()` / `requireAdmin()`** must be called at the top of any Server Action that writes data. They throw `Error('Acesso negado')` if the session lacks the required role — **but they only check role, never *which* turma/aluno**. Any action that also uses `createAdminClient()` (bypasses RLS) for its actual reads/writes on a turma- or aluno-scoped table needs its **own** ownership check on top of `requireStaff()`, or a coach can act on another coach's turma/athletes. This exact gap existed in `fichas/actions.ts` (any coach could create/invalidate/delete any athlete's enrollment form) until it was fixed by adding `assertAlunoAccess()`/`assertTurmaAccess()` helpers there — they re-run the lookup through the normal RLS-scoped client (`createClient()`) and treat "row not visible" as "access denied," reusing the exact same `coach_has_turma()`-based policies as the rest of the app instead of reinventing the scoping logic. Copy that pattern for any new admin-client action scoped to a turma or aluno. (Actions that read/write through the normal RLS-scoped client, like `lib/documentosAssinados.ts`, don't need this — RLS already enforces it for them.)
 - **`logAudit()`** must be called after every successful write in admin/coach actions.
 - **Soft deletes** on `presencas` and `avaliacoes_fisicas` — always filter with `.is('deleted_at', null)` when querying these tables.
 - **`historico_atleta`** is appended automatically in `alunos/actions.ts` whenever an athlete's `turma_id` or `status` changes — do not skip this when writing updates.
