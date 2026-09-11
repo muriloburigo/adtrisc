@@ -118,25 +118,3 @@ export async function updateTurma(id: string, formData: FormData): Promise<{ err
   revalidatePath('/turmas')
   redirect('/turmas')
 }
-
-export async function deleteTurma(id: string): Promise<{ error?: string } | void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = (await createClient()) as any
-  const actor = await requireStaff()
-
-  const { data: before } = await supabase.from('turmas').select('*').eq('id', id).single()
-
-  const { data: deleted, error } = await supabase
-    .from('turmas').delete().eq('id', id).select('id').single()
-  if (error || !deleted) return { error: friendlyError(error, 'Erro ao excluir turma.') }
-
-  await logAudit({
-    userId: actor.id, userName: actor.name,
-    action: 'excluir', resource: 'turma',
-    resourceId: id, resourceLabel: before?.nome ?? null,
-    before: before as Record<string, unknown>,
-  })
-
-  revalidatePath('/turmas')
-  redirect('/turmas')
-}

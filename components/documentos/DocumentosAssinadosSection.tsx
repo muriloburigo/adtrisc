@@ -1,9 +1,10 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { FileText, Upload, X, Trash2, Download, CheckCircle2 } from 'lucide-react'
+import { FileText, Upload, X, Download, CheckCircle2 } from 'lucide-react'
 import { uploadDocumentoAssinado, deleteDocumentoAssinado } from '@/lib/documentosAssinados'
 import { formatDate } from '@/lib/utils'
+import ConfirmDeleteButton from '@/components/ui/ConfirmDeleteButton'
 import type { DocumentoAssinadoTipo } from '@/types/database'
 
 export type DocumentoAssinadoItem = {
@@ -84,13 +85,6 @@ export default function DocumentosAssinadosSection({
     })
   }
 
-  function handleDelete(id: string, storagePath: string) {
-    if (!confirm('Excluir este documento?')) return
-    startTransition(async () => {
-      await deleteDocumentoAssinado(id, storagePath, tipo, turmaId ?? null)
-    })
-  }
-
   return (
     <div className="print:hidden border border-gray-200 rounded-xl p-4 bg-white">
       <div className="flex items-center justify-between mb-3">
@@ -133,14 +127,10 @@ export default function DocumentosAssinadosSection({
                     <Download size={13} /> Baixar
                   </a>
                 )}
-                <button
-                  disabled={pending}
-                  onClick={() => handleDelete(doc.id, doc.storagePath)}
-                  className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                <ConfirmDeleteButton
                   title="Excluir"
-                >
-                  <Trash2 size={14} />
-                </button>
+                  action={() => deleteDocumentoAssinado(doc.id, doc.storagePath, tipo, turmaId ?? null)}
+                />
               </div>
             </div>
           ))}

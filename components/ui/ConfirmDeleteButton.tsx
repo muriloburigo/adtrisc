@@ -63,7 +63,7 @@ export default function ConfirmDeleteButton({
   }
 
   if (variant === 'full') {
-    return (
+    const btn = (
       <button
         onClick={() => setConfirming(true)}
         className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
@@ -72,9 +72,16 @@ export default function ConfirmDeleteButton({
         {label}
       </button>
     )
+    if (!error) return btn
+    return (
+      <span className="inline-flex flex-col items-end gap-0.5">
+        <span className="text-xs text-red-500 whitespace-nowrap">{error}</span>
+        {btn}
+      </span>
+    )
   }
 
-  return (
+  const iconBtn = (
     <button
       onClick={() => setConfirming(true)}
       className="text-gray-300 hover:text-red-500 transition-colors p-1 rounded cursor-pointer"
@@ -82,5 +89,12 @@ export default function ConfirmDeleteButton({
     >
       <Trash2 size={size} />
     </button>
+  )
+  if (!error) return iconBtn
+  return (
+    <span className="inline-flex flex-col items-end gap-0.5">
+      <span className="text-xs text-red-500 whitespace-nowrap">{error}</span>
+      {iconBtn}
+    </span>
   )
 }

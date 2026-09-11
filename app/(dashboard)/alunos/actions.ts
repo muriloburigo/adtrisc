@@ -253,26 +253,3 @@ export async function atribuirAtletaTurma(alunoId: string, turmaId: string): Pro
   revalidatePath(`/alunos/${alunoId}`)
   revalidatePath(`/turmas/${turmaId}`)
 }
-
-export async function deleteAluno(id: string): Promise<{ error?: string } | void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = (await createClient()) as any
-  const actor = await requireStaff()
-
-  const { data: before } = await db.from('alunos').select('*').eq('id', id).single()
-
-  // .select().single() pelo mesmo motivo de updateAluno: DELETE bloqueado
-  // por RLS não retorna error, só 0 linhas afetadas.
-  const { data: deleted, error } = await db.from('alunos').delete().eq('id', id).select('id').single()
-  if (error || !deleted) return { error: friendlyError(error, 'Erro ao excluir aluno.') }
-
-  await logAudit({
-    userId: actor.id, userName: actor.name,
-    action: 'excluir', resource: 'atleta',
-    resourceId: id, resourceLabel: before?.nome ?? null,
-    before: before as Record<string, unknown>,
-  })
-
-  revalidatePath('/alunos')
-  redirect('/alunos')
-}

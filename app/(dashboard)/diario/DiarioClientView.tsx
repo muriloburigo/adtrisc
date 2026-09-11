@@ -107,6 +107,7 @@ function FotoDoDiaSlot({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function applyFile(file: File | undefined | null) {
@@ -126,10 +127,10 @@ function FotoDoDiaSlot({
 
   function handleRemove() {
     if (!foto) return
-    if (!confirm('Remover esta foto?')) return
     startTransition(async () => {
       await removerFotoDoDia(turmaId, date, foto.storage_path)
       onChange(null)
+      setConfirmingRemove(false)
     })
   }
 
@@ -140,15 +141,36 @@ function FotoDoDiaSlot({
         <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50 aspect-video max-w-[220px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={foto.url} alt={foto.titulo || 'Foto do dia'} className="w-full h-full object-cover" />
-          <button
-            type="button"
-            disabled={pending}
-            onClick={handleRemove}
-            className="absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1 hover:bg-red-500/90 transition-colors disabled:opacity-50"
-            title="Remover foto"
-          >
-            <Trash2 size={12} />
-          </button>
+          {confirmingRemove ? (
+            <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5 bg-black/70 rounded-full px-2.5 py-1">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleRemove}
+                className="text-white text-[11px] font-semibold hover:text-red-300 disabled:opacity-50"
+              >
+                {pending ? '…' : 'Remover'}
+              </button>
+              <span className="text-white/40 text-[11px]">·</span>
+              <button
+                type="button"
+                onClick={() => setConfirmingRemove(false)}
+                className="text-white/70 text-[11px] hover:text-white"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setConfirmingRemove(true)}
+              className="absolute top-1.5 right-1.5 bg-black/50 text-white rounded-full p-1 hover:bg-red-500/90 transition-colors disabled:opacity-50"
+              title="Remover foto"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
         </div>
       ) : (
         <label
