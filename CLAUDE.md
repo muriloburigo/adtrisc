@@ -353,6 +353,8 @@ storage/
 
 Old archives are deleted automatically after 30 days.
 
+**Mapping rule (what makes restore mechanical, not something to figure out by hand):** each folder directly under `storage/` **is** a bucket name, and everything inside it is the exact object path inside that bucket — `storage/avatars/alunos/{uuid}.jpg` came from (and goes back to) the `avatars` bucket at object key `alunos/{uuid}.jpg`. Restoring never requires knowing or reconstructing paths by hand: `restore-storage.mjs` (below) walks `storage/`, treats each top-level folder as a bucket, and re-uploads every file at its relative path — including any future bucket, since it auto-detects folders instead of a hardcoded list.
+
 ### How it runs
 
 - **Automatic**: a macOS LaunchAgent (`~/Library/LaunchAgents/com.adtrisc.backup.plist`) runs `scripts/backup/backup.sh` every day at 3 AM. If the Mac is asleep at that time, launchd runs it as soon as the Mac wakes up (unlike cron, which would just skip it).
@@ -382,22 +384,11 @@ Use this when you need to undo bad data (accidental bulk delete, a bug that corr
      -f 2026-09-11_1428/database.sql
    ```
    For a single table instead of everything, extract just that table's `CREATE TABLE`/`COPY` block from `database.sql` and run it, or restore into a fresh local Postgres and copy rows over with `\copy`.
-3. Re-upload storage files (only needed if files were actually lost — the DB restore above doesn't touch Storage):
+3. Re-upload storage files (only needed if files were actually lost — the DB restore above doesn't touch Storage). One command restores **all three buckets** — it auto-detects them from the folder names under `storage/` (see mapping rule above) and is safe to re-run (upsert):
    ```bash
-   node --env-file=.env.local -e '
-     import("@supabase/supabase-js").then(async ({ createClient }) => {
-       const fs = await import("node:fs");
-       const path = await import("node:path");
-       const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-       const bucket = "avatars"; // or fotos / documentos
-       const root = "2026-09-11_1428/storage/" + bucket;
-       for (const file of fs.readdirSync(root, { recursive: true })) {
-         const full = path.join(root, file);
-         if (fs.statSync(full).isDirectory()) continue;
-         await supabase.storage.from(bucket).upload(file, fs.readFileSync(full), { upsert: true });
-       }
-     });'
+   node --env-file=.env.local scripts/backup/restore-storage.mjs 2026-09-11_1428/storage
    ```
+   It refuses to run if `.env.local` (or an env var leaking in from the shell) doesn't point at the `adtrisc` project — same safety check as the backup script, just as important in reverse since this one writes.
 
 ### Restore — full disaster (Supabase project or Vercel account lost entirely)
 
@@ -406,7 +397,7 @@ This is the unlikely worst case. Steps, roughly in order:
 1. **Create a new Supabase project.** Note the new project ref/URL and grab the new anon key, service-role key, and DB password from Project Settings → API / Database.
 2. **Rebuild the schema**: run every file in `supabase/*.sql` against the new project's SQL editor, in this order (each file's header comment says "Run this in the Supabase SQL editor"): `schema_v2.sql` first (core tables), then the rest — `avatars_bucket.sql`, `fotos_bucket.sql`, `provas.sql`, `fichas_inscricao.sql`, `documentos_assinados*.sql`, `turma_coaches.sql`, `turma_access_scoping.sql`, `alunos_coach_*.sql`, `materias_imprensa.sql`, `soft_delete.sql`, `diario_aulas.sql`, `diario_resumos.sql`, `unificar_fichas_candidatos.sql`, `fichas_campos_neutros.sql`, `turma_fotos_rls.sql`, `turma_fotos_uma_por_dia.sql`. (`schema.sql` is the old v1 schema — **do not run it**, `schema_v2.sql` superseded it.) This recreates all tables, RLS policies, functions, and the three storage buckets (empty).
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".
-4. **Re-upload storage files** — same script as in the section above, once per bucket (`avatars`, `fotos`, `documentos`), pointed at the new project's `.env.local`.
+4. **Re-upload storage files** — `node --env-file=.env.local scripts/backup/restore-storage.mjs <backup>/storage`, pointed at the new project's `.env.local`. Update `EXPECTED_PROJECT_REF` at the top of `restore-storage.mjs` first (it hard-fails otherwise, on purpose — see step 9).
 5. **Recreate user accounts.** `auth_users.csv` has emails/names but *not* passwords — there is no way around this, Supabase never exposes password hashes for security reasons. For each row: create the user in Supabase Auth (dashboard → Authentication → Add user, or `supabase.auth.admin.createUser()`) using the **same `id`** from the CSV if at all possible (many tables have `profile_id`/`enviado_por`/etc. foreign keys pointing at these UUIDs) and send them a password-reset email. If preserving the same `id` isn't possible, the FK references in the restored data will be dangling for that user — acceptable but worth knowing.
 6. **Update secrets everywhere**:
    - `.env.local` (local dev) — new URL, anon key, service-role key.
@@ -416,7 +407,7 @@ This is the unlikely worst case. Steps, roughly in order:
    - Supabase Auth settings: email templates, redirect URLs, site URL (Authentication → URL Configuration).
    - Any custom domain on Vercel, if one was ever added (currently just `adtrisc.vercel.app`).
 8. **Redeploy**: `vercel --prod` from the project root.
-9. Update `NEXT_PUBLIC_SUPABASE_URL` in `CLAUDE.md`'s Environment Variables section and anywhere else the old project ref (`gjsbxpdkfmqtfwkdcbxh`) is hardcoded — notably `scripts/backup/backup.sh` (`DB_HOST`/`DB_USER`) and `scripts/backup/backup-storage.mjs` (`EXPECTED_PROJECT_REF`).
+9. Update `NEXT_PUBLIC_SUPABASE_URL` in `CLAUDE.md`'s Environment Variables section and anywhere else the old project ref (`gjsbxpdkfmqtfwkdcbxh`) is hardcoded — notably `scripts/backup/backup.sh` (`DB_HOST`/`DB_USER`) and the `EXPECTED_PROJECT_REF` constant in both `scripts/backup/backup-storage.mjs` and `scripts/backup/restore-storage.mjs`.
 
 ### What a restore can never give back
 
