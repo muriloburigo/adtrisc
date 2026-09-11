@@ -285,10 +285,6 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `materias_imprensa` follows the same shared-staff pattern as `provas`.
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
 
-### Orphaned tables (do not use)
-
-The production database also has `athletes`, `payments`, `pagamentos`, `sessions`, `training_plans`, and `sorteios` in the `public` schema — none referenced anywhere in this codebase, none with a `supabase/*.sql` migration, all empty (0 rows as of 2026-09-11). Likely leftovers from early prototyping before `schema_v2.sql`. Harmless (a full-schema `pg_dump` picks them up, adding noise but no risk), but don't build against them, and don't assume they'll still exist — ask before relying on or removing them.
-
 ### Helper DB Function
 
 ```sql
