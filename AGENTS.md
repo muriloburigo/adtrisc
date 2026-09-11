@@ -399,11 +399,14 @@ vercel --prod   # Production deploy
 
 ### Where backups live
 
-Local backups run on Murilo's Mac (not in the cloud) at:
+Every run writes the **same archive to two places** (3-2-1 rule — one machine, one cloud):
 
 ```
-~/Backups/adtrisc/<YYYY-MM-DD_HHMM>.tar.gz
+~/Backups/adtrisc/<YYYY-MM-DD_HHMM>.tar.gz                                                    # local, on Murilo's Mac
+~/Library/CloudStorage/GoogleDrive-muriloburigo@gmail.com/My Drive/ADTRISC-Backups/<...>.tar.gz  # synced to Google Drive
 ```
+
+The Drive copy is a plain `cp` into the folder Google Drive Desktop already syncs — no API/OAuth involved. It's skipped (with a log line, not a failure) if that Drive folder doesn't exist on the machine running the script; the actual cloud upload only happens once Google Drive Desktop is running (it's set to launch at login on this Mac). Both copies get the same 30-day rotation.
 
 Each archive contains:
 
@@ -416,8 +419,6 @@ storage/
   fotos/             # class photos (turma_fotos + diário "foto do dia")
   documentos/        # signed PDFs (relatório de turma, presença, diário)
 ```
-
-Old archives are deleted automatically after 30 days.
 
 **Mapping rule (what makes restore mechanical, not something to figure out by hand):** each folder directly under `storage/` **is** a bucket name, and everything inside it is the exact object path inside that bucket — `storage/avatars/alunos/{uuid}.jpg` came from (and goes back to) the `avatars` bucket at object key `alunos/{uuid}.jpg`. Restoring never requires knowing or reconstructing paths by hand: `restore-storage.mjs` (below) walks `storage/`, treats each top-level folder as a bucket, and re-uploads every file at its relative path — including any future bucket, since it auto-detects folders instead of a hardcoded list.
 
@@ -437,7 +438,7 @@ Old archives are deleted automatically after 30 days.
 
 Use this when you need to undo bad data (accidental bulk delete, a bug that corrupted rows) but the Supabase project itself is fine.
 
-1. Pick a backup and extract it:
+1. Pick a backup and extract it (from either copy — same file, `~/Backups/adtrisc/` or the Google Drive folder):
    ```bash
    cd ~/Backups/adtrisc
    tar -xzf 2026-09-11_1428.tar.gz
