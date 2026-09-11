@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
 import { friendlyError } from '@/lib/errors'
-import { fetchLinkPreview } from '@/lib/linkPreview'
+import { validateUrl, fetchLinkPreview, type LinkPreview } from '@/lib/linkPreview'
 import type { MateriaImprensaRow } from '@/types/database'
 
 export async function adicionarMateria(
@@ -15,15 +15,26 @@ export async function adicionarMateria(
   const supabase = (await createClient()) as any
   const actor = await requireStaff()
 
-  const url = (formData.get('url') as string)?.trim()
-  if (!url) return { error: 'Informe um link.' }
+  const rawUrl = (formData.get('url') as string)?.trim()
+  if (!rawUrl) return { error: 'Informe um link.' }
 
-  let preview
+  let parsedUrl
   try {
-    preview = await fetchLinkPreview(url)
+    parsedUrl = validateUrl(rawUrl)
   } catch (e) {
-    return { error: e instanceof Error ? e.message : 'Não foi possível carregar o preview do link.' }
+    return { error: e instanceof Error ? e.message : 'URL inválida.' }
   }
+
+  // Alguns sites bloqueiam scraping (ex: proteção anti-bot do Cloudflare).
+  // Nesse caso o link ainda é salvo, só sem preview — melhor que travar o cadastro.
+  let preview: LinkPreview
+  try {
+    preview = await fetchLinkPreview(parsedUrl)
+  } catch (e) {
+    preview = { titulo: null, descricao: null, imagem_url: null, site: parsedUrl.hostname.replace(/^www\./, '') }
+    console.error('[imprensa] preview falhou:', e instanceof Error ? e.message : e)
+  }
+  const url = parsedUrl.toString()
 
   const payload = {
     url,

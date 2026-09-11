@@ -47,7 +47,8 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&nbsp;/g, ' ')
 }
 
-export async function fetchLinkPreview(rawUrl: string): Promise<LinkPreview> {
+/** Valida formato/protocolo da URL. Lança erro de input inválido (bloqueia o cadastro). */
+export function validateUrl(rawUrl: string): URL {
   let url: URL
   try {
     url = new URL(rawUrl)
@@ -60,7 +61,15 @@ export async function fetchLinkPreview(rawUrl: string): Promise<LinkPreview> {
   if (BLOCKED_HOSTNAME_PATTERNS.some((p) => p.test(url.hostname))) {
     throw new Error('Este endereço não pode ser usado.')
   }
+  return url
+}
 
+/**
+ * Busca o preview de uma URL já validada (ver validateUrl). Pode lançar erro
+ * de rede/bloqueio (site fora do ar, proteção anti-bot, timeout etc.) —
+ * chamadores devem tratar isso como "sem preview", não como input inválido.
+ */
+export async function fetchLinkPreview(url: URL): Promise<LinkPreview> {
   const res = await fetch(url.toString(), {
     redirect: 'follow',
     signal: AbortSignal.timeout(8000),
