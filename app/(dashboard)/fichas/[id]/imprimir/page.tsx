@@ -33,15 +33,28 @@ function fmt(d: string | null) {
 export default async function ImprimirFichaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin' && profile?.role !== 'coach') redirect('/dashboard')
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createAdminClient() as any
   const { data: ficha } = await db.from('fichas_inscricao').select('*').eq('id', id).single()
 
   if (!ficha) notFound()
+
+  // Coach só pode imprimir a ficha de um aluno que ele gerencia (ou sem
+  // turma) — reaproveita a policy de leitura de alunos (coach_has_turma) como
+  // checagem de autorização. Admin é irrestrito.
+  if (profile.role !== 'admin') {
+    const { data: alunoVisivel } = await supabase
+      .from('alunos').select('id').eq('id', ficha.aluno_id).maybeSingle()
+    if (!alunoVisivel) notFound()
+  }
   if (ficha.status !== 'preenchida') notFound()
 
   return (

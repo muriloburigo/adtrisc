@@ -3,12 +3,36 @@
 import { revalidatePath } from 'next/cache'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+
+// As operações abaixo usam o client de service role (bypassa RLS) porque
+// fichas_inscricao guarda dados de responsáveis que não têm policy própria.
+// Sem isso, requireStaff() sozinho deixaria QUALQUER coach gerenciar a ficha
+// de um aluno de outra turma. Reaproveita a policy de leitura de alunos/turmas
+// (coach_has_turma / admin irrestrito) como checagem de autorização: se o
+// client normal (RLS) não enxerga a linha, o ator não tem acesso a ela.
+async function assertAlunoAccess(alunoId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data } = await supabase.from('alunos').select('id').eq('id', alunoId).maybeSingle()
+  if (!data) throw new Error('Acesso negado.')
+}
+
+async function assertTurmaAccess(turmaId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data } = await supabase.from('turmas').select('id').eq('id', turmaId).maybeSingle()
+  if (!data) throw new Error('Acesso negado.')
+}
 
 export async function criarFicha(
   alunoId: string
 ): Promise<{ url?: string; error?: string }> {
   const actor = await requireStaff()
+  try {
+    await assertAlunoAccess(alunoId)
+  } catch {
+    return { error: 'Acesso negado.' }
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createAdminClient() as any
 
@@ -77,6 +101,11 @@ export async function criarFichasTurma(turmaId: string): Promise<{
   results?: Array<{ alunoId: string; nome: string; token: string; url: string; telefone: string | null; email: string | null; novo: boolean }>
 }> {
   const actor = await requireStaff()
+  try {
+    await assertTurmaAccess(turmaId)
+  } catch {
+    return { error: 'Acesso negado.' }
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createAdminClient() as any
   const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://adtrisc.vercel.app'
@@ -165,7 +194,17 @@ export async function invalidarFicha(fichaId: string, alunoId: string): Promise<
   const db = createAdminClient() as any
 
   const { data: before } = await db
-    .from('fichas_inscricao').select('status').eq('id', fichaId).single()
+    .from('fichas_inscricao').select('status, aluno_id').eq('id', fichaId).single()
+  if (!before) return { error: 'Ficha não encontrada.' }
+
+  // Autoriza pelo aluno_id REAL gravado na ficha, nunca pelo parâmetro vindo
+  // do cliente — senão bastaria informar um alunoId próprio junto com o
+  // fichaId de outro aluno pra passar pela checagem.
+  try {
+    await assertAlunoAccess(before.aluno_id)
+  } catch {
+    return { error: 'Acesso negado.' }
+  }
 
   const { error } = await db
     .from('fichas_inscricao')
@@ -191,10 +230,17 @@ export async function excluirFicha(fichaId: string, alunoId: string): Promise<{ 
   const db = createAdminClient() as any
 
   const { data: ficha } = await db
-    .from('fichas_inscricao').select('status, expires_at').eq('id', fichaId).single()
+    .from('fichas_inscricao').select('status, expires_at, aluno_id').eq('id', fichaId).single()
 
   const isExpired = ficha?.status === 'expirada' || (ficha?.expires_at && new Date(ficha.expires_at) < new Date())
   if (!ficha || !isExpired) return { error: 'Só é possível excluir fichas expiradas.' }
+
+  // Autoriza pelo aluno_id REAL gravado na ficha, não pelo parâmetro do cliente.
+  try {
+    await assertAlunoAccess(ficha.aluno_id)
+  } catch {
+    return { error: 'Acesso negado.' }
+  }
 
   const { error } = await db.from('fichas_inscricao').delete().eq('id', fichaId)
   if (error) return { error: error.message }
