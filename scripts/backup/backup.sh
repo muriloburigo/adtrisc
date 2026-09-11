@@ -46,7 +46,17 @@ PGPASSWORD="$SUPABASE_DB_PASSWORD" pg_dump \
 
 log "Downloading storage buckets..."
 cd "$PROJECT_DIR"
-node --env-file=.env.local scripts/backup/backup-storage.mjs "$DEST/storage"
+# Lê as credenciais direto do .env.local e sobrescreve qualquer variável de
+# ambiente que porventura já esteja exportada no shell (ex: de outro projeto) —
+# --env-file do Node NÃO sobrescreve env vars já setadas, então isso evita
+# silenciosamente baixar o storage do projeto errado.
+SUPABASE_URL_LOCAL="$(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.local | cut -d= -f2- | tr -d '"')"
+SUPABASE_ANON_LOCAL="$(grep -E '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' .env.local | cut -d= -f2- | tr -d '"')"
+SUPABASE_SERVICE_LOCAL="$(grep -E '^SUPABASE_SERVICE_ROLE_KEY=' .env.local | cut -d= -f2- | tr -d '"')"
+NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL_LOCAL" \
+NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_LOCAL" \
+SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_LOCAL" \
+  node scripts/backup/backup-storage.mjs "$DEST/storage"
 
 log "Compressing..."
 tar -czf "$DEST.tar.gz" -C "$BACKUP_ROOT" "$TIMESTAMP"

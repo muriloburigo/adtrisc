@@ -13,15 +13,24 @@ if (!destDir) {
   process.exit(1);
 }
 
+const EXPECTED_PROJECT_REF = 'gjsbxpdkfmqtfwkdcbxh'; // adtrisc
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !serviceKey) {
   console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in the environment.');
   process.exit(1);
 }
+// Uma env var de outro projeto (ex: exportada globalmente no shell) sobrescreveria
+// silenciosamente o .env.local e baixaria o storage do projeto errado. Melhor
+// falhar alto aqui do que produzir um backup com dados de outro app.
+if (!url.includes(EXPECTED_PROJECT_REF)) {
+  console.error(`NEXT_PUBLIC_SUPABASE_URL (${url}) não é do projeto adtrisc (${EXPECTED_PROJECT_REF}). Abortando — confira se não há essa variável exportada globalmente no shell (~/.zshrc etc).`);
+  process.exit(1);
+}
 
 const supabase = createClient(url, serviceKey);
-const BUCKETS = ['avatars', 'fotos'];
+const BUCKETS = ['avatars', 'fotos', 'documentos'];
 
 async function downloadDir(bucket, prefix, localDir) {
   const { data: entries, error } = await supabase.storage
