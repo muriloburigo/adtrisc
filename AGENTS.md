@@ -94,7 +94,10 @@ adtrisc/
 ├── components/
 │   ├── alunos/AlunoForm.tsx        # Create/edit athlete form
 │   ├── turmas/TurmaForm.tsx        # Create/edit class form
+│   ├── provas/                     # Categoria/resultado forms + cards for the Provas detail page
 │   ├── imprensa/                   # MateriaForm.tsx (add link) + MateriaCard.tsx (preview + delete)
+│   ├── documentos/                 # DocumentosAssinadosSection.tsx — upload/list/delete signed PDFs
+│   ├── enrollment/                 # CamposComuns.tsx — fields shared by /inscricao and /ficha/[token]
 │   ├── layout/
 │   │   ├── Sidebar.tsx             # Desktop nav (role-filtered)
 │   │   └── MobileHeader.tsx        # Mobile nav header
@@ -108,8 +111,13 @@ adtrisc/
 │   ├── assert.ts                   # requireStaff() / requireAdmin() guards
 │   ├── audit.ts                    # logAudit() + getSessionUser()
 │   ├── documentosAssinados.ts      # Signed-PDF upload/delete (bucket `documentos`)
+│   ├── errors.ts                   # friendlyError() — translates Supabase/RLS errors for the UI
+│   ├── faltasAlerta.ts             # Computes attendance-alert thresholds per athlete
 │   ├── linkPreview.ts              # Open Graph scraper + slug-based title fallback (Imprensa)
 │   ├── password.ts                 # Password validation rules
+│   ├── provas.ts                   # Etapa/status labels + helpers for the Provas feature
+│   ├── termos.ts                   # Enrollment terms & conditions text (shared by inscricao/ficha)
+│   ├── turmas.ts                   # getTurmaIdsForCoach() — turma scoping for coach-only actions
 │   └── utils.ts                    # cn(), formatDate(), formatTelefone(), etc.
 ├── types/
 │   └── database.ts                 # All TypeScript types: enums + row types
@@ -119,6 +127,7 @@ adtrisc/
 │   ├── fichas_inscricao.sql        # fichas_inscricao table migration
 │   ├── provas.sql                  # provas / prova_categorias / resultados_prova tables
 │   ├── materias_imprensa.sql       # materias_imprensa table (Imprensa area)
+│   ├── turma_fotos_table.sql       # turma_fotos table (was hand-created in the dashboard until this)
 │   ├── soft_delete.sql             # Adds deleted_at to presencas & avaliacoes_fisicas
 │   └── ...                         # one file per feature added since — see Backup & Restore
 │                                   #   for the full run order on a from-scratch restore
@@ -206,8 +215,9 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 **`aluno_responsavel`** — junction table linking athletes to guardians
 - `aluno_id`, `responsavel_id`, `principal` (bool — mae is set as principal by default)
 
-**`turma_fotos`** — class photo gallery
-- `id`, `turma_id`, `url`, `titulo`, `data`, `storage_path`
+**`turma_fotos`** — class photo gallery (table only ever existed hand-created in the dashboard until `supabase/turma_fotos_table.sql` documented it)
+- `id`, `turma_id`, `url`, `storage_path`, `titulo`, `data`, `uploaded_by` (FK → profiles, nullable), `file_hash`, `created_at`
+- Unique constraint on `(turma_id, data)` — one photo per class per day
 
 **`avaliacoes_fisicas`** — fitness assessments (soft-deleted via `deleted_at`)
 - `id`, `aluno_id`, `data`, `massa_corporal`, `estatura`, `imc` (auto-computed), `resistencia_6min`, `forca_abdominal`, `envergadura`, `impulsao_vertical`, `velocidade_20m`, `flexibilidade`, `observacoes`
@@ -426,7 +436,30 @@ Use this when you need to undo bad data (accidental bulk delete, a bug that corr
 This is the unlikely worst case. Steps, roughly in order:
 
 1. **Create a new Supabase project.** Note the new project ref/URL and grab the new anon key, service-role key, and DB password from Project Settings → API / Database.
-2. **Rebuild the schema**: run every file in `supabase/*.sql` against the new project's SQL editor, in this order (each file's header comment says "Run this in the Supabase SQL editor"): `schema_v2.sql` first (core tables), then the rest — `avatars_bucket.sql`, `fotos_bucket.sql`, `provas.sql`, `fichas_inscricao.sql`, `documentos_assinados*.sql`, `turma_coaches.sql`, `turma_access_scoping.sql`, `alunos_coach_*.sql`, `materias_imprensa.sql`, `soft_delete.sql`, `diario_aulas.sql`, `diario_resumos.sql`, `unificar_fichas_candidatos.sql`, `fichas_campos_neutros.sql`, `turma_fotos_rls.sql`, `turma_fotos_uma_por_dia.sql`. (`schema.sql` is the old v1 schema — **do not run it**, `schema_v2.sql` superseded it.) This recreates all tables, RLS policies, functions, and the three storage buckets (empty).
+2. **Rebuild the schema**: run every file in `supabase/*.sql` against the new project's SQL editor, **in this exact order** (each file's header comment says "Run this in the Supabase SQL editor"; several later files call `coach_has_turma()` or alter tables created earlier, so order isn't cosmetic — running them out of order will error):
+   1. `schema_v2.sql` — core tables + `get_my_role()` (`schema.sql` is the old v1 schema — **do not run it**, `schema_v2.sql` superseded it)
+   2. `turma_coaches.sql` — `turma_coaches` table
+   3. `turma_access_scoping.sql` — defines `coach_has_turma()` (needs `turma_coaches`); every file below that uses `coach_has_turma()` must come after this one
+   4. `avatars_bucket.sql`, `fotos_bucket.sql` — storage buckets (any order)
+   5. `turma_fotos_table.sql` — `turma_fotos` table (undocumented until now — was only ever created by hand in the dashboard)
+   6. `turma_fotos_rls.sql` — policies for `turma_fotos` (needs #3 and #5)
+   7. `turma_fotos_uma_por_dia.sql` — adds a unique constraint to `turma_fotos`
+   8. `fichas_inscricao.sql` — `fichas_inscricao` table
+   9. `unificar_fichas_candidatos.sql` — alters `candidatos` + `fichas_inscricao` (needs #8)
+   10. `fichas_campos_neutros.sql` — alters `fichas_inscricao` further (needs #8, run after #9)
+   11. `provas.sql` — needs `coach_has_turma()` (#3)
+   12. `documentos_assinados.sql` — needs `coach_has_turma()` (#3)
+   13. `documentos_assinados_diario.sql` — alters `documentos_assinados` (needs #12)
+   14. `alunos_coach_insert.sql`
+   15. `alunos_coach_remove.sql`
+   16. `alunos_atribuir_turma.sql`
+   17. `alunos_coach_edit.sql` — **must run last of #14-17**: it does `drop policy if exists "alunos_insert_coach"` before recreating it, superseding the policy `alunos_coach_insert.sql` (#14) created
+   18. `materias_imprensa.sql`
+   19. `soft_delete.sql`
+   20. `diario_aulas.sql`
+   21. `diario_resumos.sql`
+
+   This recreates all tables, RLS policies, functions, and the three storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".
 4. **Re-upload storage files** — `node --env-file=.env.local scripts/backup/restore-storage.mjs <backup>/storage`, pointed at the new project's `.env.local`. Update `EXPECTED_PROJECT_REF` at the top of `restore-storage.mjs` first (it hard-fails otherwise, on purpose — see step 9).
 5. **Recreate user accounts.** `auth_users.csv` has emails/names but *not* passwords — there is no way around this, Supabase never exposes password hashes for security reasons. For each row: create the user in Supabase Auth (dashboard → Authentication → Add user, or `supabase.auth.admin.createUser()`) using the **same `id`** from the CSV if at all possible (many tables have `profile_id`/`enviado_por`/etc. foreign keys pointing at these UUIDs) and send them a password-reset email. If preserving the same `id` isn't possible, the FK references in the restored data will be dangling for that user — acceptable but worth knowing.
