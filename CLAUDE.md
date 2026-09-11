@@ -102,13 +102,19 @@ adtrisc/
 │   └── utils.ts                    # cn(), formatDate(), formatTelefone(), etc.
 ├── types/
 │   └── database.ts                 # All TypeScript types: enums + row types
-├── supabase/
+├── supabase/                       # SQL migrations — run manually in the Supabase SQL editor
 │   ├── schema.sql                  # v1 schema (legacy — do not re-run)
 │   ├── schema_v2.sql               # v2 schema with turmas, alunos, responsaveis
 │   ├── fichas_inscricao.sql        # fichas_inscricao table migration
 │   ├── provas.sql                  # provas / prova_categorias / resultados_prova tables
-│   └── soft_delete.sql             # Adds deleted_at to presencas & avaliacoes_fisicas
-├── middleware.ts                   # Auth gate + public route exceptions
+│   ├── soft_delete.sql             # Adds deleted_at to presencas & avaliacoes_fisicas
+│   └── ...                         # one file per feature added since — see Backup & Restore
+│                                   #   for the full run order on a from-scratch restore
+├── scripts/backup/                 # Local backup/restore tooling — see "Backup & Restore" below
+│   ├── backup.sh                   # Full backup: pg_dump + auth_users.csv + storage buckets
+│   ├── backup-storage.mjs          # Downloads every Storage bucket, called by backup.sh
+│   └── restore-storage.mjs         # Re-uploads a backup's storage/ dir back into Supabase
+├── proxy.ts                        # Auth gate + public route exceptions (Next.js 16 "middleware")
 ├── next.config.ts                  # Minimal (no custom config needed)
 ├── tsconfig.json                   # Path alias: @/* → ./*
 └── vercel.json                     # Build/dev/install commands
@@ -120,7 +126,7 @@ adtrisc/
 
 Supabase Auth with cookie sessions via `@supabase/ssr`.
 
-**Middleware** (`middleware.ts`) runs on every request except `_next/static`, `_next/image`, and image files. It:
+**Proxy** (`proxy.ts` — Next.js 16's rename of `middleware.ts`) runs on every request except `_next/static`, `_next/image`, and image files. It:
 1. Creates a server Supabase client from cookies.
 2. Calls `supabase.auth.getUser()`.
 3. Redirects unauthenticated users to `/login` (except public routes).
