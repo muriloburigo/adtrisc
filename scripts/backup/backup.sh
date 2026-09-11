@@ -14,6 +14,10 @@ PROJECT_DIR="/Users/muriloburigo/Documents/Projects/adtrisc"
 BACKUP_ROOT="${ADTRISC_BACKUP_DIR:-$HOME/Backups/adtrisc}"
 SECRETS_FILE="$HOME/.adtrisc-backup.env"
 KEEP_DAYS=30
+# Segunda cópia (regra 3-2-1) — pasta sincronizada pelo Google Drive Desktop.
+# Se o Drive não estiver instalado/montado nesta máquina, o backup local
+# continua normalmente e só pula essa etapa (não falha o backup por isso).
+DRIVE_BACKUP_DIR="$HOME/Library/CloudStorage/GoogleDrive-muriloburigo@gmail.com/My Drive/ADTRISC-Backups"
 
 DB_HOST="aws-1-sa-east-1.pooler.supabase.com"
 DB_PORT=5432
@@ -76,5 +80,15 @@ log "Backup complete: $DEST.tar.gz ($SIZE)"
 
 log "Rotating backups older than $KEEP_DAYS days..."
 find "$BACKUP_ROOT" -maxdepth 1 -name "*.tar.gz" -mtime "+$KEEP_DAYS" -print -delete
+
+if [[ -d "$HOME/Library/CloudStorage/GoogleDrive-muriloburigo@gmail.com/My Drive" ]]; then
+  log "Copying to Google Drive..."
+  mkdir -p "$DRIVE_BACKUP_DIR"
+  cp "$DEST.tar.gz" "$DRIVE_BACKUP_DIR/"
+  find "$DRIVE_BACKUP_DIR" -maxdepth 1 -name "*.tar.gz" -mtime "+$KEEP_DAYS" -print -delete
+  log "Copied to Drive: $DRIVE_BACKUP_DIR/$TIMESTAMP.tar.gz"
+else
+  log "Google Drive folder not found — skipping second copy (local backup still complete)."
+fi
 
 log "Done."
