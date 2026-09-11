@@ -2,6 +2,8 @@
 // lendo as tags Open Graph / meta tags da página. Usado pela área de
 // Imprensa para mostrar uma prévia do link sem precisar embutir a página.
 
+import dns from 'node:dns/promises'
+
 export type LinkPreview = {
   titulo: string | null
   descricao: string | null
@@ -36,6 +38,62 @@ const BLOCKED_HOSTNAME_PATTERNS = [
   /^\[?::1\]?$/,
   /^\[?fe80:/i,
 ]
+
+function ipv4ToInt(ip: string): number | null {
+  const parts = ip.split('.').map(Number)
+  if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return null
+  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0
+}
+
+function isPrivateIpv4(ip: string): boolean {
+  const n = ipv4ToInt(ip)
+  if (n === null) return true // não parseou como IPv4 — trata como suspeito, não deixa passar
+  const inRange = (base: string, bits: number) => {
+    const b = ipv4ToInt(base)!
+    const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0
+    return (n & mask) === (b & mask)
+  }
+  return (
+    inRange('0.0.0.0', 8) ||
+    inRange('10.0.0.0', 8) ||
+    inRange('100.64.0.0', 10) || // CGNAT
+    inRange('127.0.0.0', 8) ||
+    inRange('169.254.0.0', 16) || // link-local / cloud metadata (169.254.169.254)
+    inRange('172.16.0.0', 12) ||
+    inRange('192.168.0.0', 16)
+  )
+}
+
+function isPrivateIpv6(ip: string): boolean {
+  const lower = ip.toLowerCase()
+  if (lower === '::1' || lower === '::') return true
+  if (lower.startsWith('fe80:')) return true // link-local
+  if (/^f[cd][0-9a-f]{2}:/.test(lower)) return true // fc00::/7 (unique local)
+  const mapped = lower.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
+  if (mapped) return isPrivateIpv4(mapped[1])
+  return false
+}
+
+/**
+ * Resolve o hostname via DNS e confere se algum IP resolvido é privado/
+ * loopback/link-local — bloqueia SSRF via domínio que aponta pra rede
+ * interna ou metadata de cloud (ex: 169.254.169.254), o que o simples
+ * regex de hostname (abaixo) não pega. Chamado antes de CADA request,
+ * inclusive em cada hop de redirecionamento.
+ */
+async function assertPublicHost(url: URL): Promise<void> {
+  let addresses: { address: string; family: number }[]
+  try {
+    addresses = await dns.lookup(url.hostname, { all: true, verbatim: true })
+  } catch {
+    throw new Error('Não foi possível resolver este endereço.')
+  }
+  if (addresses.length === 0) throw new Error('Não foi possível resolver este endereço.')
+  for (const { address, family } of addresses) {
+    const isPrivate = family === 4 ? isPrivateIpv4(address) : isPrivateIpv6(address)
+    if (isPrivate) throw new Error('Este endereço não pode ser usado.')
+  }
+}
 
 function extractMeta(html: string, keys: string[]): string | null {
   for (const key of keys) {
@@ -86,14 +144,31 @@ export function validateUrl(rawUrl: string): URL {
  * chamadores devem tratar isso como "sem preview", não como input inválido.
  */
 export async function fetchLinkPreview(url: URL): Promise<LinkPreview> {
-  const res = await fetch(url.toString(), {
-    redirect: 'follow',
-    signal: AbortSignal.timeout(8000),
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; ADTRISCBot/1.0; +https://adtrisc.vercel.app)',
-      Accept: 'text/html',
-    },
-  })
+  // redirect: 'manual' + revalidação a cada hop — um 1º hop pra um host público
+  // que redireciona pra um IP interno também precisa ser barrado, não só a URL
+  // original (senão assertPublicHost() na primeira URL não adianta nada).
+  let current = url
+  let res: Response
+  for (let hop = 0; ; hop++) {
+    if (hop > 5) throw new Error('Muitos redirecionamentos.')
+    await assertPublicHost(current)
+    res = await fetch(current.toString(), {
+      redirect: 'manual',
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ADTRISCBot/1.0; +https://adtrisc.vercel.app)',
+        Accept: 'text/html',
+      },
+    })
+    const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null
+    if (!location) break
+    try {
+      current = validateUrl(new URL(location, current).toString())
+    } catch {
+      throw new Error('Redirecionamento inválido.')
+    }
+  }
+  url = current
 
   if (!res.ok) throw new Error(`Não foi possível acessar o link (HTTP ${res.status}).`)
 

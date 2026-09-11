@@ -17,9 +17,13 @@ export async function uploadAvatar(
 
   if (!file || file.size === 0) return { error: 'Nenhum arquivo recebido.' }
   if (file.size > 3 * 1024 * 1024) return { error: 'Imagem muito grande (máx 3 MB).' }
-  if (!file.type.startsWith('image/')) return { error: 'Apenas imagens são aceitas.' }
 
-  const ext = file.type === 'image/png' ? 'png' : 'jpg'
+  // Allowlist fechada — não usar startsWith('image/'), que também aceita
+  // image/svg+xml (SVG pode conter <script>, e viraria XSS armazenado servido
+  // com esse content-type pro bucket público).
+  const EXT_BY_TYPE: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+  const ext = EXT_BY_TYPE[file.type]
+  if (!ext) return { error: 'Apenas imagens JPEG, PNG ou WebP são aceitas.' }
   const filename = `${folder}/${crypto.randomUUID()}.${ext}`
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
