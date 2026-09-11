@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Full local backup of the ADTRISC Supabase project: database (schema `public`)
-# + storage buckets (avatars, fotos). Compresses everything into one .tar.gz
-# per run and rotates backups older than KEEP_DAYS.
+# Full local backup of the ADTRISC Supabase project: database (schema `public`),
+# a no-password list of auth accounts, and storage buckets (avatars, fotos,
+# documentos). Compresses everything into one .tar.gz per run and rotates
+# backups older than KEEP_DAYS.
 #
 # Requires a secrets file at $HOME/.adtrisc-backup.env containing:
 #   SUPABASE_DB_PASSWORD=<your Supabase DB password>
@@ -43,6 +44,14 @@ PGPASSWORD="$SUPABASE_DB_PASSWORD" pg_dump \
   --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" --dbname="$DB_NAME" \
   --no-owner --no-privileges --schema=public \
   --file="$DEST/database.sql"
+
+log "Exporting account list (auth.users, sem senha)..."
+# Só o essencial pra recriar contas manualmente num desastre total (projeto
+# Supabase inteiro perdido) — nunca o hash de senha. Cada pessoa reseta a
+# própria senha por e-mail depois de restaurada.
+PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
+  --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" --dbname="$DB_NAME" \
+  -c "\copy (select id, email, created_at, last_sign_in_at, raw_user_meta_data->>'full_name' as full_name from auth.users order by created_at) to '$DEST/auth_users.csv' with csv header"
 
 log "Downloading storage buckets..."
 cd "$PROJECT_DIR"
