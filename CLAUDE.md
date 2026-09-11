@@ -289,10 +289,11 @@ Only use the admin client in Server Actions or server-side code, never in client
 
 ## Supabase Storage Buckets
 
-| Bucket | Used for |
-|--------|----------|
-| `avatars` | Athlete profile photos (path: `{folder}/{uuid}.{ext}`) |
-| `fotos` | Class photo gallery (path: `turmas/{turmaId}/{timestamp}.{ext}`) |
+| Bucket | Public | Used for |
+|--------|--------|----------|
+| `avatars` | Yes | Athlete profile photos (path: `alunos/{uuid}.{ext}`) |
+| `fotos` | Yes | Class photo gallery + diário "foto do dia" (path: `turmas/{turmaId}/{data}.{ext}`) |
+| `documentos` | No (service-role/signed URL only) | Signed PDFs — relatório de turma, presença exportada, diário de aula (path: `{turma\|coach}/{id}/{tipo}/{timestamp}-{filename}`) |
 
 ---
 
@@ -325,6 +326,103 @@ vercel --prod   # Production deploy
 ```
 
 `vercel.json` sets framework to `nextjs` with standard build/install commands. No custom headers, rewrites, or edge functions configured.
+
+---
+
+## Backup & Restore
+
+### Where backups live
+
+Local backups run on Murilo's Mac (not in the cloud) at:
+
+```
+~/Backups/adtrisc/<YYYY-MM-DD_HHMM>.tar.gz
+```
+
+Each archive contains:
+
+```
+database.sql       # pg_dump of the public schema — all tables, RLS policies, functions, triggers
+auth_users.csv      # id, email, created_at, last_sign_in_at, full_name for every login account
+                     # (NEVER includes the password hash)
+storage/
+  avatars/           # athlete profile photos
+  fotos/             # class photos (turma_fotos + diário "foto do dia")
+  documentos/        # signed PDFs (relatório de turma, presença, diário)
+```
+
+Old archives are deleted automatically after 30 days.
+
+### How it runs
+
+- **Automatic**: a macOS LaunchAgent (`~/Library/LaunchAgents/com.adtrisc.backup.plist`) runs `scripts/backup/backup.sh` every day at 3 AM. If the Mac is asleep at that time, launchd runs it as soon as the Mac wakes up (unlike cron, which would just skip it).
+- **Manual**: `bash scripts/backup/backup.sh` from the project root.
+- **Requires** a secrets file at `~/.adtrisc-backup.env` (chmod 600, never committed):
+  ```
+  SUPABASE_DB_PASSWORD=<database password, from Supabase Dashboard → Project Settings → Database>
+  ```
+  This is the Postgres role password — different from the anon/service-role API keys, and not retrievable after creation (only reset). If it stops working, reset it in the dashboard and update this file.
+
+⚠️ The `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` used for the storage part of the backup are read from **this project's `.env.local`** and explicitly override anything already exported in the shell. If you ever add a global Supabase env var to `~/.zshrc` for some other project, the backup will refuse to run (it checks the URL matches the `adtrisc` project ref) instead of silently backing up the wrong project — this happened once and it's why the check exists.
+
+### Restore — same Supabase project still exists (most common case)
+
+Use this when you need to undo bad data (accidental bulk delete, a bug that corrupted rows) but the Supabase project itself is fine.
+
+1. Pick a backup and extract it:
+   ```bash
+   cd ~/Backups/adtrisc
+   tar -xzf 2026-09-11_1428.tar.gz
+   ```
+2. Restore the database (⚠️ this overwrites current data — coordinate downtime, or restore into a scratch database first to inspect/cherry-pick):
+   ```bash
+   PGPASSWORD=<db password> psql \
+     --host=aws-1-sa-east-1.pooler.supabase.com --port=5432 \
+     --username=postgres.gjsbxpdkfmqtfwkdcbxh --dbname=postgres \
+     -f 2026-09-11_1428/database.sql
+   ```
+   For a single table instead of everything, extract just that table's `CREATE TABLE`/`COPY` block from `database.sql` and run it, or restore into a fresh local Postgres and copy rows over with `\copy`.
+3. Re-upload storage files (only needed if files were actually lost — the DB restore above doesn't touch Storage):
+   ```bash
+   node --env-file=.env.local -e '
+     import("@supabase/supabase-js").then(async ({ createClient }) => {
+       const fs = await import("node:fs");
+       const path = await import("node:path");
+       const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+       const bucket = "avatars"; // or fotos / documentos
+       const root = "2026-09-11_1428/storage/" + bucket;
+       for (const file of fs.readdirSync(root, { recursive: true })) {
+         const full = path.join(root, file);
+         if (fs.statSync(full).isDirectory()) continue;
+         await supabase.storage.from(bucket).upload(file, fs.readFileSync(full), { upsert: true });
+       }
+     });'
+   ```
+
+### Restore — full disaster (Supabase project or Vercel account lost entirely)
+
+This is the unlikely worst case. Steps, roughly in order:
+
+1. **Create a new Supabase project.** Note the new project ref/URL and grab the new anon key, service-role key, and DB password from Project Settings → API / Database.
+2. **Rebuild the schema**: run every file in `supabase/*.sql` against the new project's SQL editor, in this order (each file's header comment says "Run this in the Supabase SQL editor"): `schema_v2.sql` first (core tables), then the rest — `avatars_bucket.sql`, `fotos_bucket.sql`, `provas.sql`, `fichas_inscricao.sql`, `documentos_assinados*.sql`, `turma_coaches.sql`, `turma_access_scoping.sql`, `alunos_coach_*.sql`, `materias_imprensa.sql`, `soft_delete.sql`, `diario_aulas.sql`, `diario_resumos.sql`, `unificar_fichas_candidatos.sql`, `fichas_campos_neutros.sql`, `turma_fotos_rls.sql`, `turma_fotos_uma_por_dia.sql`. (`schema.sql` is the old v1 schema — **do not run it**, `schema_v2.sql` superseded it.) This recreates all tables, RLS policies, functions, and the three storage buckets (empty).
+3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".
+4. **Re-upload storage files** — same script as in the section above, once per bucket (`avatars`, `fotos`, `documentos`), pointed at the new project's `.env.local`.
+5. **Recreate user accounts.** `auth_users.csv` has emails/names but *not* passwords — there is no way around this, Supabase never exposes password hashes for security reasons. For each row: create the user in Supabase Auth (dashboard → Authentication → Add user, or `supabase.auth.admin.createUser()`) using the **same `id`** from the CSV if at all possible (many tables have `profile_id`/`enviado_por`/etc. foreign keys pointing at these UUIDs) and send them a password-reset email. If preserving the same `id` isn't possible, the FK references in the restored data will be dangling for that user — acceptable but worth knowing.
+6. **Update secrets everywhere**:
+   - `.env.local` (local dev) — new URL, anon key, service-role key.
+   - Vercel → Project Settings → Environment Variables — set the same three for **both** Production and Development (see gotcha above: if only Production is set, `vercel env pull` returns nothing locally).
+   - `~/.adtrisc-backup.env` — new DB password.
+7. **Reconfigure things that live outside the database and aren't backed up at all:**
+   - Supabase Auth settings: email templates, redirect URLs, site URL (Authentication → URL Configuration).
+   - Any custom domain on Vercel, if one was ever added (currently just `adtrisc.vercel.app`).
+8. **Redeploy**: `vercel --prod` from the project root.
+9. Update `NEXT_PUBLIC_SUPABASE_URL` in `CLAUDE.md`'s Environment Variables section and anywhere else the old project ref (`gjsbxpdkfmqtfwkdcbxh`) is hardcoded — notably `scripts/backup/backup.sh` (`DB_HOST`/`DB_USER`) and `scripts/backup/backup-storage.mjs` (`EXPECTED_PROJECT_REF`).
+
+### What a restore can never give back
+
+- **User passwords** — by design, nobody (not Supabase, not this backup) can recover them. Every account needs a password reset after a full-disaster restore.
+- **Auth configuration** — email templates, redirect/site URLs, any OAuth provider setup. Not stored in the database at all.
+- **Vercel project settings** — custom domains, non-Supabase env vars, deployment protection settings.
 
 ---
 
