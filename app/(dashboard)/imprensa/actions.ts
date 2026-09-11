@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
 import { friendlyError } from '@/lib/errors'
-import { validateUrl, fetchLinkPreview, type LinkPreview } from '@/lib/linkPreview'
+import { validateUrl, fetchLinkPreview, titleFromSlug, type LinkPreview } from '@/lib/linkPreview'
 import type { MateriaImprensaRow } from '@/types/database'
 
 export async function adicionarMateria(
@@ -31,7 +31,12 @@ export async function adicionarMateria(
   try {
     preview = await fetchLinkPreview(parsedUrl)
   } catch (e) {
-    preview = { titulo: null, descricao: null, imagem_url: null, site: parsedUrl.hostname.replace(/^www\./, '') }
+    preview = {
+      titulo: titleFromSlug(parsedUrl),
+      descricao: null,
+      imagem_url: null,
+      site: parsedUrl.hostname.replace(/^www\./, ''),
+    }
     console.error('[imprensa] preview falhou:', e instanceof Error ? e.message : e)
   }
   const url = parsedUrl.toString()

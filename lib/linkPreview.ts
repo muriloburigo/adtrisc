@@ -9,6 +9,22 @@ export type LinkPreview = {
   site: string
 }
 
+/**
+ * Deriva um título legível a partir do slug da URL (último segmento do path
+ * que não seja puramente numérico), para quando o fetch da página falha.
+ * Ex: /sofia-gelati-e-campea-brasileira-de-triathlon/106133/ -> "Sofia gelati e campea brasileira de triathlon"
+ */
+export function titleFromSlug(url: URL): string | null {
+  const segments = url.pathname.split('/').filter(Boolean)
+  const slug = [...segments].reverse().find((s) => !/^\d+$/.test(s))
+  if (!slug || slug.length < 4) return null
+
+  const words = decodeURIComponent(slug).replace(/[-_]+/g, ' ').trim()
+  if (!words || !/[a-zA-Z]/.test(words)) return null
+
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
 const BLOCKED_HOSTNAME_PATTERNS = [
   /^localhost$/i,
   /^127\./,
