@@ -248,6 +248,17 @@ export type ResultadoProvaRow = {
   updated_at: string
 }
 
+export type MateriaImprensaRow = {
+  id: string
+  url: string
+  titulo: string | null
+  descricao: string | null
+  imagem_url: string | null
+  site: string | null
+  criado_por: string | null
+  created_at: string
+}
+
 export type ProfileRow = {
   id: string
   full_name: string | null

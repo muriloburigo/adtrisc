@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, LogOut, LayoutDashboard, Users, UserCheck, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, Trophy } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard, Users, UserCheck, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, Trophy, Newspaper } from 'lucide-react'
 import { cn, formatRole } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Database, UserRole } from '@/types/database'
@@ -18,6 +18,7 @@ const nav = [
   { href: '/presencas',     label: 'Presenças',     icon: ClipboardCheck,  roles: ['admin','coach'] as UserRole[] },
   { href: '/avaliacoes',    label: 'Avaliações',    icon: Dumbbell,        roles: ['admin','coach'] as UserRole[] },
   { href: '/provas',        label: 'Provas',        icon: Trophy,          roles: ['admin','coach'] as UserRole[] },
+  { href: '/imprensa',      label: 'Imprensa',      icon: Newspaper,       roles: ['admin','coach'] as UserRole[] },
   { href: '/candidatos',    label: 'Candidatos',    icon: UserPlus,        roles: ['admin','coach'] as UserRole[] },
   { href: '/coaches',       label: 'Treinadores',   icon: UserCheck,       roles: ['admin'] as UserRole[] },
   { href: '/auditoria',     label: 'Auditoria',     icon: ScrollText,      roles: ['admin'] as UserRole[] },
