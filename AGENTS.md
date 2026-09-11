@@ -201,7 +201,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 ### Tables
 
 **`profiles`** — mirrors `auth.users`; auto-created by trigger on user signup
-- `id` (uuid, FK → auth.users), `email`, `full_name`, `role` (UserRole), `avatar_url`
+- `id` (uuid, FK → auth.users), `email`, `full_name`, `role` (UserRole), `avatar_url`, `cref` (coach's professional registration number, nullable)
 
 **`turmas`** — training classes
 - `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `status` (TurmaStatus), `observacoes`
@@ -220,20 +220,28 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - Unique constraint on `(turma_id, data)` — one photo per class per day
 
 **`avaliacoes_fisicas`** — fitness assessments (soft-deleted via `deleted_at`)
-- `id`, `aluno_id`, `data`, `massa_corporal`, `estatura`, `imc` (auto-computed), `resistencia_6min`, `forca_abdominal`, `envergadura`, `impulsao_vertical`, `velocidade_20m`, `flexibilidade`, `observacoes`
+- `id`, `aluno_id`, `avaliador_id` (FK → profiles, nullable), `data`, `massa_corporal`, `estatura`, `perimetro_cintura`, `envergadura`, `estatura_sentado`, `altura_cm`, `altura_ao_quadrado`, `imc` (auto-computed), `rce`, `sentar_alcancar`, `resistencia_6min`, `forca_abdominal`, `arremesso_medicineball`, `agilidade`, `salto_horizontal`, `corrida_20m`, `natacao_12min`, `observacoes`
+- All exact field names — the previous version of this doc (`impulsao_vertical`, `velocidade_20m`, `flexibilidade`) didn't match the real columns or `types/database.ts`'s `AvaliacaoFisicaRow`; verified against production with `information_schema.columns`.
 
 **`historico_atleta`** — athlete lifecycle events (auto-written by alunos actions)
 - `id`, `aluno_id`, `tipo` (`matricula` | `mudanca_turma` | `desligamento` | `reativacao`), `data`, `turma_id`, `turma_nome`, `turma_anterior_id`, `turma_anterior_nome`
 
 **`presencas`** — attendance records (soft-deleted via `deleted_at`)
-- `id`, `aluno_id`, `turma_id`, `data`, `presente` (bool), `justificada` (bool)
+- `id`, `aluno_id`, `turma_id`, `data`, `presente` (bool), `justificada` (bool), `observacao`, `registrado_por` (FK → profiles, nullable)
 - Unique constraint on `(turma_id, aluno_id, data)` — upserted on save
 
+**Shared enrollment fields** (`unificar_fichas_candidatos.sql` + `fichas_campos_neutros.sql` unified `candidatos` and `fichas_inscricao` around the same field set — both tables carry nearly all of these):
+- Participant: `nome`/`p_nome`, `data_nascimento`/`p_data_nascimento`, `sexo`/`p_sexo`, `cpf`/`p_cpf`, address (`rua`/`p_rua`, `numero`/`p_numero`, `bairro`/`p_bairro`, `cep`/`p_cep`, `cidade`/`p_cidade`, or `endereco_completo` on `candidatos`), `telefone`/`p_telefone`
+- School: `escola_nome_endereco`, `serie_escolar`
+- Health: `condicao_medica` + `condicao_medica_descricao`, `tratamento_medico` + `tratamento_medico_descricao`, `alergia` + `alergia_descricao`, `autorizacao_medica`
+- Other: `praticou_modalidade`, `interesse_eventos`, `como_soube`, `tem_bicicleta`, `tamanho_camiseta`
+- Guardians: `mae_nome`/`mae_cpf`/`mae_rg`/`mae_email`/`mae_telefone`, `pai_nome`/`pai_cpf`/`pai_rg`/`pai_email`/`pai_telefone` (or `responsavel_nome`/`responsavel_telefone`/`responsavel_email` on `candidatos`), `responsavel_assina`, `aceite_termos`, `assinatura_data` (base64 PNG)
+
 **`candidatos`** — pre-enrollment applicants (from public `/inscricao` form)
-- `id`, `turma_id`, `status`, `nome`, `data_nascimento`, `sexo`, `cpf`, `endereco_completo`, health fields (`condicao_medica`, `alergia`, `tratamento_medico` each with boolean + description), `responsavel_*`, `como_soube`, `aceite_termos`, `email_responsavel`, `tem_bicicleta`, `tamanho_camiseta`
+- `id`, `turma_id`, `status`, `email_responsavel`, `observacoes_internas` (staff-only), `created_at`, `updated_at`, plus the shared enrollment fields above
 
 **`fichas_inscricao`** — digital enrollment forms sent to parents
-- `id`, `token` (uuid, unique — used in public URL `/ficha/{token}`), `aluno_id`, `status` (pendente/preenchida/expirada), pre-filled participant fields (`p_nome`, `p_telefone`, `p_sexo`, `p_data_nascimento`, address), parent fields (`mae_*`, `pai_*`), `responsavel_assina`, `aceite_termos`, `assinatura_data` (base64 PNG), `gerado_por`, `expires_at` (default 30 days from creation)
+- `id`, `token` (uuid, unique — used in public URL `/ficha/{token}`), `aluno_id`, `status` (pendente/preenchida/expirada), `gerado_por` (FK → profiles), `gerado_em`, `preenchido_em`, `expires_at` (default 30 days from creation), `created_at`, `updated_at`, plus the shared enrollment fields above (participant fields prefixed `p_`)
 
 **`provas`** — external competitions (e.g. a city duathlon) the athletes take part in
 - `id`, `nome`, `local`, `data`, `observacoes`, `criado_por` (FK → profiles)
@@ -248,11 +256,25 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 **`materias_imprensa`** — press clippings (links to articles mentioning ADTRISC)
 - `id`, `url`, `titulo`, `descricao`, `imagem_url`, `site`, `criado_por` (FK → profiles), `created_at`
 
-**`documentos_assinados`** — signed PDFs sent back after digital signature (relatório de turma, presença exportada)
-- `id`, `turma_id`, `tipo`, `periodo`, `nome_arquivo`, `storage_path`, `enviado_por` (FK → profiles), `enviado_em`
+**`documentos_assinados`** — signed PDFs sent back after digital signature (relatório de turma, presença exportada, diário de aula)
+- `id`, `turma_id` (nullable — null for diário docs, which are per-coach instead), `coach_id` (FK → profiles, nullable), `tipo` (`relatorio_turma` | `presenca_exportar` | `diario_aula`), `periodo`, `nome_arquivo`, `storage_path`, `enviado_por` (FK → profiles), `enviado_em`
+
+**`turma_coaches`** — junction table for turmas with more than one coach (assistant coaches)
+- `turma_id`, `coach_id`, `created_at`. Read by `coach_has_turma()` — see RLS Summary.
+
+**`registros_aula`** — one lesson-diary entry per coach per day (Diário de Aulas)
+- `id`, `coach_id` (FK → profiles), `data`, `modalidade`, `objetivo`, `observacoes`, `descricao`, `created_at`, `updated_at`
+- Unique per `(coach_id, data)` — upserted by `criarMultiplosRegistros()`'s batch-fill flow
+
+**`registro_aula_turmas`** — which turmas a `registros_aula` entry covers, with a per-turma note
+- `id`, `registro_aula_id` (FK → registros_aula), `turma_id` (FK → turmas), `descricao`
+
+**`diario_resumos`** — monthly free-text summary per coach, feeding the signed diário report
+- `coach_id` (FK → profiles), `ano`, `mes`, `cidade`, `processo`, `resumo`, `updated_at`
+- Unique per `(coach_id, ano, mes)` — upserted
 
 **`audit_logs`** — all admin/coach write actions
-- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB)
+- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`
 
 ### RLS Summary
 
@@ -262,6 +284,10 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `provas`/`prova_categorias` are shared event data (not tied to one turma) — any staff (admin or coach) can read/write them. `resultados_prova` is scoped like `avaliacoes_fisicas`: a coach can only read/write results for athletes in a turma they coach (`coach_has_turma()`), admin unrestricted.
 - `materias_imprensa` follows the same shared-staff pattern as `provas`.
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
+
+### Orphaned tables (do not use)
+
+The production database also has `athletes`, `payments`, `pagamentos`, `sessions`, `training_plans`, and `sorteios` in the `public` schema — none referenced anywhere in this codebase, none with a `supabase/*.sql` migration, all empty (0 rows as of 2026-09-11). Likely leftovers from early prototyping before `schema_v2.sql`. Harmless (a full-schema `pg_dump` picks them up, adding noise but no risk), but don't build against them, and don't assume they'll still exist — ask before relying on or removing them.
 
 ### Helper DB Function
 
@@ -292,7 +318,7 @@ Full CRUD for athletes. Each athlete has:
 Staff selects a class and date, then marks each athlete present/absent/excused. Records are upserted by `(turma_id, aluno_id, data)`. Supports export/print view.
 
 ### Fitness Assessments (`/avaliacoes`)
-Grid view per class and date. Fields: body mass (kg), height (m), IMC (auto-computed), 6-min run (meters), abdominal strength (reps), wingspan (cm), vertical jump (cm), 20m sprint time (seconds, stored as mm:ss.cc), flexibility (cm). Soft-deleted via `deleted_at`. Individual assessments also accessible from athlete detail page.
+Grid view per class and date. See the `avaliacoes_fisicas` table above for the exact field list (body mass, height, waist/seated-height/wingspan measurements, IMC auto-computed, sit-and-reach flexibility, 6-min run, abdominal strength, medicine ball throw, agility, standing long jump, 20m run, 12-min swim). Soft-deleted via `deleted_at`. Individual assessments also accessible from athlete detail page.
 
 ### Competitions & Results (`/provas`)
 Staff registers external competitions (nome, local, data, observações) with one or more age-based categories, each defining an ordered list of leg distances (`etapas`: natação/ciclismo/corrida + distância em metros). Results are logged per athlete against a category: total time (stored in seconds, entered/displayed as `MM:SS` via `mmssToSeconds()`/`secondsToMmss()`), plus overall and category placement. One result per athlete per prova (upserted). Deleting a categoria cascades its results — confirmed with a warning showing the affected count.
