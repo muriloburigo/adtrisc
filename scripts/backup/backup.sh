@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Full local backup of the ADTRISC Supabase project: database (schema `public`),
 # a no-password list of auth accounts, and storage buckets (avatars, fotos,
-# documentos). Compresses everything into one .tar.gz per run and rotates
-# backups older than KEEP_DAYS.
+# documentos). Compresses everything into one .tar.gz, encrypts it (the
+# archive holds real CPF/RG/medical data in plain text — the .tar.gz itself
+# must never sit on disk unencrypted), and rotates backups older than
+# KEEP_DAYS. The plaintext .tar.gz is deleted right after encryption, before
+# the Google Drive copy step, so it's never written to the synced folder.
 #
-# Requires a secrets file at $HOME/.adtrisc-backup.env containing:
+# Requires a secrets file at $HOME/.adtrisc-backup.env (chmod 600) containing:
 #   SUPABASE_DB_PASSWORD=<your Supabase DB password>
-# (Project Settings > Database > Database password, on supabase.com/dashboard)
-# chmod 600 that file — never commit it.
+#     (Project Settings > Database > Database password, on supabase.com/dashboard)
+#   BACKUP_ENCRYPTION_PASSPHRASE=<a long random passphrase>
+#     (also save this in a password manager — if this file and your password
+#     manager are both gone, the backups are unrecoverable ciphertext)
 set -euo pipefail
 
 PROJECT_DIR="/Users/muriloburigo/Documents/Projects/adtrisc"
@@ -34,6 +39,10 @@ fi
 source "$SECRETS_FILE"
 if [[ -z "${SUPABASE_DB_PASSWORD:-}" ]]; then
   echo "SUPABASE_DB_PASSWORD not set in $SECRETS_FILE" >&2
+  exit 1
+fi
+if [[ -z "${BACKUP_ENCRYPTION_PASSPHRASE:-}" ]]; then
+  echo "BACKUP_ENCRYPTION_PASSPHRASE not set in $SECRETS_FILE" >&2
   exit 1
 fi
 
@@ -75,20 +84,27 @@ log "Compressing..."
 tar -czf "$DEST.tar.gz" -C "$BACKUP_ROOT" "$TIMESTAMP"
 rm -rf "$DEST"
 
-SIZE="$(du -h "$DEST.tar.gz" | cut -f1)"
-log "Backup complete: $DEST.tar.gz ($SIZE)"
+log "Encrypting (AES256, symmetric)..."
+gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" \
+  --symmetric --cipher-algo AES256 --output "$DEST.tar.gz.gpg" "$DEST.tar.gz"
+rm -f "$DEST.tar.gz" # nunca deixa a versão sem senha no disco, nem por um instante a mais
+
+SIZE="$(du -h "$DEST.tar.gz.gpg" | cut -f1)"
+log "Backup complete: $DEST.tar.gz.gpg ($SIZE)"
 
 log "Rotating backups older than $KEEP_DAYS days..."
-find "$BACKUP_ROOT" -maxdepth 1 -name "*.tar.gz" -mtime "+$KEEP_DAYS" -print -delete
+find "$BACKUP_ROOT" -maxdepth 1 -name "*.tar.gz.gpg" -mtime "+$KEEP_DAYS" -print -delete
 
 if [[ -d "$HOME/Library/CloudStorage/GoogleDrive-muriloburigo@gmail.com/My Drive" ]]; then
   log "Copying to Google Drive..."
   mkdir -p "$DRIVE_BACKUP_DIR"
-  cp "$DEST.tar.gz" "$DRIVE_BACKUP_DIR/"
-  find "$DRIVE_BACKUP_DIR" -maxdepth 1 -name "*.tar.gz" -mtime "+$KEEP_DAYS" -print -delete
-  log "Copied to Drive: $DRIVE_BACKUP_DIR/$TIMESTAMP.tar.gz"
+  cp "$DEST.tar.gz.gpg" "$DRIVE_BACKUP_DIR/"
+  chmod 600 "$DRIVE_BACKUP_DIR/$TIMESTAMP.tar.gz.gpg"
+  find "$DRIVE_BACKUP_DIR" -maxdepth 1 -name "*.tar.gz.gpg" -mtime "+$KEEP_DAYS" -print -delete
+  log "Copied to Drive: $DRIVE_BACKUP_DIR/$TIMESTAMP.tar.gz.gpg"
 else
   log "Google Drive folder not found — skipping second copy (local backup still complete)."
 fi
 
+chmod 600 "$DEST.tar.gz.gpg"
 log "Done."

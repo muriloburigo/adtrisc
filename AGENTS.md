@@ -402,11 +402,13 @@ vercel --prod   # Production deploy
 Every run writes the **same archive to two places** (3-2-1 rule — one machine, one cloud):
 
 ```
-~/Backups/adtrisc/<YYYY-MM-DD_HHMM>.tar.gz                                                    # local, on Murilo's Mac
-~/Library/CloudStorage/GoogleDrive-muriloburigo@gmail.com/My Drive/ADTRISC-Backups/<...>.tar.gz  # synced to Google Drive
+~/Backups/adtrisc/<YYYY-MM-DD_HHMM>.tar.gz.gpg                                                    # local, on Murilo's Mac
+~/Library/CloudStorage/GoogleDrive-muriloburigo@gmail.com/My Drive/ADTRISC-Backups/<...>.tar.gz.gpg  # synced to Google Drive
 ```
 
 The Drive copy is a plain `cp` into the folder Google Drive Desktop already syncs — no API/OAuth involved. It's skipped (with a log line, not a failure) if that Drive folder doesn't exist on the machine running the script; the actual cloud upload only happens once Google Drive Desktop is running (it's set to launch at login on this Mac). Both copies get the same 30-day rotation.
+
+**The archive is GPG-encrypted (`--symmetric --cipher-algo AES256`) — never written to disk as a plain `.tar.gz`.** It holds real CPF/RG, medical-condition text, and signatures for both athletes and their guardians in plain-text columns (no column-level encryption in the database itself), so the compressed archive is the only thing standing between that data and anyone who gets a copy of the file (local disk access, or the Google Drive account). The plaintext `.tar.gz` is deleted immediately after encryption, before the Drive copy step, so it's never synced. Decrypting needs `BACKUP_ENCRYPTION_PASSPHRASE` from `~/.adtrisc-backup.env` — see below.
 
 Each archive contains:
 
@@ -429,8 +431,9 @@ storage/
 - **Requires** a secrets file at `~/.adtrisc-backup.env` (chmod 600, never committed):
   ```
   SUPABASE_DB_PASSWORD=<database password, from Supabase Dashboard → Project Settings → Database>
+  BACKUP_ENCRYPTION_PASSPHRASE=<a long random passphrase, e.g. `openssl rand -base64 32`>
   ```
-  This is the Postgres role password — different from the anon/service-role API keys, and not retrievable after creation (only reset). If it stops working, reset it in the dashboard and update this file.
+  `SUPABASE_DB_PASSWORD` is the Postgres role password — different from the anon/service-role API keys, and not retrievable after creation (only reset). If it stops working, reset it in the dashboard and update this file. `BACKUP_ENCRYPTION_PASSPHRASE` is what every archive is encrypted with — also save it in a password manager, not just this file: if this file and your password manager are both gone, every backup is unrecoverable ciphertext, forever.
 
 ⚠️ The `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` used for the storage part of the backup are read from **this project's `.env.local`** and explicitly override anything already exported in the shell. If you ever add a global Supabase env var to `~/.zshrc` for some other project, the backup will refuse to run (it checks the URL matches the `adtrisc` project ref) instead of silently backing up the wrong project — this happened once and it's why the check exists.
 
@@ -438,10 +441,14 @@ storage/
 
 Use this when you need to undo bad data (accidental bulk delete, a bug that corrupted rows) but the Supabase project itself is fine.
 
-1. Pick a backup and extract it (from either copy — same file, `~/Backups/adtrisc/` or the Google Drive folder):
+1. Pick a backup, decrypt it, and extract it (from either copy — same file, `~/Backups/adtrisc/` or the Google Drive folder):
    ```bash
    cd ~/Backups/adtrisc
+   source ~/.adtrisc-backup.env
+   gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" \
+     --decrypt 2026-09-11_1428.tar.gz.gpg > 2026-09-11_1428.tar.gz
    tar -xzf 2026-09-11_1428.tar.gz
+   rm 2026-09-11_1428.tar.gz # não deixa a versão sem senha no disco depois de extrair
    ```
 2. Restore the database (⚠️ this overwrites current data — coordinate downtime, or restore into a scratch database first to inspect/cherry-pick):
    ```bash
@@ -504,6 +511,7 @@ This is the unlikely worst case. Steps, roughly in order:
 - **User passwords** — by design, nobody (not Supabase, not this backup) can recover them. Every account needs a password reset after a full-disaster restore.
 - **Auth configuration** — email templates, redirect/site URLs, any OAuth provider setup. Not stored in the database at all.
 - **Vercel project settings** — custom domains, non-Supabase env vars, deployment protection settings.
+- **The backups themselves, if `BACKUP_ENCRYPTION_PASSPHRASE` is lost** — it's only in `~/.adtrisc-backup.env` and (hopefully) a password manager. Lose both and every `.tar.gz.gpg` ever made is permanent, unrecoverable ciphertext — there's no vendor or admin backdoor for GPG symmetric encryption.
 
 ---
 
