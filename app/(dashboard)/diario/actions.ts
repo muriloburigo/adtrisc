@@ -4,6 +4,7 @@ import { requireStaff } from '@/lib/assert'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { friendlyError } from '@/lib/errors'
+import { logAudit } from '@/lib/audit'
 
 type TurmaPayload = { turma_id: string; descricao: string }
 
@@ -51,6 +52,13 @@ export async function criarRegistroAula(payload: {
       })))
     if (tErr) throw new Error(tErr.message)
   }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'criar', resource: 'diario',
+    resourceId: registro.id, resourceLabel: `Diário ${payload.data} — ${payload.modalidade}`,
+    after: { coach_id: coachId, data: payload.data, modalidade: payload.modalidade },
+  })
 
   revalidatePath('/diario')
   return registro.id
@@ -106,6 +114,13 @@ export async function atualizarRegistroAula(
     )
   }
 
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'editar', resource: 'diario',
+    resourceId: registroId, resourceLabel: `Diário ${payload.data} — ${payload.modalidade}`,
+    after: { data: payload.data, modalidade: payload.modalidade },
+  })
+
   revalidatePath('/diario')
   revalidatePath(`/diario/${registroId}/editar`)
 }
@@ -129,6 +144,7 @@ export async function criarMultiplosRegistros(
   const coachId = (targetCoachId && role === 'admin') ? targetCoachId : actor.id
 
   let lastError: unknown = null
+  let salvos = 0
 
   for (const entry of entries) {
     if (!entry.data) continue
@@ -154,6 +170,7 @@ export async function criarMultiplosRegistros(
     // demais dias do batch — mas guarda pra reportar no fim em vez de
     // engolir a falha em silêncio.
     if (error || !registro) { lastError = error; continue }
+    salvos++
 
     // Replace turma entries — dia sem nenhuma turma marcada (ex: feriado) ainda
     // salva o registro, só fica sem vínculo de turma nenhuma.
@@ -167,6 +184,15 @@ export async function criarMultiplosRegistros(
         }))
       )
     }
+  }
+
+  if (salvos > 0) {
+    await logAudit({
+      userId: actor.id, userName: actor.name,
+      action: 'criar', resource: 'diario',
+      resourceId: coachId, resourceLabel: `Diário em lote (${salvos} dia${salvos > 1 ? 's' : ''})`,
+      after: { coach_id: coachId, quantidade: salvos },
+    })
   }
 
   if (lastError) return { error: friendlyError(lastError, 'Alguns dias não foram salvos.') }
@@ -221,8 +247,15 @@ export async function excluirRegistroAula(registroId: string): Promise<void> {
   if (existing.coach_id !== actor.id && role !== 'admin') throw new Error('Acesso negado')
 
   const { data: deleted, error } = await supabase
-    .from('registros_aula').delete().eq('id', registroId).select('id').single()
+    .from('registros_aula').delete().eq('id', registroId).select('*').single()
   if (error || !deleted) throw new Error(error?.message ?? 'Erro ao excluir registro.')
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'diario',
+    resourceId: registroId, resourceLabel: `Diário ${deleted.data} — ${deleted.modalidade}`,
+    before: deleted as Record<string, unknown>,
+  })
 
   revalidatePath('/diario')
 }

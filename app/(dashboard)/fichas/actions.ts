@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireStaff } from '@/lib/assert'
+import { logAudit } from '@/lib/audit'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function criarFicha(
@@ -51,13 +52,21 @@ export async function criarFicha(
       pai_email:         pai?.email    ?? null,
       pai_telefone:      pai?.telefone ?? null,
     })
-    .select('token')
+    .select('id, token')
     .single()
 
   if (error || !ficha) return { error: error?.message ?? 'Erro ao criar ficha.' }
 
   const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://adtrisc.vercel.app'
   const url = `${base}/ficha/${ficha.token}`
+
+  // Sem dados sensíveis (CPF/RG) no log — só o vínculo aluno/ficha.
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'criar', resource: 'ficha',
+    resourceId: ficha.id, resourceLabel: aluno.nome,
+    after: { aluno_id: alunoId },
+  })
 
   revalidatePath(`/alunos/${alunoId}`)
   return { url }
@@ -123,6 +132,13 @@ export async function criarFichasTurma(turmaId: string): Promise<{
     const { data: newFichas, error } = await db.from('fichas_inscricao').insert(toInsert).select('aluno_id, token')
     if (error) return { error: error.message }
     newMap = new Map((newFichas ?? []).map((f: any) => [f.aluno_id, f.token]))
+
+    await logAudit({
+      userId: actor.id, userName: actor.name,
+      action: 'criar', resource: 'ficha',
+      resourceId: turmaId, resourceLabel: `Fichas em lote (${toInsert.length})`,
+      after: { turma_id: turmaId, quantidade: toInsert.length },
+    })
   }
 
   const results = alunos.flatMap((aluno: any) => {
@@ -144,20 +160,33 @@ export async function criarFichasTurma(turmaId: string): Promise<{
 }
 
 export async function invalidarFicha(fichaId: string, alunoId: string): Promise<{ error?: string }> {
-  await requireStaff()
+  const actor = await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createAdminClient() as any
+
+  const { data: before } = await db
+    .from('fichas_inscricao').select('status').eq('id', fichaId).single()
+
   const { error } = await db
     .from('fichas_inscricao')
     .update({ status: 'expirada' })
     .eq('id', fichaId)
   if (error) return { error: error.message }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'status', resource: 'ficha',
+    resourceId: fichaId, resourceLabel: null,
+    before: { status: before?.status ?? null },
+    after: { status: 'expirada' },
+  })
+
   revalidatePath(`/alunos/${alunoId}`)
   return {}
 }
 
 export async function excluirFicha(fichaId: string, alunoId: string): Promise<{ error?: string }> {
-  await requireStaff()
+  const actor = await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createAdminClient() as any
 
@@ -169,6 +198,14 @@ export async function excluirFicha(fichaId: string, alunoId: string): Promise<{ 
 
   const { error } = await db.from('fichas_inscricao').delete().eq('id', fichaId)
   if (error) return { error: error.message }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'ficha',
+    resourceId: fichaId, resourceLabel: null,
+    before: { status: ficha.status, expires_at: ficha.expires_at, aluno_id: alunoId },
+  })
+
   revalidatePath(`/alunos/${alunoId}`)
   return {}
 }

@@ -27,6 +27,12 @@ const RESOURCE_LABEL: Record<string, string> = {
   candidato: 'Candidato(a)',
   usuario:   'Usuário',
   presenca:  'Presença',
+  prova:     'Prova',
+  materia:   'Matéria (Imprensa)',
+  documento: 'Documento assinado',
+  ficha:     'Ficha de inscrição',
+  diario:    'Diário de aulas',
+  foto:      'Foto',
 }
 
 function formatDateTime(iso: string) {

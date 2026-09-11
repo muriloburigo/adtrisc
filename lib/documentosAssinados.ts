@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireStaff } from '@/lib/assert'
+import { logAudit } from '@/lib/audit'
 import type { DocumentoAssinadoTipo } from '@/types/database'
 
 function sanitizeFilename(name: string): string {
@@ -43,7 +44,7 @@ export async function uploadDocumentoAssinado(formData: FormData): Promise<{ err
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const { error } = await supabase.from('documentos_assinados').insert({
+  const payload = {
     turma_id: turmaId,
     coach_id: coachId,
     tipo,
@@ -51,12 +52,21 @@ export async function uploadDocumentoAssinado(formData: FormData): Promise<{ err
     nome_arquivo: file.name,
     storage_path: path,
     enviado_por: actor.id,
-  })
-
-  if (error) {
-    await admin.storage.from('documentos').remove([path])
-    return { error: error.message }
   }
+  const { data: doc, error } = await supabase
+    .from('documentos_assinados').insert(payload).select('id').single()
+
+  if (error || !doc) {
+    await admin.storage.from('documentos').remove([path])
+    return { error: error?.message ?? 'Erro ao salvar documento.' }
+  }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'criar', resource: 'documento',
+    resourceId: doc.id, resourceLabel: file.name,
+    after: payload as Record<string, unknown>,
+  })
 
   revalidateForTipo(tipo, turmaId)
   return {}
@@ -68,18 +78,25 @@ export async function deleteDocumentoAssinado(
   tipo: DocumentoAssinadoTipo,
   turmaId: string | null,
 ): Promise<{ error?: string }> {
-  await requireStaff()
+  const actor = await requireStaff()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
   const { data: deleted, error } = await supabase
-    .from('documentos_assinados').delete().eq('id', id).select('id')
+    .from('documentos_assinados').delete().eq('id', id).select('*')
   if (error) return { error: error.message }
   if (!deleted || deleted.length === 0) return { error: 'Acesso negado.' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin = createAdminClient() as any
   await admin.storage.from('documentos').remove([storagePath])
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'documento',
+    resourceId: id, resourceLabel: deleted[0]?.nome_arquivo ?? null,
+    before: deleted[0] as Record<string, unknown>,
+  })
 
   revalidateForTipo(tipo, turmaId)
   return {}

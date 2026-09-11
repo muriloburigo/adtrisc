@@ -131,10 +131,21 @@ export async function saveAvaliacaoField(
 export async function deleteAvaliacao(id: string, alunoId: string): Promise<{ error?: string } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
-  await requireStaff()
-  const { data: updated, error } = await db
-    .from('avaliacoes_fisicas').update({ deleted_at: new Date().toISOString() }).eq('id', id).select('id').single()
+  const actor = await requireStaff()
+
+  const [{ data: aluno }, { data: updated, error }] = await Promise.all([
+    db.from('alunos').select('nome').eq('id', alunoId).single(),
+    db.from('avaliacoes_fisicas').update({ deleted_at: new Date().toISOString() }).eq('id', id).select('id, data').single(),
+  ])
   if (error || !updated) return { error: friendlyError(error, 'Erro ao excluir avaliação.') }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'atleta',
+    resourceId: alunoId,
+    resourceLabel: `Avaliação ${aluno?.nome ?? ''} — ${updated.data}`,
+  })
+
   revalidatePath(`/alunos/${alunoId}`)
   revalidatePath('/avaliacoes')
 }

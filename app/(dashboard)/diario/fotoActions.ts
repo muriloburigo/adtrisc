@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireStaff } from '@/lib/assert'
+import { logAudit } from '@/lib/audit'
 import { getTurmaIdsForCoach } from '@/lib/turmas'
 
 async function assertTurmaAccess(turmaId: string) {
@@ -11,9 +12,10 @@ async function assertTurmaAccess(turmaId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', actor.id).single()
-  if (profile?.role === 'admin') return
+  if (profile?.role === 'admin') return actor
   const turmaIds = await getTurmaIdsForCoach(supabase, actor.id)
   if (!turmaIds.includes(turmaId)) throw new Error('Acesso negado')
+  return actor
 }
 
 export type FotoDoDia = { id: string; url: string; titulo: string; turma_id: string; storage_path: string }
@@ -26,8 +28,9 @@ export async function setFotoDoDia(formData: FormData): Promise<{ error?: string
 
   if (!turmaId || !data) return { error: 'Dados inválidos.' }
 
+  let actor
   try {
-    await assertTurmaAccess(turmaId)
+    actor = await assertTurmaAccess(turmaId)
   } catch {
     return { error: 'Acesso negado.' }
   }
@@ -66,6 +69,13 @@ export async function setFotoDoDia(formData: FormData): Promise<{ error?: string
 
   if (error) return { error: error.message }
 
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'criar', resource: 'foto',
+    resourceId: saved.id, resourceLabel: `Foto ${turmaId} — ${data}`,
+    after: { turma_id: turmaId, data, titulo: titulo || '' },
+  })
+
   revalidatePath('/diario')
   return { foto: saved as FotoDoDia }
 }
@@ -75,8 +85,9 @@ export async function removerFotoDoDia(
   data: string,
   storagePath: string,
 ): Promise<{ error?: string }> {
+  let actor
   try {
-    await assertTurmaAccess(turmaId)
+    actor = await assertTurmaAccess(turmaId)
   } catch {
     return { error: 'Acesso negado.' }
   }
@@ -86,6 +97,13 @@ export async function removerFotoDoDia(
   await admin.storage.from('fotos').remove([storagePath])
   const { error } = await admin.from('turma_fotos').delete().eq('turma_id', turmaId).eq('data', data)
   if (error) return { error: error.message }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'foto',
+    resourceId: turmaId, resourceLabel: `Foto ${turmaId} — ${data}`,
+    before: { turma_id: turmaId, data, storage_path: storagePath },
+  })
 
   revalidatePath('/diario')
   return {}

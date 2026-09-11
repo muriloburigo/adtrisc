@@ -28,6 +28,8 @@ const ACTION_LABEL: Record<string, string> = {
 const RESOURCE_LABEL: Record<string, string> = {
   turma: 'Turma', atleta: 'Atleta', treinador: 'Treinador(a)',
   candidato: 'Candidato(a)', usuario: 'Usuário', presenca: 'Presença',
+  prova: 'Prova', materia: 'Matéria (Imprensa)', documento: 'Documento assinado',
+  ficha: 'Ficha de inscrição', diario: 'Diário de aulas', foto: 'Foto',
 }
 
 // ── Diff helpers ──────────────────────────────────────────────────────────────
