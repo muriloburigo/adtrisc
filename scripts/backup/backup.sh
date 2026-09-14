@@ -15,6 +15,11 @@
 #     manager are both gone, the backups are unrecoverable ciphertext)
 set -euo pipefail
 
+# launchd invoca com um PATH mínimo (sem /opt/homebrew/bin) — sem isso,
+# pg_dump/psql/node/gpg não são encontrados quando o job roda sozinho às 3h,
+# mesmo funcionando normal rodado manualmente num terminal interativo.
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+
 PROJECT_DIR="/Users/muriloburigo/Documents/Projects/adtrisc"
 BACKUP_ROOT="${ADTRISC_BACKUP_DIR:-$HOME/Backups/adtrisc}"
 SECRETS_FILE="$HOME/.adtrisc-backup.env"
