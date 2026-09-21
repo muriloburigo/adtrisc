@@ -13,6 +13,12 @@
 #   BACKUP_ENCRYPTION_PASSPHRASE=<a long random passphrase>
 #     (also save this in a password manager — if this file and your password
 #     manager are both gone, the backups are unrecoverable ciphertext)
+#   DB_HOST=<Supabase pooler host, e.g. aws-1-sa-east-1.pooler.supabase.com>
+#   DB_USER=<Supabase pooler user, e.g. postgres.<project-ref>>
+#     (kept out of this tracked script on purpose — GitGuardian flagged the
+#     project ref embedded in DB_USER as a "Generic Database Assignment" even
+#     though it's already public via NEXT_PUBLIC_SUPABASE_URL; moving it here
+#     avoids the false-positive noise without changing what's actually secret)
 set -euo pipefail
 
 # launchd invoca com um PATH mínimo (sem /opt/homebrew/bin) — sem isso,
@@ -29,9 +35,7 @@ KEEP_DAYS=30
 # continua normalmente e só pula essa etapa (não falha o backup por isso).
 DRIVE_BACKUP_DIR="$HOME/Library/CloudStorage/GoogleDrive-muriloburigo@gmail.com/My Drive/ADTRISC-Backups"
 
-DB_HOST="aws-1-sa-east-1.pooler.supabase.com"
 DB_PORT=5432
-DB_USER="postgres.gjsbxpdkfmqtfwkdcbxh"
 DB_NAME="postgres"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
@@ -48,6 +52,14 @@ if [[ -z "${SUPABASE_DB_PASSWORD:-}" ]]; then
 fi
 if [[ -z "${BACKUP_ENCRYPTION_PASSPHRASE:-}" ]]; then
   echo "BACKUP_ENCRYPTION_PASSPHRASE not set in $SECRETS_FILE" >&2
+  exit 1
+fi
+if [[ -z "${DB_HOST:-}" ]]; then
+  echo "DB_HOST not set in $SECRETS_FILE" >&2
+  exit 1
+fi
+if [[ -z "${DB_USER:-}" ]]; then
+  echo "DB_USER not set in $SECRETS_FILE" >&2
   exit 1
 fi
 
