@@ -259,6 +259,57 @@ export type MateriaImprensaRow = {
   created_at: string
 }
 
+export type CategoriaFinanceiraRow = {
+  id: string
+  nome: string
+  ativo: boolean
+  created_at: string
+}
+
+export type ProjetoFinanceiroRow = {
+  id: string
+  nome: string
+  ano: number
+  descricao: string | null
+  objetivo: string | null
+  metas: string | null
+  ativo: boolean
+  criado_por: string | null
+  created_at: string
+}
+
+export type ProjetoArquivoRow = {
+  id: string
+  projeto_id: string
+  nome_arquivo: string
+  storage_path: string
+  enviado_por: string | null
+  created_at: string
+}
+
+export type OrcamentoFinanceiroRow = {
+  id: string
+  projeto_id: string
+  categoria_id: string
+  valor_orcado: number
+  updated_at: string
+}
+
+export type LancamentoFinanceiroRow = {
+  id: string
+  projeto_id: string
+  categoria_id: string
+  coach_id: string
+  valor: number
+  descricao: string
+  numero_nota: string | null
+  data: string
+  nome_arquivo: string | null
+  storage_path: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type ProfileRow = {
   id: string
   full_name: string | null

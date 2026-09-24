@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, UserCheck,
-  LogOut, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, BookOpen, Trophy, Newspaper,
+  LogOut, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, BookOpen, Trophy, Newspaper, Wallet,
 } from 'lucide-react'
 import { cn, formatRole } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -13,19 +13,45 @@ import type { Database, UserRole } from '@/types/database'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
-const nav = [
-  { href: '/dashboard',      label: 'Dashboard',     icon: LayoutDashboard, roles: ['admin','coach','aluno','pai'] as UserRole[] },
-  { href: '/turmas',         label: 'Turmas',         icon: Users2,          roles: ['admin','coach'] as UserRole[] },
-  { href: '/alunos',         label: 'Atletas',        icon: Users,           roles: ['admin','coach'] as UserRole[] },
-  { href: '/presencas',      label: 'Presenças',      icon: ClipboardCheck,  roles: ['admin','coach'] as UserRole[] },
-  { href: '/diario',         label: 'Diário de Aulas',icon: BookOpen,        roles: ['admin','coach'] as UserRole[] },
-  { href: '/avaliacoes',     label: 'Avaliações',     icon: Dumbbell,        roles: ['admin','coach'] as UserRole[] },
-  { href: '/provas',         label: 'Provas',         icon: Trophy,          roles: ['admin','coach'] as UserRole[] },
-  { href: '/imprensa',       label: 'Imprensa',       icon: Newspaper,       roles: ['admin','coach'] as UserRole[] },
-  { href: '/candidatos',     label: 'Candidatos',     icon: UserPlus,        roles: ['admin','coach'] as UserRole[] },
-  { href: '/coaches',        label: 'Treinadores',    icon: UserCheck,       roles: ['admin'] as UserRole[] },
-  { href: '/auditoria',      label: 'Auditoria',      icon: ScrollText,      roles: ['admin'] as UserRole[] },
-  { href: '/configuracoes',  label: 'Configurações',  icon: Settings,        roles: ['admin'] as UserRole[] },
+const navGroups: { label: string | null; items: { href: string; label: string; icon: typeof LayoutDashboard; roles: UserRole[] }[] }[] = [
+  {
+    label: null,
+    items: [
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin','coach','aluno','pai'] },
+    ],
+  },
+  {
+    label: 'Operação',
+    items: [
+      { href: '/turmas',     label: 'Turmas',          icon: Users2,         roles: ['admin','coach'] },
+      { href: '/alunos',     label: 'Atletas',         icon: Users,          roles: ['admin','coach'] },
+      { href: '/presencas',  label: 'Presenças',       icon: ClipboardCheck, roles: ['admin','coach'] },
+      { href: '/diario',     label: 'Diário de Aulas', icon: BookOpen,       roles: ['admin','coach'] },
+      { href: '/avaliacoes', label: 'Avaliações',      icon: Dumbbell,       roles: ['admin','coach'] },
+    ],
+  },
+  {
+    label: 'Competições & Comunicação',
+    items: [
+      { href: '/provas',     label: 'Provas',      icon: Trophy,    roles: ['admin','coach'] },
+      { href: '/imprensa',   label: 'Imprensa',    icon: Newspaper, roles: ['admin','coach'] },
+      { href: '/candidatos', label: 'Candidatos',  icon: UserPlus,  roles: ['admin','coach'] },
+    ],
+  },
+  {
+    label: 'Financeiro',
+    items: [
+      { href: '/financeiro', label: 'Financeiro', icon: Wallet, roles: ['admin','coach'] },
+    ],
+  },
+  {
+    label: 'Administração',
+    items: [
+      { href: '/coaches',       label: 'Treinadores',   icon: UserCheck,  roles: ['admin'] },
+      { href: '/auditoria',     label: 'Auditoria',     icon: ScrollText, roles: ['admin'] },
+      { href: '/configuracoes', label: 'Configurações', icon: Settings,   roles: ['admin'] },
+    ],
+  },
 ]
 
 export default function Sidebar({ user }: { user: Profile | null }) {
@@ -40,7 +66,9 @@ export default function Sidebar({ user }: { user: Profile | null }) {
     router.refresh()
   }
 
-  const visibleNav = nav.filter((item) => item.roles.includes(role))
+  const visibleGroups = navGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => item.roles.includes(role)) }))
+    .filter((group) => group.items.length > 0)
 
   return (
     <aside className="hidden md:flex print:hidden w-60 bg-navy-500 flex-col h-full flex-shrink-0">
@@ -62,25 +90,34 @@ export default function Sidebar({ user }: { user: Profile | null }) {
       </Link>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {visibleNav.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                active
-                  ? 'bg-sky-400 text-white'
-                  : 'text-navy-100 hover:bg-navy-600 hover:text-white'
-              )}
-            >
-              <Icon size={17} />
-              {label}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        {visibleGroups.map((group, gi) => (
+          <div key={group.label ?? `group-${gi}`}>
+            {group.label && (
+              <p className="px-3 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-wide text-navy-100/40">
+                {group.label}
+              </p>
+            )}
+            {group.items.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || pathname.startsWith(href + '/')
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                    active
+                      ? 'bg-sky-400 text-white'
+                      : 'text-navy-100 hover:bg-navy-600 hover:text-white'
+                  )}
+                >
+                  <Icon size={17} />
+                  {label}
+                </Link>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* User */}

@@ -83,6 +83,7 @@ adtrisc/
 │   │   ├── configuracoes/          # User management (admin only)
 │   │   ├── auditoria/              # Audit log viewer (admin only)
 │   │   ├── diario/                 # Class diary (lesson log + monthly summary + signed reports)
+│   │   ├── financeiro/             # Budget per project/category + coach-submitted expense notes
 │   │   └── fichas/                 # Digital enrollment form generation
 │   ├── ficha/[token]/              # Public — enrollment form filled by parents
 │   ├── inscricao/                  # Public — online pre-enrollment form
@@ -277,7 +278,24 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - Unique per `(coach_id, ano, mes)` — upserted
 
 **`audit_logs`** — all admin/coach write actions
-- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`
+- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
+
+**`categorias_financeiras`** — global, reusable expense categories (Treinadores, Camisetas, Viagens...)
+- `id`, `nome`, `ativo` (soft-disable — categories are never hard-deleted since budgets/notes reference them), `created_at`
+
+**`projetos_financeiros`** — a funding source (edital, patrocínio) with its own budget, scoped to one competência year
+- `id`, `nome`, `ano` (the competência — a project spanning multiple years gets one row per year, same convention as `turmas.ano`), `descricao`, `objetivo`, `metas`, `ativo`, `criado_por` (FK → profiles), `created_at`
+
+**`projeto_arquivos`** — general attachments on a projeto (plano de trabalho, convênio assinado, edital) — separate from a lançamento's own nota attachment
+- `id`, `projeto_id` (FK → projetos_financeiros, cascade), `nome_arquivo`, `storage_path`, `enviado_por` (FK → profiles), `created_at`
+
+**`orcamentos_financeiros`** — the budgeted amount for one projeto+categoria pair
+- `id`, `projeto_id` (FK, cascade), `categoria_id` (FK, restrict), `valor_orcado`, `updated_at`
+- Unique on `(projeto_id, categoria_id)` — upserted from the inline editor on the projeto detail page
+
+**`lancamentos_financeiros`** — an expense note (nota fiscal) a coach logs against a projeto+categoria's budget
+- `id`, `projeto_id` (FK, restrict — a projeto with notes can't be deleted), `categoria_id` (FK, restrict), `coach_id` (FK → profiles — who it's logged under; admin can log on behalf of any coach), `valor`, `descricao`, `numero_nota`, `data`, `nome_arquivo`, `storage_path`, `created_at`, `updated_at`
+- No approval flow — a saved lançamento counts against the budget's "consumido" immediately; admin edits/deletes to correct mistakes.
 
 ### RLS Summary
 
@@ -286,6 +304,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `pai` can only read their own children and related records (via `aluno_responsavel` join).
 - `provas`/`prova_categorias` are shared event data (not tied to one turma) — any staff (admin or coach) can read/write them. `resultados_prova` is scoped like `avaliacoes_fisicas`: a coach can only read/write results for athletes in a turma they coach (`coach_has_turma()`), admin unrestricted.
 - `materias_imprensa` follows the same shared-staff pattern as `provas`.
+- The 4 `*_financeiros`/`projeto_arquivos` tables: **select** is open to any staff (admin+coach) on all of them — a coach needs to see every other coach's lançamentos too, otherwise the budget "consumido" total on `/financeiro` would only reflect their own notes. **Write** on `categorias_financeiras`/`projetos_financeiros`/`orcamentos_financeiros`/`projeto_arquivos` is admin-only. **Write** on `lancamentos_financeiros` is admin OR the row's own `coach_id = auth.uid()` — a coach can only create/edit/delete their own notes.
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
 
 ### Helper DB Function
@@ -334,6 +353,9 @@ Admin-only. Shows all write actions with actor, resource, and before/after diffs
 ### Class Diary (`/diario`)
 Coach logs lessons per day (modalidade, objetivo, observações, which turmas), can batch-fill a whole month, and writes a monthly summary (`diario_resumos`) used in signed reports. A "foto do dia" can be attached per turma/date (bucket `fotos`).
 
+### Financeiro (`/financeiro`)
+Budget tracking per project (edital/patrocínio) and category, plus coach-submitted expense notes (notas fiscais). Four tabs (`FinanceiroTabs.tsx`): **Orçamento** (`/financeiro`, everyone) — pick a competência year, see every projeto that year as a card with orçado/consumido/saldo per categoria and a progress bar (green <70%, yellow 70–100%, red past 100%, computed by `lib/financeiro.ts`'s `percentConsumido()`/`progressoBarColor()`); **Notas Fiscais** (`/financeiro/notas`, everyone) — filterable list, "+ Nova nota" lets a coach log an expense (valor, categoria, data, optional anexo — PDF/JPG/PNG/WebP up to 10MB in the private `notas-fiscais` bucket) against their own name, admin can log on behalf of any coach and edit/delete anyone's; **Projetos** (`/financeiro/projetos`, admin-only) — CRUD for projects (nome, ano, descrição, objetivo, metas), per-projeto page has an inline-editable orçamento table per categoria (`OrcamentoTable.tsx` — each row is its own component with its own `useTransition`, so saving one category's value never disables another mid-edit) and a general attachments section (`ProjetoArquivosSection.tsx`, private `financeiro-arquivos` bucket, for plano de trabalho/convênio/edital docs); **Categorias** (`/financeiro/categorias`, admin-only) — manage the shared category list, rename inline, soft-disable (never hard-deleted, since budgets/notes reference them). No approval flow — a lançamento counts against the budget the moment it's saved. See the `### RLS Summary` note above for the read-open/write-scoped policy shape.
+
 ### User / Coach Management
 - `/coaches` — Admin creates/edits/deletes coach accounts using `auth.admin` APIs.
 - `/configuracoes` — Admin views all auth users, edits name/role, deletes users.
@@ -360,6 +382,8 @@ Only use the admin client in Server Actions or server-side code, never in client
 | `avatars` | Yes | Athlete profile photos (path: `alunos/{uuid}.{ext}`) |
 | `fotos` | Yes | Class photo gallery + diário "foto do dia" (path: `turmas/{turmaId}/{data}.{ext}`) |
 | `documentos` | No (service-role/signed URL only) | Signed PDFs — relatório de turma, presença exportada, diário de aula (path: `{turma\|coach}/{id}/{tipo}/{timestamp}-{filename}`) |
+| `notas-fiscais` | No (service-role/signed URL only) | Nota fiscal attachments on a `lancamentos_financeiros` row (path: `{projetoId}/{categoriaId}/{timestamp}-{filename}`) |
+| `financeiro-arquivos` | No (service-role/signed URL only) | General projeto attachments — plano de trabalho, convênio, edital (path: `{projetoId}/{timestamp}-{filename}`) |
 
 ---
 
@@ -491,6 +515,8 @@ This is the unlikely worst case. Steps, roughly in order:
    19. `soft_delete.sql`
    20. `diario_aulas.sql`
    21. `diario_resumos.sql`
+   22. `financeiro.sql` — categorias/projetos/orçamentos/lançamentos tables + `notas-fiscais` bucket (only needs `get_my_role()` from #1, no `coach_has_turma()` dependency)
+   23. `financeiro_projeto_extras.sql` — adds `objetivo`/`metas` to `projetos_financeiros` + `projeto_arquivos` table + `financeiro-arquivos` bucket (needs #22)
 
    This recreates all tables, RLS policies, functions, and the three storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".
