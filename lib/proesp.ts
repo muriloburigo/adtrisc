@@ -11,7 +11,7 @@ type PorSexo<T> = { M: T[]; F: T[] }
 
 // ── 6. Aptidão física relacionada à saúde (pontos de corte) ──────────────────
 // "acima" = valores acima do corte são zona de risco; "abaixo" = abaixo do corte é risco.
-const SAUDE: Record<string, { sentido: 'acima' | 'abaixo'; corte: PorSexo<number> }> = {
+export const SAUDE: Record<string, { sentido: 'acima' | 'abaixo'; corte: PorSexo<number> }> = {
   imc: { sentido: 'acima', corte: {
     M: [17.7, 17.8, 19.2, 19.3, 20.7, 22.1, 22.2, 22.0, 22.2, 23.0, 24.0, 25.4],
     F: [17.0, 17.1, 18.2, 19.1, 20.9, 22.3, 22.6, 22.0, 22.0, 22.4, 24.0, 24.0],
@@ -37,7 +37,7 @@ const SAUDE: Record<string, { sentido: 'acima' | 'abaixo'; corte: PorSexo<number
     F: [5.22, 4.88, 4.66, 4.58, 4.44, 4.36, 4.28, 4.17, 4.16, 4.07, 4.01, 3.91],
   } },
 }
-const RCE_CORTE = 0.5 // igual para todas as idades e sexos; acima é risco
+export const RCE_CORTE = 0.5 // igual para todas as idades e sexos; acima é risco
 
 // ── 7. Desempenho motor (normas por percentil) ──────────────────────────────
 // "maior": limites inferiores de [Razoável, Bom, Muito bom, Excelência].
@@ -45,8 +45,8 @@ const RCE_CORTE = 0.5 // igual para todas as idades e sexos; acima é risco
 // Correções de digitação do PDF: Excelência do salto aparece com "≤" (é "≥");
 // Excelência feminina de abdominal/flexibilidade repete o topo do Muito bom
 // (usado o valor seguinte, como nas tabelas masculinas).
-type Quad = [number, number, number, number]
-const DESEMPENHO: Record<string, { sentido: 'maior' | 'menor'; limites: PorSexo<Quad> }> = {
+export type Quad = [number, number, number, number]
+export const DESEMPENHO: Record<string, { sentido: 'maior' | 'menor'; limites: PorSexo<Quad> }> = {
   resistencia_6min: { sentido: 'maior', limites: {
     M: [[730, 827, 956, 1317], [752, 849, 975, 1303], [774, 871, 995, 1301], [797, 895, 1018, 1310],
         [817, 917, 1040, 1323], [837, 939, 1062, 1339], [860, 965, 1090, 1367], [895, 1005, 1136, 1422],
@@ -103,7 +103,7 @@ const DESEMPENHO: Record<string, { sentido: 'maior' | 'menor'; limites: PorSexo<
   } },
 }
 
-const EM_CM = new Set(['arremesso_medicineball', 'salto_horizontal']) // banco em m, manual em cm
+export const EM_CM = new Set(['arremesso_medicineball', 'salto_horizontal']) // banco em m, manual em cm
 
 export const IDADE_MIN = 6
 export const IDADE_MAX = 17

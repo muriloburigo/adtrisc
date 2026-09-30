@@ -1,7 +1,7 @@
 import Badge from '@/components/ui/Badge'
 import type { ClassificacaoTeste, NivelDesempenho } from '@/lib/proesp'
 
-const COR_DESEMPENHO: Record<NivelDesempenho, 'red' | 'yellow' | 'gray' | 'sky' | 'green'> = {
+export const COR_DESEMPENHO: Record<NivelDesempenho, 'red' | 'yellow' | 'gray' | 'sky' | 'green'> = {
   'Fraco': 'red',
   'Razoável': 'yellow',
   'Bom': 'gray',

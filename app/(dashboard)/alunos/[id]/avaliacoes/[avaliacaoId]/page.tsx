@@ -74,6 +74,16 @@ export default async function AvaliacaoDetalhePage({
         subtitle={`${aluno.nome} · ${formatDate(av.data)}${idade != null ? ` · ${idade} anos` : ''}`}
       />
 
+      <Link
+        href={`/avaliacoes/referencia?${new URLSearchParams({
+          ...(aluno.sexo ? { sexo: aluno.sexo } : {}),
+          ...(idade != null ? { idade: String(idade) } : {}),
+        })}`}
+        className="inline-block text-xs text-sky-500 hover:underline mb-4"
+      >
+        Classificação pelo PROESP-Br 2021 · ver tabelas de referência →
+      </Link>
+
       {semProesp ? (
         <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-4 py-2.5 mb-4">
           Complete o sexo e a data de nascimento no cadastro do atleta para ver a classificação PROESP-Br e a maturação.
