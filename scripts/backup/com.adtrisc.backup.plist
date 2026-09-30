@@ -3,7 +3,9 @@
 <!--
   LaunchAgent do backup diário (cópia versionada; a instalada fica em
   ~/Library/LaunchAgents/com.adtrisc.backup.plist — ver AGENTS.md, "Backup").
-  - caffeinate -i: impede o Mac de voltar a dormir no meio do backup.
+  - O programa é o /bin/bash direto. Não colocar /usr/bin/caffeinate aqui:
+    o macOS barra o acesso à pasta Documentos e o job morre com "Operation
+    not permitted" (exit 126). O caffeinate é ligado dentro do backup.sh.
   - 3 horários: se o das 3h falhar (Mac em Power Nap, rede instável), os de
     12h30 e 20h30 tentam de novo; backup.sh não faz nada se já houver backup do dia.
 -->
@@ -13,8 +15,6 @@
   <string>com.adtrisc.backup</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/caffeinate</string>
-    <string>-i</string>
     <string>/bin/bash</string>
     <string>/Users/muriloburigo/Documents/Projects/adtrisc/scripts/backup/backup.sh</string>
   </array>

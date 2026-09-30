@@ -71,6 +71,12 @@ if [[ "${1:-}" != "--force" ]] && compgen -G "$BACKUP_ROOT/$(date +%Y-%m-%d)_*.t
   exit 0
 fi
 
+# Impede o Mac de dormir enquanto este script estiver vivo. Fica aqui, e não
+# no plist: com /usr/bin/caffeinate como programa do LaunchAgent, o macOS
+# (privacidade > pasta Documentos) barra a leitura deste script e o job morre
+# com "Operation not permitted" antes de começar.
+caffeinate -i -w $$ &
+
 TIMESTAMP="$(date +%Y-%m-%d_%H%M)"
 DEST="$BACKUP_ROOT/$TIMESTAMP"
 mkdir -p "$DEST"

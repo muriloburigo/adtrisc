@@ -471,7 +471,7 @@ storage/
 
 ### How it runs
 
-- **Automatic**: a macOS LaunchAgent runs `scripts/backup/backup.sh` under `caffeinate -i` at **03:00, 12:30 and 20:30**. The first run of the day that succeeds creates the backup; later runs see today's `.tar.gz.gpg` and exit without doing anything. Why three times: from 23 to 30/09/2026 every 3 AM run failed silently — the Mac wakes in Power Nap with flaky network and `pg_dump` died with "server closed the connection unexpectedly".
+- **Automatic**: a macOS LaunchAgent runs `scripts/backup/backup.sh` (plain `/bin/bash`; the script itself starts `caffeinate -i -w $$`) at **03:00, 12:30 and 20:30**. Never make `/usr/bin/caffeinate` the plist's program: macOS privacy blocks it from reading the script in `~/Documents` and the job dies with "Operation not permitted" (exit 126) — that happened on 30/09/2026. The first run of the day that succeeds creates the backup; later runs see today's `.tar.gz.gpg` and exit without doing anything. Why three times: from 23 to 30/09/2026 every 3 AM run failed silently — the Mac wakes in Power Nap with flaky network and `pg_dump` died with "server closed the connection unexpectedly".
   - Versioned copy: `scripts/backup/com.adtrisc.backup.plist`. After editing it, reinstall with:
     `cp scripts/backup/com.adtrisc.backup.plist ~/Library/LaunchAgents/ && launchctl bootout gui/$(id -u)/com.adtrisc.backup; launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.adtrisc.backup.plist`
   - Every network step (pg_dump, auth export, storage) gets up to 3 attempts, 60 s apart.
