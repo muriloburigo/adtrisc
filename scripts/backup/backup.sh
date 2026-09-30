@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Full local backup of the ADTRISC Supabase project: database (schema `public`),
-# a no-password list of auth accounts, and storage buckets (avatars, fotos,
-# documentos). Compresses everything into one .tar.gz, encrypts it (the
-# archive holds real CPF/RG/medical data in plain text — the .tar.gz itself
-# must never sit on disk unencrypted), and rotates backups older than
+# a no-password list of auth accounts, and every storage bucket. Compresses
+# everything into one .tar.gz, encrypts it (the archive holds real
+# CPF/RG/medical data in plain text — the .tar.gz itself must never sit on
+# disk unencrypted), and rotates backups older than
 # KEEP_DAYS. The plaintext .tar.gz is deleted right after encryption, before
 # the Google Drive copy step, so it's never written to the synced folder.
 #
@@ -63,14 +63,47 @@ if [[ -z "${DB_USER:-}" ]]; then
   exit 1
 fi
 
+# O launchd dispara o job em mais de um horário (ver com.adtrisc.backup.plist):
+# se já existe um backup completo de hoje, os disparos seguintes não fazem nada.
+# `backup.sh --force` ignora essa checagem (backup manual extra).
+if [[ "${1:-}" != "--force" ]] && compgen -G "$BACKUP_ROOT/$(date +%Y-%m-%d)_*.tar.gz.gpg" > /dev/null; then
+  log "Já existe backup de hoje em $BACKUP_ROOT — nada a fazer."
+  exit 0
+fi
+
 TIMESTAMP="$(date +%Y-%m-%d_%H%M)"
 DEST="$BACKUP_ROOT/$TIMESTAMP"
 mkdir -p "$DEST"
 
+# Falha nunca pode ser silenciosa (de 23 a 30/09/2026 todo backup falhou sem
+# ninguém perceber): limpa o que ficou pela metade e avisa na tela do Mac.
+on_exit() {
+  local rc=$?
+  if [[ $rc -ne 0 ]]; then
+    rm -rf "$DEST" "$DEST.tar.gz"
+    log "BACKUP FALHOU (código $rc) — nada foi salvo em $DEST"
+    osascript -e 'display notification "O backup automático falhou. Veja ~/Library/Logs/adtrisc-backup.log" with title "Backup ADTRISC falhou" sound name "Basso"' 2>/dev/null || true
+  fi
+}
+trap on_exit EXIT
+
+# A rede cai quando o Mac acorda "meio dormindo" (Power Nap) de madrugada —
+# o pg_dump morria com "server closed the connection unexpectedly". Cada etapa
+# de rede tem até 3 tentativas, com 60 s entre elas.
+tentar() {
+  local n=1
+  until "$@"; do
+    if (( n >= 3 )); then return 1; fi
+    log "Falhou (tentativa $n/3) — tentando de novo em 60 s..."
+    sleep 60
+    n=$((n + 1))
+  done
+}
+
 log "Starting backup -> $DEST"
 
 log "Dumping database (schema public)..."
-PGPASSWORD="$SUPABASE_DB_PASSWORD" pg_dump \
+tentar env PGPASSWORD="$SUPABASE_DB_PASSWORD" pg_dump \
   --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" --dbname="$DB_NAME" \
   --no-owner --no-privileges --schema=public \
   --file="$DEST/database.sql"
@@ -79,7 +112,7 @@ log "Exporting account list (auth.users, sem senha)..."
 # Só o essencial pra recriar contas manualmente num desastre total (projeto
 # Supabase inteiro perdido) — nunca o hash de senha. Cada pessoa reseta a
 # própria senha por e-mail depois de restaurada.
-PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
+tentar env PGPASSWORD="$SUPABASE_DB_PASSWORD" psql \
   --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" --dbname="$DB_NAME" \
   -c "\copy (select id, email, created_at, last_sign_in_at, raw_user_meta_data->>'full_name' as full_name from auth.users order by created_at) to '$DEST/auth_users.csv' with csv header"
 
@@ -92,10 +125,14 @@ cd "$PROJECT_DIR"
 SUPABASE_URL_LOCAL="$(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.local | cut -d= -f2- | tr -d '"')"
 SUPABASE_ANON_LOCAL="$(grep -E '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' .env.local | cut -d= -f2- | tr -d '"')"
 SUPABASE_SERVICE_LOCAL="$(grep -E '^SUPABASE_SERVICE_ROLE_KEY=' .env.local | cut -d= -f2- | tr -d '"')"
-NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL_LOCAL" \
-NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_LOCAL" \
-SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_LOCAL" \
-  node scripts/backup/backup-storage.mjs "$DEST/storage"
+baixar_storage() {
+  rm -rf "$DEST/storage" # recomeça do zero a cada tentativa
+  NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL_LOCAL" \
+  NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_LOCAL" \
+  SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_LOCAL" \
+    node scripts/backup/backup-storage.mjs "$DEST/storage"
+}
+tentar baixar_storage
 
 log "Compressing..."
 tar -czf "$DEST.tar.gz" -C "$BACKUP_ROOT" "$TIMESTAMP"

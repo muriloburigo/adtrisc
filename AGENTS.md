@@ -136,7 +136,8 @@ adtrisc/
 │                                   #   for the full run order on a from-scratch restore
 ├── scripts/backup/                 # Local backup/restore tooling — see "Backup & Restore" below
 │   ├── backup.sh                   # Full backup: pg_dump + auth_users.csv + storage buckets
-│   ├── backup-storage.mjs          # Downloads every Storage bucket, called by backup.sh
+│   ├── backup-storage.mjs          # Downloads every Storage bucket (listed from the project), called by backup.sh
+│   ├── com.adtrisc.backup.plist    # LaunchAgent (versioned copy of the one installed in ~/Library/LaunchAgents)
 │   └── restore-storage.mjs         # Re-uploads a backup's storage/ dir back into Supabase
 ├── proxy.ts                        # Auth gate + public route exceptions (Next.js 16 "middleware")
 ├── next.config.ts                  # headers(): X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy
@@ -285,7 +286,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - Unique per `(coach_id, ano, mes)` — upserted
 
 **`audit_logs`** — all admin/coach write actions
-- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
+- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro/config), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
 
 **`categorias_financeiras`** — global, reusable expense categories (Treinadores, Camisetas, Viagens...)
 - `id`, `nome`, `ativo` (soft-disable — categories are never hard-deleted since budgets/notes reference them), `created_at`
@@ -426,6 +427,8 @@ git push origin main   # the only way to deploy to production
 
 `vercel.json` sets framework to `nextjs` with standard build/install commands. No custom headers, rewrites, or edge functions configured.
 
+**`site/`** (static institutional site + Portal da Transparência, a single `index.html`) is a **separate Vercel project, `adtrisc-site`** (`site/.vercel/project.json`), served at `adtrisc-site.vercel.app`. Unlike the app it is **not connected to Git** — it has only ever been published with the CLI from `site/`. As of 30/09/2026 the live page is byte-identical to `site/index.html` on `main`. Since CLI deploys are denied for agents in this repo, publishing a change to the site needs either the maintainer running `vercel --prod` inside `site/` **after committing**, or connecting `adtrisc-site` to the GitHub repo with Root Directory `site`.
+
 ---
 
 ## Backup & Restore
@@ -453,18 +456,27 @@ storage/
   avatars/           # athlete profile photos
   fotos/             # class photos (turma_fotos + diário "foto do dia")
   documentos/        # signed PDFs (relatório de turma, presença, diário)
+  notas-fiscais/     # invoice attachments of lançamentos_financeiros
+  financeiro-arquivos/ # project attachments (projeto_arquivos)
 ```
+`backup-storage.mjs` lists the buckets from the Supabase project itself (`storage.listBuckets()`), so a bucket created by a new feature is backed up automatically — until 30/09/2026 it used a hardcoded list and `notas-fiscais`/`financeiro-arquivos` were silently missing. It pages through folders (no 1,000-file cap) and exits non-zero if any file fails to download, so a partial storage backup is retried instead of saved.
 
 **Mapping rule (what makes restore mechanical, not something to figure out by hand):** each folder directly under `storage/` **is** a bucket name, and everything inside it is the exact object path inside that bucket — `storage/avatars/alunos/{uuid}.jpg` came from (and goes back to) the `avatars` bucket at object key `alunos/{uuid}.jpg`. Restoring never requires knowing or reconstructing paths by hand: `restore-storage.mjs` (below) walks `storage/`, treats each top-level folder as a bucket, and re-uploads every file at its relative path — including any future bucket, since it auto-detects folders instead of a hardcoded list.
 
 ### How it runs
 
-- **Automatic**: a macOS LaunchAgent (`~/Library/LaunchAgents/com.adtrisc.backup.plist`) runs `scripts/backup/backup.sh` every day at 3 AM. If the Mac is asleep at that time, launchd runs it as soon as the Mac wakes up (unlike cron, which would just skip it).
-- **Manual**: `bash scripts/backup/backup.sh` from the project root.
+- **Automatic**: a macOS LaunchAgent runs `scripts/backup/backup.sh` under `caffeinate -i` at **03:00, 12:30 and 20:30**. The first run of the day that succeeds creates the backup; later runs see today's `.tar.gz.gpg` and exit without doing anything. Why three times: from 23 to 30/09/2026 every 3 AM run failed silently — the Mac wakes in Power Nap with flaky network and `pg_dump` died with "server closed the connection unexpectedly".
+  - Versioned copy: `scripts/backup/com.adtrisc.backup.plist`. After editing it, reinstall with:
+    `cp scripts/backup/com.adtrisc.backup.plist ~/Library/LaunchAgents/ && launchctl bootout gui/$(id -u)/com.adtrisc.backup; launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.adtrisc.backup.plist`
+  - Every network step (pg_dump, auth export, storage) gets up to 3 attempts, 60 s apart.
+  - **On failure** the half-written folder is deleted (it holds plaintext CPF/RG) and a macOS notification "Backup ADTRISC falhou" is shown. Log: `~/Library/Logs/adtrisc-backup.log`.
+- **Manual**: `bash scripts/backup/backup.sh` from the project root (add `--force` to make an extra backup on a day that already has one).
 - **Requires** a secrets file at `~/.adtrisc-backup.env` (chmod 600, never committed):
   ```
   SUPABASE_DB_PASSWORD=<database password, from Supabase Dashboard → Project Settings → Database>
   BACKUP_ENCRYPTION_PASSPHRASE=<a long random passphrase, e.g. `openssl rand -base64 32`>
+  DB_HOST=<Supabase pooler host, e.g. aws-1-sa-east-1.pooler.supabase.com>
+  DB_USER=<Supabase pooler user, postgres.<project-ref>>
   ```
   `SUPABASE_DB_PASSWORD` is the Postgres role password — different from the anon/service-role API keys, and not retrievable after creation (only reset). If it stops working, reset it in the dashboard and update this file. `BACKUP_ENCRYPTION_PASSPHRASE` is what every archive is encrypted with — also save it in a password manager, not just this file: if this file and your password manager are both gone, every backup is unrecoverable ciphertext, forever.
 
@@ -491,7 +503,7 @@ Use this when you need to undo bad data (accidental bulk delete, a bug that corr
      -f 2026-09-11_1428/database.sql
    ```
    For a single table instead of everything, extract just that table's `CREATE TABLE`/`COPY` block from `database.sql` and run it, or restore into a fresh local Postgres and copy rows over with `\copy`.
-3. Re-upload storage files (only needed if files were actually lost — the DB restore above doesn't touch Storage). One command restores **all three buckets** — it auto-detects them from the folder names under `storage/` (see mapping rule above) and is safe to re-run (upsert):
+3. Re-upload storage files (only needed if files were actually lost — the DB restore above doesn't touch Storage). One command restores **every bucket in the backup** — it auto-detects them from the folder names under `storage/` (see mapping rule above) and is safe to re-run (upsert):
    ```bash
    node --env-file=.env.local scripts/backup/restore-storage.mjs 2026-09-11_1428/storage
    ```
@@ -503,7 +515,7 @@ This is the unlikely worst case. Steps, roughly in order:
 
 1. **Create a new Supabase project.** Note the new project ref/URL and grab the new anon key, service-role key, and DB password from Project Settings → API / Database.
 2. **Rebuild the schema**: run every file in `supabase/*.sql` against the new project's SQL editor, **in this exact order** (each file's header comment says "Run this in the Supabase SQL editor"; several later files call `coach_has_turma()` or alter tables created earlier, so order isn't cosmetic — running them out of order will error):
-   1. `schema_v2.sql` — core tables + `get_my_role()` (`schema.sql` is the old v1 schema — **do not run it**, `schema_v2.sql` superseded it)
+   1. `schema_v2.sql` — core tables + `get_my_role()` (`schema.sql` is the old v1 schema — **do not run it**, `schema_v2.sql` superseded it). Note: it also creates a `pagamentos` table that **does not exist in production** and isn't used by any code — harmless on a restore, but don't take it as a live feature.
    2. `turma_coaches.sql` — `turma_coaches` table
    3. `turma_access_scoping.sql` — defines `coach_has_turma()` (needs `turma_coaches`); every file below that uses `coach_has_turma()` must come after this one
    4. `avatars_bucket.sql`, `fotos_bucket.sql` — storage buckets (any order)
@@ -529,7 +541,7 @@ This is the unlikely worst case. Steps, roughly in order:
    24. `avaliacoes_extras_zonas.sql` — new `avaliacoes_fisicas` columns (Dabonneville, maturação, ciclismo 2 km, link) + `zonas_treino` table (needs `coach_has_turma()`, #3)
    25. `testes_campo_proesp.sql` — natação 50/100 m + `altura_banco` columns, `config_avaliacao` table, drops `zonas_treino` (needs #24)
 
-   This recreates all tables, RLS policies, functions, and the three storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
+   This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".
 4. **Re-upload storage files** — `node --env-file=.env.local scripts/backup/restore-storage.mjs <backup>/storage`, pointed at the new project's `.env.local`. Update `EXPECTED_PROJECT_REF` at the top of `restore-storage.mjs` first (it hard-fails otherwise, on purpose — see step 9).
 5. **Recreate user accounts.** `auth_users.csv` has emails/names but *not* passwords — there is no way around this, Supabase never exposes password hashes for security reasons. For each row: create the user in Supabase Auth (dashboard → Authentication → Add user, or `supabase.auth.admin.createUser()`) using the **same `id`** from the CSV if at all possible (many tables have `profile_id`/`enviado_por`/etc. foreign keys pointing at these UUIDs) and send them a password-reset email. If preserving the same `id` isn't possible, the FK references in the restored data will be dangling for that user — acceptable but worth knowing.
@@ -541,7 +553,7 @@ This is the unlikely worst case. Steps, roughly in order:
    - Supabase Auth settings: email templates, redirect URLs, site URL (Authentication → URL Configuration).
    - Any custom domain on Vercel, if one was ever added (currently just `adtrisc.vercel.app`).
 8. **Redeploy**: Vercel dashboard → Deployments → latest `main` deployment → Redeploy (or push a commit to `main`). Don't use `vercel --prod` (see Deployment).
-9. Update `NEXT_PUBLIC_SUPABASE_URL` in this file's Environment Variables section and anywhere else the old project ref (`gjsbxpdkfmqtfwkdcbxh`) is hardcoded — notably `scripts/backup/backup.sh` (`DB_HOST`/`DB_USER`) and the `EXPECTED_PROJECT_REF` constant in both `scripts/backup/backup-storage.mjs` and `scripts/backup/restore-storage.mjs`.
+9. Update `NEXT_PUBLIC_SUPABASE_URL` in this file's Environment Variables section and anywhere else the old project ref (`gjsbxpdkfmqtfwkdcbxh`) is hardcoded — notably `DB_HOST`/`DB_USER` in `~/.adtrisc-backup.env` and the `EXPECTED_PROJECT_REF` constant in both `scripts/backup/backup-storage.mjs` and `scripts/backup/restore-storage.mjs`.
 
 ### What a restore can never give back
 

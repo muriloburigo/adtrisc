@@ -1,5 +1,9 @@
-// Downloads all files from the Supabase Storage buckets used by ADTRISC
-// (avatars, fotos) into a local directory, preserving folder structure.
+// Downloads all files from every Supabase Storage bucket of ADTRISC into a
+// local directory, preserving folder structure (one folder per bucket).
+// Buckets are listed from the project itself, so a bucket created by a new
+// feature (ex.: notas-fiscais) is never silently left out of the backup.
+// Exits non-zero if any file fails, so backup.sh can retry instead of
+// producing a partial backup.
 //
 // Usage: node --env-file=.env.local scripts/backup/backup-storage.mjs <dest-dir>
 
@@ -30,13 +34,23 @@ if (!url.includes(EXPECTED_PROJECT_REF)) {
 }
 
 const supabase = createClient(url, serviceKey);
-const BUCKETS = ['avatars', 'fotos', 'documentos'];
+const PAGE = 1000;
+let falhas = 0;
+
+async function listAll(bucket, prefix) {
+  const all = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .list(prefix, { limit: PAGE, offset, sortBy: { column: 'name', order: 'asc' } });
+    if (error) throw new Error(`list ${bucket}/${prefix}: ${error.message}`);
+    all.push(...data);
+    if (data.length < PAGE) return all;
+  }
+}
 
 async function downloadDir(bucket, prefix, localDir) {
-  const { data: entries, error } = await supabase.storage
-    .from(bucket)
-    .list(prefix, { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
-  if (error) throw new Error(`list ${bucket}/${prefix}: ${error.message}`);
+  const entries = await listAll(bucket, prefix);
 
   fs.mkdirSync(localDir, { recursive: true });
 
@@ -50,6 +64,7 @@ async function downloadDir(bucket, prefix, localDir) {
     const { data, error: dlErr } = await supabase.storage.from(bucket).download(remotePath);
     if (dlErr) {
       console.error(`  FAILED ${bucket}/${remotePath}: ${dlErr.message}`);
+      falhas++;
       continue;
     }
     const buf = Buffer.from(await data.arrayBuffer());
@@ -57,8 +72,15 @@ async function downloadDir(bucket, prefix, localDir) {
   }
 }
 
-for (const bucket of BUCKETS) {
+const { data: buckets, error: bucketsErr } = await supabase.storage.listBuckets();
+if (bucketsErr) throw new Error(`listBuckets: ${bucketsErr.message}`);
+
+for (const { name: bucket } of buckets) {
   console.log(`[storage] backing up bucket "${bucket}"...`);
   await downloadDir(bucket, '', path.join(destDir, bucket));
 }
-console.log('[storage] done.');
+if (falhas > 0) {
+  console.error(`[storage] ${falhas} arquivo(s) falharam — backup de storage incompleto.`);
+  process.exit(1);
+}
+console.log(`[storage] done (${buckets.length} buckets).`);

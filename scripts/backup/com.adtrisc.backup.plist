@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent do backup diário (cópia versionada; a instalada fica em
+  ~/Library/LaunchAgents/com.adtrisc.backup.plist — ver AGENTS.md, "Backup").
+  - caffeinate -i: impede o Mac de voltar a dormir no meio do backup.
+  - 3 horários: se o das 3h falhar (Mac em Power Nap, rede instável), os de
+    12h30 e 20h30 tentam de novo; backup.sh não faz nada se já houver backup do dia.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.adtrisc.backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/caffeinate</string>
+    <string>-i</string>
+    <string>/bin/bash</string>
+    <string>/Users/muriloburigo/Documents/Projects/adtrisc/scripts/backup/backup.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key>
+      <integer>3</integer>
+      <key>Minute</key>
+      <integer>0</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>12</integer>
+      <key>Minute</key>
+      <integer>30</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>20</integer>
+      <key>Minute</key>
+      <integer>30</integer>
+    </dict>
+  </array>
+  <key>StandardOutPath</key>
+  <string>/Users/muriloburigo/Library/Logs/adtrisc-backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/muriloburigo/Library/Logs/adtrisc-backup.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
