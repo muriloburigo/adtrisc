@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import BackButton from '@/components/ui/BackButton'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
-import { formatDate } from '@/lib/utils'
+import { formatDate, secondsToMmss } from '@/lib/utils'
 import DeleteAvaliacaoIndividualButton from './DeleteAvaliacaoIndividualButton'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 
@@ -104,8 +104,26 @@ export default async function AvaliacaoDetalhePage({
           <Stat label="Teste 12 min" value={av.natacao_12min != null ? `${av.natacao_12min} m` : null} />
           <Stat label="Agilidade" value={av.agilidade != null ? `${av.agilidade} s` : null} />
           <Stat label="Corrida 20 m" value={av.corrida_20m != null ? `${av.corrida_20m} s` : null} />
+          <Stat label="Dabonneville 5 min" value={av.resistencia_5min_dabonneville != null ? `${av.resistencia_5min_dabonneville} m` : null} />
+          <Stat label="Ciclismo 2 km" value={av.ciclismo_2km_tempo != null ? secondsToMmss(av.ciclismo_2km_tempo) : null} />
+          <Stat label="Veloc. média ciclismo" value={av.ciclismo_2km_velocidade != null ? `${av.ciclismo_2km_velocidade.toFixed(1)} km/h` : null} />
         </dl>
+        {av.atividade_url && (
+          <a href={av.atividade_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-sm text-sky-500 hover:underline">
+            Ver atividade do teste ↗
+          </a>
+        )}
       </Card>
+
+      {(av.maturity_offset != null || av.maturity_classificacao) && (
+        <Card className="mb-4">
+          <h3 className="text-sm font-semibold text-navy-500 mb-4">Maturação</h3>
+          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <Stat label="Maturity offset" value={av.maturity_offset != null ? `${av.maturity_offset > 0 ? '+' : ''}${av.maturity_offset} anos` : null} />
+            <Stat label="Classificação" value={av.maturity_classificacao} />
+          </dl>
+        </Card>
+      )}
 
       {av.observacoes && (
         <Card className="mb-4">

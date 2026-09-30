@@ -146,6 +146,48 @@ export default function AvaliacaoForm({
         <input name="natacao_12min" type="number" min="0" placeholder="Distância em metros" className={inputClass} />
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Dabonneville 5 min (m)</label>
+          <input name="resistencia_5min_dabonneville" type="number" min="0" placeholder="Distância em metros" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Ciclismo 2 km (tempo)</label>
+          <input
+            name="ciclismo_2km_tempo"
+            type="text"
+            inputMode="decimal"
+            pattern="\d{1,3}:[0-5]\d(\.\d{1,2})?"
+            title="Formato MM:SS ou MM:SS.cc — ex.: 03:59.57"
+            placeholder="MM:SS.cc"
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Maturity offset (anos)</label>
+          <input name="maturity_offset" type="number" step="0.1" placeholder="Ex: -0.5 ou 1.2" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Classificação maturacional</label>
+          <input name="maturity_classificacao" list="maturity-classificacoes" placeholder="Ex: Janela do PHV" className={inputClass} />
+          <datalist id="maturity-classificacoes">
+            <option value="Pré PHV" />
+            <option value="Janela do PHV" />
+            <option value="Pós PHV inicial" />
+            <option value="Pós PHV intermediário" />
+            <option value="Pós PHV avançado" />
+          </datalist>
+        </div>
+      </div>
+
+      <div>
+        <label className={labelClass}>Link da atividade (Garmin, Polar, Strava)</label>
+        <input name="atividade_url" type="url" placeholder="https://…" className={inputClass} />
+      </div>
+
       <div>
         <label className={labelClass}>Observações</label>
         <textarea

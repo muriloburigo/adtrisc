@@ -99,7 +99,29 @@ export type AvaliacaoFisicaRow = {
   salto_horizontal: number | null
   corrida_20m: number | null
   natacao_12min: number | null
+  resistencia_5min_dabonneville: number | null
+  maturity_offset: number | null
+  maturity_classificacao: string | null
+  ciclismo_2km_tempo: number | null
+  ciclismo_2km_velocidade: number | null
+  atividade_url: string | null
   observacoes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ZonaTreinoRow = {
+  id: string
+  aluno_id: string
+  modalidade: 'corrida' | 'ciclismo'
+  zona: number
+  faixa_min: number | null   // corrida: pace em s/km · ciclismo: km/h
+  faixa_max: number | null
+  fc_min: number | null
+  fc_max: number | null
+  tempo_400m_min: number | null
+  tempo_400m_max: number | null
+  referencia_data: string | null
   created_at: string
   updated_at: string
 }

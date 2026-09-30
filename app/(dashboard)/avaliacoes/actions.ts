@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
 import { friendlyError } from '@/lib/errors'
+import { mmssToSeconds } from '@/lib/utils'
 
 // Campos medidos em cm no formulário, mas guardados em metros no banco
 // (mesma escala de "estatura", já usada assim antes desta correção).
@@ -22,6 +23,11 @@ function calcularDerivados(massaCorporal: number | null, estaturaM: number | nul
   return { altura_cm, altura_ao_quadrado, imc, rce }
 }
 
+// Velocidade média (km/h) do teste de 2 km de ciclismo a partir do tempo em segundos.
+function velocidadeCiclismo2km(tempoS: number | null) {
+  return tempoS ? Math.round((2 / (tempoS / 3600)) * 100) / 100 : null
+}
+
 export async function saveAvaliacao(formData: FormData): Promise<{ id?: string; error?: string }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
@@ -35,6 +41,8 @@ export async function saveAvaliacao(formData: FormData): Promise<{ id?: string; 
   const envergaduraCm   = parseFloat(formData.get('envergadura') as string) || null
   const estaturaSentCm  = parseFloat(formData.get('estatura_sentado') as string) || null
   const perimetro       = parseFloat(formData.get('perimetro_cintura') as string) || null
+  const ciclismoTempo   = mmssToSeconds((formData.get('ciclismo_2km_tempo') as string) ?? '')
+  const maturityOffset  = parseFloat(formData.get('maturity_offset') as string)
 
   const estatura = estaturaCm ? estaturaCm / 100 : null
   const derivados = calcularDerivados(massaCorporal, estatura, perimetro)
@@ -57,6 +65,12 @@ export async function saveAvaliacao(formData: FormData): Promise<{ id?: string; 
     salto_horizontal:       parseFloat(formData.get('salto_horizontal') as string) || null,
     corrida_20m:            parseFloat(formData.get('corrida_20m') as string) || null,
     natacao_12min:          parseInt(formData.get('natacao_12min') as string) || null,
+    resistencia_5min_dabonneville: parseInt(formData.get('resistencia_5min_dabonneville') as string) || null,
+    maturity_offset:        Number.isNaN(maturityOffset) ? null : maturityOffset,
+    maturity_classificacao: (formData.get('maturity_classificacao') as string)?.trim() || null,
+    ciclismo_2km_tempo:     ciclismoTempo,
+    ciclismo_2km_velocidade: velocidadeCiclismo2km(ciclismoTempo),
+    atividade_url:          (formData.get('atividade_url') as string)?.trim() || null,
     observacoes:            (formData.get('observacoes') as string)?.trim() || null,
   }
 
@@ -106,6 +120,7 @@ export async function saveAvaliacaoField(
     const estatura  = field === 'estatura'          ? numValue : existing.estatura
     const perimetro = field === 'perimetro_cintura' ? numValue : existing.perimetro_cintura
     Object.assign(update, calcularDerivados(massa, estatura, perimetro))
+    if (field === 'ciclismo_2km_tempo') update.ciclismo_2km_velocidade = velocidadeCiclismo2km(numValue)
     const { data: updated, error } = await db
       .from('avaliacoes_fisicas').update(update).eq('id', existing.id).select('id').single()
     if (error || !updated) return { error: friendlyError(error, 'Erro ao salvar.') }
@@ -120,6 +135,7 @@ export async function saveAvaliacaoField(
         field === 'estatura' ? numValue : null,
         field === 'perimetro_cintura' ? numValue : null,
       ),
+      ...(field === 'ciclismo_2km_tempo' ? { ciclismo_2km_velocidade: velocidadeCiclismo2km(numValue) } : {}),
     }
     const { error } = await db.from('avaliacoes_fisicas').insert(insert)
     if (error) return { error: friendlyError(error, 'Erro ao salvar.') }

@@ -224,8 +224,11 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - Unique constraint on `(turma_id, data)` — one photo per class per day
 
 **`avaliacoes_fisicas`** — fitness assessments (soft-deleted via `deleted_at`)
-- `id`, `aluno_id`, `avaliador_id` (FK → profiles, nullable), `data`, `massa_corporal`, `estatura`, `perimetro_cintura`, `envergadura`, `estatura_sentado`, `altura_cm`, `altura_ao_quadrado`, `imc` (auto-computed), `rce`, `sentar_alcancar`, `resistencia_6min`, `forca_abdominal`, `arremesso_medicineball`, `agilidade`, `salto_horizontal`, `corrida_20m`, `natacao_12min`, `observacoes`
+- `id`, `aluno_id`, `avaliador_id` (FK → profiles, nullable), `data`, `massa_corporal`, `estatura`, `perimetro_cintura`, `envergadura`, `estatura_sentado`, `altura_cm`, `altura_ao_quadrado`, `imc` (auto-computed), `rce`, `sentar_alcancar`, `resistencia_6min`, `forca_abdominal`, `arremesso_medicineball`, `agilidade`, `salto_horizontal`, `corrida_20m`, `natacao_12min`, `resistencia_5min_dabonneville` (m), `maturity_offset` (anos), `maturity_classificacao` (text, ex. "Janela do PHV"), `ciclismo_2km_tempo` (s, entered as `MM:SS.cc`), `ciclismo_2km_velocidade` (km/h, auto-computed from the time), `atividade_url` (Garmin/Polar link of the test), `observacoes`
 - All exact field names — the previous version of this doc (`impulsao_vertical`, `velocidade_20m`, `flexibilidade`) didn't match the real columns or `types/database.ts`'s `AvaliacaoFisicaRow`; verified against production with `information_schema.columns`.
+
+**`zonas_treino`** — current training zones per athlete (`avaliacoes_extras_zonas.sql`)
+- `aluno_id`, `modalidade` (`corrida`/`ciclismo`), `zona` (1–5), `faixa_min`/`faixa_max` (corrida: pace in s/km · ciclismo: km/h), `fc_min`/`fc_max` (bpm), `tempo_400m_min`/`tempo_400m_max` (s), `referencia_data` (date of the assessment the zones came from). Unique per `(aluno_id, modalidade, zona)`. Same RLS scope as `avaliacoes_fisicas`. Read-only in the UI for now (shown on `/alunos/[id]`); rows are loaded by import.
 
 **`historico_atleta`** — athlete lifecycle events (auto-written by alunos actions)
 - `id`, `aluno_id`, `tipo` (`matricula` | `mudanca_turma` | `desligamento` | `reativacao`), `data`, `turma_id`, `turma_nome`, `turma_anterior_id`, `turma_anterior_nome`
@@ -519,6 +522,7 @@ This is the unlikely worst case. Steps, roughly in order:
    21. `diario_resumos.sql`
    22. `financeiro.sql` — categorias/projetos/orçamentos/lançamentos tables + `notas-fiscais` bucket (only needs `get_my_role()` from #1, no `coach_has_turma()` dependency)
    23. `financeiro_projeto_extras.sql` — adds `objetivo`/`metas` to `projetos_financeiros` + `projeto_arquivos` table + `financeiro-arquivos` bucket (needs #22)
+   24. `avaliacoes_extras_zonas.sql` — new `avaliacoes_fisicas` columns (Dabonneville, maturação, ciclismo 2 km, link) + `zonas_treino` table (needs `coach_has_turma()`, #3)
 
    This recreates all tables, RLS policies, functions, and the three storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

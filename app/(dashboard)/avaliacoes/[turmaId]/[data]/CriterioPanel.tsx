@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { saveAvaliacaoField } from '../../actions'
+import { mmssToSeconds, secondsToMmss } from '@/lib/utils'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 
 type AlunoBasic = { id: string; nome: string }
@@ -10,6 +11,9 @@ type AlunoBasic = { id: string; nome: string }
 // (o server action já faz a conversão) — aqui só precisamos multiplicar
 // por 100 pra exibir o valor certo na célula.
 const CAMPOS_CM_PARA_M = new Set<keyof AvaliacaoFisicaRow>(['estatura', 'envergadura', 'estatura_sentado'])
+
+// Tempos digitados como MM:SS(.cc) e guardados em segundos.
+const CAMPOS_MMSS = new Set<keyof AvaliacaoFisicaRow>(['ciclismo_2km_tempo'])
 
 const CAMPOS: { key: keyof AvaliacaoFisicaRow; label: string }[] = [
   { key: 'massa_corporal',         label: 'Massa (kg)' },
@@ -25,6 +29,9 @@ const CAMPOS: { key: keyof AvaliacaoFisicaRow; label: string }[] = [
   { key: 'agilidade',              label: 'Agilidade (s)' },
   { key: 'corrida_20m',            label: 'Corrida 20m (s)' },
   { key: 'natacao_12min',          label: "Teste 12' (m)" },
+  { key: 'resistencia_5min_dabonneville', label: "Dabonneville 5' (m)" },
+  { key: 'ciclismo_2km_tempo',     label: 'Ciclismo 2km (MM:SS)' },
+  { key: 'maturity_offset',        label: 'Maturity offset' },
 ]
 
 function CellInput({
@@ -41,11 +48,19 @@ function CellInput({
   const [, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const emCm = CAMPOS_CM_PARA_M.has(field)
-  const displayValue = initialValue != null && emCm ? initialValue * 100 : initialValue
+  const emMmss = CAMPOS_MMSS.has(field)
+  const displayValue = initialValue == null
+    ? initialValue
+    : emMmss ? secondsToMmss(initialValue) : emCm ? initialValue * 100 : initialValue
 
   function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
-    const val = e.target.value
+    let val = e.target.value
     setError(null)
+    if (emMmss && val !== '') {
+      const segundos = mmssToSeconds(val)
+      if (segundos == null) { setError('Use o formato MM:SS ou MM:SS.cc'); return }
+      val = String(segundos)
+    }
     startTransition(async () => {
       const res = await saveAvaliacaoField(alunoId, data, field as string, val)
       if (res?.error) setError(res.error)
@@ -54,7 +69,8 @@ function CellInput({
 
   return (
     <input
-      type="number"
+      type={emMmss ? 'text' : 'number'}
+      inputMode="decimal"
       step="any"
       defaultValue={displayValue ?? ''}
       onBlur={handleBlur}
