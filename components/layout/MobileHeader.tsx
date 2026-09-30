@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, LogOut, LayoutDashboard, Users, UserCheck, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, BookOpen, Trophy, Newspaper, Wallet } from 'lucide-react'
+import { Menu, X, LogOut, KeyRound, LayoutDashboard, Users, UserCheck, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, BookOpen, Trophy, Newspaper, Wallet } from 'lucide-react'
 import { cn, formatRole } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Database, UserRole } from '@/types/database'
@@ -160,6 +160,15 @@ export default function MobileHeader({ user }: { user: Profile | null }) {
             <p className="text-sm font-medium text-white truncate">{user?.full_name ?? 'Usuário'}</p>
             <p className="text-xs text-sky-400">{user?.role ? formatRole(user.role) : ''}</p>
           </div>
+          <Link
+            href="/conta" onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full transition-colors ${
+              pathname === '/conta' ? 'bg-navy-600 text-white' : 'text-navy-100 hover:bg-navy-600 hover:text-white'
+            }`}
+          >
+            <KeyRound size={17} />
+            Minha conta
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-navy-100 hover:bg-red-500 hover:text-white w-full transition-colors"

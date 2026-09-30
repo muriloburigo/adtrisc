@@ -12,3 +12,8 @@ export function validatePassword(password: string): string | null {
   }
   return null
 }
+
+/** Nova senha escolhida pelo próprio usuário: requisitos acima + confirmação igual. */
+export function validarNovaSenha(nova: string, confirmacao: string): string | null {
+  return validatePassword(nova) ?? (nova !== confirmacao ? 'A confirmação não é igual à nova senha.' : null)
+}

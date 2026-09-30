@@ -164,6 +164,7 @@ Supabase Auth with cookie sessions via `@supabase/ssr`.
 - `/inscricao`
 - `/regras-sorteio`
 - `/ficha/*`
+- `/esqueci-senha`, `/auth/callback` (password recovery — see below)
 
 **Server-side auth helpers** in `lib/assert.ts`:
 
@@ -173,6 +174,12 @@ requireAdmin()  // throws if not admin
 ```
 
 These are called at the top of Server Actions to enforce authorization. The dashboard layout also does a redundant `redirect('/login')` check.
+
+**Passwords (self-service)**
+- `/conta` ("Minha conta", in the sidebar for every role): change your own password — the current password is checked first with a throwaway, cookie-less client, then `auth.updateUser`.
+- Recovery: login → "Esqueci minha senha" (`/esqueci-senha`) → `resetPasswordForEmail` with `redirectTo = <origin>/auth/callback?next=/redefinir-senha` → the route handler exchanges the code for a session (PKCE — the link must be opened in the same browser that asked for it) → `/redefinir-senha` sets the new password. The request always answers "se este e-mail estiver cadastrado…", so it can't be used to discover accounts.
+- New passwords follow `validarNovaSenha()` in `lib/password.ts` (same 5 requirements as `PasswordInput`). Both flows log `action: 'senha'` in `audit_logs`.
+- ⚠️ Recovery e-mail depends on **Supabase Auth settings, not code**: Site URL and Redirect URLs must include `https://adtrisc.vercel.app/auth/callback`, and without custom SMTP Supabase only delivers auth e-mails to members of the Supabase org (and ~2/hour). As of 30/09/2026 the project still had Site URL `http://localhost:3000`, an empty redirect allow list and no SMTP.
 
 **Roles** (stored in `profiles.role`):
 

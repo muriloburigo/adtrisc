@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, UserCheck,
-  LogOut, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, BookOpen, Trophy, Newspaper, Wallet,
+  LogOut, KeyRound, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, BookOpen, Trophy, Newspaper, Wallet,
 } from 'lucide-react'
 import { cn, formatRole } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -126,6 +126,15 @@ export default function Sidebar({ user }: { user: Profile | null }) {
           <p className="text-sm font-medium text-white truncate">{user?.full_name ?? 'Usuário'}</p>
           <p className="text-xs text-sky-400">{user?.role ? formatRole(user.role) : ''}</p>
         </div>
+        <Link
+          href="/conta"
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full transition-colors ${
+            pathname === '/conta' ? 'bg-navy-600 text-white' : 'text-navy-100 hover:bg-navy-600 hover:text-white'
+          }`}
+        >
+          <KeyRound size={17} />
+          Minha conta
+        </Link>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-navy-100 hover:bg-brand-red-500 hover:text-white w-full transition-colors"
