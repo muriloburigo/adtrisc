@@ -7,7 +7,7 @@ export type AuditAction =
 
 export type AuditResource =
   | 'turma' | 'atleta' | 'treinador' | 'candidato' | 'usuario' | 'presenca' | 'prova' | 'materia'
-  | 'documento' | 'ficha' | 'diario' | 'foto' | 'financeiro' | 'config'
+  | 'documento' | 'ficha' | 'diario' | 'foto' | 'financeiro' | 'config' | 'relatorio'
 
 export interface AuditParams {
   userId:        string

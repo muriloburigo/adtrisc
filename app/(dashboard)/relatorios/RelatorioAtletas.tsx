@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { ArrowDown, ArrowUp, Plus, X, Columns3, RotateCcw } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, X, Columns3, RotateCcw, Star, Save } from 'lucide-react'
+import ConfirmDeleteButton from '@/components/ui/ConfirmDeleteButton'
+import { salvarRelatorio, excluirRelatorio, type RelatorioSalvo } from './actions'
 import Card from '@/components/ui/Card'
 import { formatDate, secondsToMmss } from '@/lib/utils'
 import {
@@ -171,17 +173,118 @@ function EditorFiltro({
   )
 }
 
+// Relatórios salvos do usuário: abrir, salvar (novo ou por cima) e excluir.
+function MeusRelatorios({
+  iniciais, estado, onAbrir, ativo, setAtivo,
+}: {
+  iniciais: RelatorioSalvo[] | null
+  estado: Estado
+  onAbrir: (e: Estado) => void
+  ativo: string | null // id do relatório salvo aberto
+  setAtivo: (id: string | null) => void
+}) {
+  const [salvos, setSalvos] = useState<RelatorioSalvo[]>(iniciais ?? [])
+  const [nome, setNome] = useState<string | null>(null)   // null = campo de nome fechado
+  const [erro, setErro] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  if (iniciais === null) {
+    return <p className="text-xs text-gray-400">Salvar relatórios ainda não está disponível (falta criar a tabela no banco).</p>
+  }
+
+  const aberto = salvos.find((r) => r.id === ativo) ?? null
+  const alterado = aberto != null && JSON.stringify(aberto.estado) !== JSON.stringify(estado)
+  const substitui = nome != null && salvos.some((r) => r.nome.toLowerCase() === nome.trim().toLowerCase())
+
+  function salvar() {
+    if (nome == null) return
+    setErro(null)
+    startTransition(async () => {
+      const res = await salvarRelatorio(nome, estado)
+      if (res.error || !res.relatorio) { setErro(res.error ?? 'Erro ao salvar.'); return }
+      const r = res.relatorio
+      setSalvos((l) => [...l.filter((x) => x.id !== r.id), r].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')))
+      setAtivo(r.id)
+      setNome(null)
+    })
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-xs text-gray-400 mr-1"><Star size={12} /> Meus relatórios:</span>
+        {salvos.length === 0 && <span className="text-xs text-gray-400">nenhum salvo ainda</span>}
+        {salvos.map((r) => (
+          <span
+            key={r.id}
+            className={`inline-flex items-center gap-1 pl-3 pr-1.5 py-0.5 rounded-full text-xs font-medium border ${
+              r.id === ativo ? 'bg-navy-500 text-white border-navy-500' : 'bg-white text-navy-500 border-gray-200 hover:border-sky-400'
+            }`}
+          >
+            <button onClick={() => { setAtivo(r.id); setNome(null); onAbrir({ ...ESTADO_INICIAL, ...(r.estado as Partial<Estado>) }) }}>
+              {r.nome}{r.id === ativo && alterado ? ' •' : ''}
+            </button>
+            <span className={r.id === ativo ? '[&_button]:text-white/70' : ''}>
+              <ConfirmDeleteButton
+                size={12}
+                title="Excluir relatório"
+                confirmLabel="Excluir?"
+                action={() => excluirRelatorio(r.id)}
+                onSuccess={() => { setSalvos((l) => l.filter((x) => x.id !== r.id)); if (ativo === r.id) setAtivo(null) }}
+              />
+            </span>
+          </span>
+        ))}
+        {nome == null && (
+          <button
+            onClick={() => { setErro(null); setNome(aberto?.nome ?? '') }}
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium text-sky-500 hover:bg-sky-50"
+          >
+            <Save size={12} /> {aberto && alterado ? `Salvar alterações em “${aberto.nome}”` : 'Salvar relatório'}
+          </button>
+        )}
+      </div>
+      {nome != null && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={nome}
+            autoFocus
+            maxLength={80}
+            placeholder="Nome do relatório (ex.: Alergias Turma 3)"
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') salvar(); if (e.key === 'Escape') setNome(null) }}
+            className={`${inputCls} w-72`}
+          />
+          <button
+            onClick={salvar}
+            disabled={pending || !nome.trim()}
+            className="px-3 py-1 rounded-lg text-xs font-semibold bg-sky-400 text-white hover:bg-sky-500 disabled:opacity-50"
+          >
+            {pending ? 'Salvando…' : substitui ? 'Substituir' : 'Salvar'}
+          </button>
+          <button onClick={() => setNome(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancelar</button>
+          {substitui && <span className="text-xs text-amber-600">Já existe um relatório com esse nome; ele será substituído.</span>}
+          {erro && <span className="text-xs text-red-500">{erro}</span>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function RelatorioAtletas({
   linhasRecentes,
   linhasAvaliacoes,
+  salvosIniciais,
   campos,
 }: {
   linhasRecentes: Linha[]
   linhasAvaliacoes: Linha[]
+  salvosIniciais: RelatorioSalvo[] | null
   campos: Campo[]
 }) {
   const [estado, setEstado] = useState<Estado>(ESTADO_INICIAL)
   const [mostrarColunas, setMostrarColunas] = useState(false)
+  const [salvoAberto, setSalvoAberto] = useState<string | null>(null)
 
   // Estado na URL: dá para salvar o relatório nos favoritos ou mandar o link.
   useEffect(() => {
@@ -268,20 +371,22 @@ export default function RelatorioAtletas({
 
   return (
     <div className="space-y-4">
+      <MeusRelatorios iniciais={salvosIniciais} estado={estado} onAbrir={setEstado} ativo={salvoAberto} setAtivo={setSalvoAberto} />
+
       {/* Atalhos */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-gray-400 mr-1">Prontos:</span>
         {PRONTOS.map((p) => (
           <button
             key={p.nome}
-            onClick={() => setEstado({ ...ESTADO_INICIAL, ...p.estado })}
+            onClick={() => { setSalvoAberto(null); setEstado({ ...ESTADO_INICIAL, ...p.estado }) }}
             className="px-3 py-1 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-600 hover:border-sky-400 hover:text-sky-500"
           >
             {p.nome}
           </button>
         ))}
         <button
-          onClick={() => setEstado(ESTADO_INICIAL)}
+          onClick={() => { setSalvoAberto(null); setEstado(ESTADO_INICIAL) }}
           className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs text-gray-400 hover:text-navy-500"
         >
           <RotateCcw size={12} /> Limpar

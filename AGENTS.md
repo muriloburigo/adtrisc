@@ -292,6 +292,9 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `coach_id` (FK → profiles), `ano`, `mes`, `cidade`, `processo`, `resumo`, `updated_at`
 - Unique per `(coach_id, ano, mes)` — upserted
 
+**`relatorios_salvos`** — saved report setups on `/relatorios` (`relatorios_salvos.sql`)
+- `id`, `user_id` (FK → profiles, default `auth.uid()`), `nome` (1–80 chars, unique per user), `estado` (jsonb — the same JSON as the page's `?r=`), `created_at`, `updated_at`. RLS: each admin/coach sees and writes only their own rows.
+
 **`audit_logs`** — all admin/coach write actions
 - `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro/config), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
 
@@ -367,6 +370,7 @@ Admin and coach. One screen that answers "which athletes match these criteria". 
 - Scope: athletes come through the RLS client, so a coach sees only their turmas. Responsáveis/fichas use the service role, restricted to those athletes. CPF/RG fields (`admin: true`) are stripped on the server for non-admins.
 - **Evolução** (only in "most recent" mode) compares the two most recent results **of each test**, which may come from different dates. `tend_<test>` is Melhorou/Piorou/Manteve. `melhora_<test>` is positive whenever the athlete got better, so time tests are sign-flipped (`MENOR_MELHOR`). Body measures get only `var_<measure>`, a raw difference, since "better" doesn't apply to them. `intervalo_avaliacoes` is the number of days between the two latest evaluations.
 - State (filters, columns, sort) lives in `?r=` in the URL, so a report can be bookmarked or shared. The "Prontos" chips are presets of that same state.
+- **Meus relatórios**: each user saves that same state under a name (`relatorios_salvos`, personal via RLS). They can reopen it, overwrite it (same name) and delete it. Actions live in `relatorios/actions.ts` and are audited as resource `relatorio`. If the table doesn't exist yet, the page works normally without this section.
 
 ### Competitions & Results (`/provas`)
 Staff registers external competitions (nome, local, data, observações) with one or more age-based categories, each defining an ordered list of leg distances (`etapas`: natação/ciclismo/corrida + distância em metros). Results are logged per athlete against a category: total time (stored in seconds, entered/displayed as `MM:SS` via `mmssToSeconds()`/`secondsToMmss()`), plus overall and category placement. One result per athlete per prova (upserted). Deleting a categoria cascades its results — confirmed with a warning showing the affected count.
@@ -564,6 +568,7 @@ This is the unlikely worst case. Steps, roughly in order:
    23. `financeiro_projeto_extras.sql` — adds `objetivo`/`metas` to `projetos_financeiros` + `projeto_arquivos` table + `financeiro-arquivos` bucket (needs #22)
    24. `avaliacoes_extras_zonas.sql` — new `avaliacoes_fisicas` columns (Dabonneville, maturação, ciclismo 2 km, link) + `zonas_treino` table (needs `coach_has_turma()`, #3)
    25. `testes_campo_proesp.sql` — natação 50/100 m + `altura_banco` columns, `config_avaliacao` table, drops `zonas_treino` (needs #24)
+   26. `relatorios_salvos.sql` — saved reports of `/relatorios` (only needs `get_my_role()` from #1)
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

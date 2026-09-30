@@ -6,6 +6,7 @@ import { getConfigAvaliacao } from '@/lib/config-avaliacao'
 import { montarLinhas, camposVisiveis, type AlunoFonte, type RespFonte, type FichaFonte } from '@/lib/relatorio'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 import RelatorioAtletas from './RelatorioAtletas'
+import type { RelatorioSalvo } from './actions'
 
 // Relatório de atletas com filtros combinados (cadastro, responsáveis, ficha e
 // avaliações). Sem exportação: os resultados aparecem na tela conforme os
@@ -34,11 +35,15 @@ export default async function RelatoriosPage() {
   // atletas que este usuário já pode ver (lista acima).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminDb = createAdminClient() as any
-  const [{ data: respsRaw }, { data: fichasRaw }, { data: avsRaw }] = await Promise.all([
+  const [{ data: respsRaw }, { data: fichasRaw }, { data: avsRaw }, salvosRes] = await Promise.all([
     adminDb.from('aluno_responsavel').select('aluno_id, responsaveis ( nome, telefone, email, cpf, rg, parentesco )').in('aluno_id', ids),
     adminDb.from('fichas_inscricao').select('*').in('aluno_id', ids).order('created_at', { ascending: false }),
     supabase.from('avaliacoes_fisicas').select('*').in('aluno_id', ids).is('deleted_at', null).order('data', { ascending: false }),
+    // Pessoais (RLS). Erro = tabela ainda não criada (supabase/relatorios_salvos.sql):
+    // a página funciona igual, só sem a parte de salvar.
+    supabase.from('relatorios_salvos').select('id, nome, estado, updated_at').eq('user_id', user.id).order('nome'),
   ])
+  const salvos: RelatorioSalvo[] | null = salvosRes.error ? null : (salvosRes.data ?? [])
 
   const responsaveis = new Map<string, Record<string, RespFonte>>()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,6 +75,7 @@ export default async function RelatoriosPage() {
       <RelatorioAtletas
         linhasRecentes={linhas.atleta}
         linhasAvaliacoes={linhas.avaliacao}
+        salvosIniciais={salvos}
         campos={camposVisiveis('atleta', admin).concat(camposVisiveis('avaliacao', admin).filter((c) => c.visao === 'avaliacao'))}
       />
     </div>
