@@ -5,6 +5,7 @@ import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { aplicarFichaNoCadastro, houveMudanca } from '@/lib/fichaCadastro'
 
 // As operações abaixo usam o client de service role (bypassa RLS) porque
 // fichas_inscricao guarda dados de responsáveis que não têm policy própria.
@@ -186,6 +187,39 @@ export async function criarFichasTurma(turmaId: string): Promise<{
 
   revalidatePath(`/turmas/${turmaId}`)
   return { results }
+}
+
+// Reaplica uma ficha preenchida ao cadastro (fichas enviadas antes de a ficha
+// passar a atualizar o cadastro sozinha, ou se aquela atualização falhou).
+export async function aplicarFichaCadastro(fichaId: string): Promise<{ error?: string; mudou?: boolean }> {
+  const actor = await requireStaff()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createAdminClient() as any
+
+  const { data: ficha } = await db.from('fichas_inscricao').select('aluno_id').eq('id', fichaId).single()
+  if (!ficha) return { error: 'Ficha não encontrada.' }
+  // Autoriza pelo aluno_id gravado na ficha (ver invalidarFicha).
+  try {
+    await assertAlunoAccess(ficha.aluno_id)
+  } catch {
+    return { error: 'Acesso negado.' }
+  }
+
+  const { error, resultado } = await aplicarFichaNoCadastro(db, fichaId)
+  if (error || !resultado) return { error: error ?? 'Erro ao atualizar o cadastro.' }
+  if (!houveMudanca(resultado)) return { mudou: false }
+
+  // Sem CPF/RG no log (a lib já não os inclui no antes/depois do atleta).
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'editar', resource: 'atleta',
+    resourceId: resultado.alunoId, resourceLabel: `Cadastro de ${resultado.alunoNome} atualizado pela ficha`,
+    before: resultado.aluno.antes, after: resultado.aluno.depois,
+    metadata: { ficha_id: fichaId, responsaveis: resultado.responsaveis },
+  })
+
+  revalidatePath(`/alunos/${resultado.alunoId}`)
+  return { mudou: true }
 }
 
 export async function invalidarFicha(fichaId: string, alunoId: string): Promise<{ error?: string }> {

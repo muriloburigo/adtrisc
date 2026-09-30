@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import AlunoTimeline from './AlunoTimeline'
 import FichaSection from './FichaSection'
+import FichaDadosCard, { CAMPOS_FICHA_DADOS, type FichaDados } from './FichaDadosCard'
 import AvaliacoesSection from './AvaliacoesSection'
 import TestesCampoSection from './TestesCampoSection'
 import { Pencil, User, MapPin, Phone, Users2 } from 'lucide-react'
@@ -25,7 +26,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminDb = createAdminClient() as any
 
-  const [{ data: alunoRaw }, { data: respsRaw }, { data: fichasRaw }] = await Promise.all([
+  const [{ data: alunoRaw }, { data: respsRaw }, { data: fichasRaw }, { data: fichaDadosRaw }] = await Promise.all([
     supabase.from('alunos').select('*, turmas:turma_id ( id, nome )').eq('id', id).single(),
     adminDb
       .from('responsaveis')
@@ -36,6 +37,14 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
       .select('id, token, status, gerado_em, preenchido_em, expires_at')
       .eq('aluno_id', id)
       .order('created_at', { ascending: false }),
+    adminDb
+      .from('fichas_inscricao')
+      .select(CAMPOS_FICHA_DADOS)
+      .eq('aluno_id', id)
+      .eq('status', 'preenchida')
+      .order('preenchido_em', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   if (!alunoRaw) notFound()
@@ -138,6 +147,8 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
               </p>
             </Card>
           )}
+
+          {fichaDadosRaw && <FichaDadosCard ficha={fichaDadosRaw as FichaDados} />}
 
           <Card>
             <AvaliacoesSection alunoId={id} />

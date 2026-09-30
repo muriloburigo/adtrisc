@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { FileText, Link as LinkIcon, Check, Plus, X, Mail, MessageCircle, Download } from 'lucide-react'
-import { criarFicha, invalidarFicha, excluirFicha } from '@/app/(dashboard)/fichas/actions'
+import { FileText, Link as LinkIcon, Check, Plus, X, Mail, MessageCircle, Download, RefreshCw } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { criarFicha, invalidarFicha, excluirFicha, aplicarFichaCadastro } from '@/app/(dashboard)/fichas/actions'
 import ConfirmDeleteButton from '@/components/ui/ConfirmDeleteButton'
 
 type ResponsavelContact = { nome: string; telefone: string | null; email: string | null }
@@ -67,6 +68,8 @@ export default function FichaSection({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+  const [aviso, setAviso] = useState<string | null>(null)
 
   const firstPhone = responsaveis.find(r => r.telefone)?.telefone ?? null
   const firstEmail = responsaveis.find(r => r.email)?.email ?? null
@@ -110,6 +113,17 @@ export default function FichaSection({
     })
   }
 
+  function handleAplicar(fichaId: string) {
+    setError(null)
+    setAviso(null)
+    startTransition(async () => {
+      const result = await aplicarFichaCadastro(fichaId)
+      if (result.error) { setError(result.error); return }
+      setAviso(result.mudou ? 'Cadastro atualizado com os dados da ficha.' : 'O cadastro já estava igual à ficha.')
+      router.refresh()
+    })
+  }
+
   function handleInvalidar(fichaId: string) {
     startTransition(async () => {
       const result = await invalidarFicha(fichaId, alunoId)
@@ -149,6 +163,9 @@ export default function FichaSection({
       {error && (
         <p className="text-xs text-red-500 mb-3">{error}</p>
       )}
+      {aviso && (
+        <p className="text-xs text-green-600 mb-3">{aviso}</p>
+      )}
 
       {/* Fichas existentes */}
       {fichas.length > 0 ? (
@@ -173,6 +190,16 @@ export default function FichaSection({
                   )}
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
+                {f.status === 'preenchida' && (
+                  <button
+                    onClick={() => handleAplicar(f.id)}
+                    disabled={isPending}
+                    title="Atualizar o cadastro com os dados desta ficha"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-sky-500 hover:bg-sky-50 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} />
+                  </button>
+                )}
                 {f.status === 'preenchida' && (
                   <a
                     href={`/fichas/${f.id}/imprimir`}

@@ -1,6 +1,8 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logAudit } from '@/lib/audit'
+import { aplicarFichaNoCadastro, houveMudanca } from '@/lib/fichaCadastro'
 
 export async function submitFicha(
   formData: FormData
@@ -95,5 +97,25 @@ export async function submitFicha(
     .eq('id', ficha.id)
 
   if (error) return { error: `Erro ao salvar: ${error.message}` }
+
+  // Leva o que os pais enviaram para o cadastro do atleta e dos responsáveis.
+  // Uma falha aqui não pode perder a ficha dos pais (já salva acima): fica no
+  // log e a equipe reaplica pelo botão na página do atleta.
+  try {
+    const { error: erroCadastro, resultado } = await aplicarFichaNoCadastro(db, ficha.id)
+    if (erroCadastro) console.error('[ficha → cadastro]', ficha.id, erroCadastro)
+    else if (resultado && houveMudanca(resultado)) {
+      await logAudit({
+        userId: '', userName: `Ficha preenchida por ${responsavelAssina}`,
+        action: 'editar', resource: 'atleta',
+        resourceId: resultado.alunoId, resourceLabel: `Cadastro de ${resultado.alunoNome} atualizado pela ficha`,
+        before: resultado.aluno.antes, after: resultado.aluno.depois,
+        metadata: { ficha_id: ficha.id, responsaveis: resultado.responsaveis },
+      })
+    }
+  } catch (e) {
+    console.error('[ficha → cadastro]', ficha.id, e)
+  }
+
   return { success: true }
 }
