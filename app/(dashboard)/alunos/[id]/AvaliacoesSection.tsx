@@ -3,34 +3,29 @@ import { createClient } from '@/lib/supabase/server'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import { Plus, ClipboardList, TrendingUp } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
-import type { AvaliacaoFisicaRow } from '@/types/database'
-
-function imcLabel(imc: number): string {
-  if (imc < 18.5) return 'Abaixo do peso'
-  if (imc < 25)   return 'Normal'
-  if (imc < 30)   return 'Sobrepeso'
-  return 'Obesidade'
-}
-function imcColor(imc: number): string {
-  if (imc < 18.5) return 'text-blue-500 bg-blue-50'
-  if (imc < 25)   return 'text-emerald-600 bg-emerald-50'
-  if (imc < 30)   return 'text-amber-500 bg-amber-50'
-  return 'text-red-500 bg-red-50'
-}
+import { formatDate, idadeNaData, secondsToMmss } from '@/lib/utils'
+import { classificarProesp } from '@/lib/proesp'
+import type { AvaliacaoFisicaRow, SexoEnum } from '@/types/database'
 
 export default async function AvaliacoesSection({ alunoId }: { alunoId: string }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
-  const { data: avaliacoesRaw } = await supabase
-    .from('avaliacoes_fisicas')
-    .select('*')
-    .eq('aluno_id', alunoId)
-    .is('deleted_at', null)
-    .order('data', { ascending: false })
+  const [{ data: avaliacoesRaw }, { data: aluno }] = await Promise.all([
+    supabase
+      .from('avaliacoes_fisicas')
+      .select('*')
+      .eq('aluno_id', alunoId)
+      .is('deleted_at', null)
+      .order('data', { ascending: false }),
+    supabase.from('alunos').select('sexo, data_nascimento').eq('id', alunoId).single(),
+  ])
 
   const avaliacoes = (avaliacoesRaw ?? []) as AvaliacaoFisicaRow[]
+  const { sexo, data_nascimento } = (aluno ?? {}) as { sexo: SexoEnum | null; data_nascimento: string | null }
+  // Zona de saúde do IMC pelo PROESP-Br (pontos de corte por sexo e idade)
+  const zonaImc = (av: AvaliacaoFisicaRow) =>
+    classificarProesp(av, sexo, data_nascimento ? idadeNaData(data_nascimento, av.data) : null).imc?.saude
 
   return (
     <div>
@@ -72,10 +67,14 @@ export default async function AvaliacoesSection({ alunoId }: { alunoId: string }
                   {av.imc != null && (
                     <div className="text-center">
                       <p className="text-[11px] text-gray-400">IMC</p>
-                      <p className={`text-xs font-bold px-2 py-0.5 rounded ${imcColor(av.imc)}`}>
+                      <p className={`text-xs font-bold px-2 py-0.5 rounded ${
+                        zonaImc(av) === 'risco' ? 'text-red-500 bg-red-50' : zonaImc(av) === 'saudavel' ? 'text-emerald-600 bg-emerald-50' : 'text-navy-500'
+                      }`}>
                         {av.imc.toFixed(1)}
                       </p>
-                      <p className="text-[10px] text-gray-400">{imcLabel(av.imc)}</p>
+                      {zonaImc(av) && (
+                        <p className="text-[10px] text-gray-400">{zonaImc(av) === 'risco' ? 'Zona de risco' : 'Zona saudável'}</p>
+                      )}
                     </div>
                   )}
                   {av.massa_corporal != null && (
@@ -89,6 +88,15 @@ export default async function AvaliacoesSection({ alunoId }: { alunoId: string }
                   )}
                   {av.forca_abdominal != null && (
                     <Stat label="Abd." value={`${av.forca_abdominal} rep`} />
+                  )}
+                  {av.resistencia_5min_dabonneville != null && (
+                    <Stat label="Dabonn. 5'" value={`${av.resistencia_5min_dabonneville} m`} />
+                  )}
+                  {av.ciclismo_2km_tempo != null && (
+                    <Stat label="Bike 2 km" value={secondsToMmss(av.ciclismo_2km_tempo)} />
+                  )}
+                  {av.natacao_100m != null && (
+                    <Stat label="Nado 100 m" value={secondsToMmss(av.natacao_100m)} />
                   )}
                   {idx > 0 && avaliacoes[idx - 1].imc != null && av.imc != null && (
                     <Evolution prev={avaliacoes[idx - 1].imc!} curr={av.imc} label="IMC" />

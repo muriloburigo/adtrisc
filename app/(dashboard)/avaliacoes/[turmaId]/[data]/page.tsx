@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
-import { ChevronLeft, Calendar } from 'lucide-react'
+import { ChevronLeft, Calendar, Gauge } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import CriterioPanel from './CriterioPanel'
 import type { AlunoRow, TurmaRow, AvaliacaoFisicaRow } from '@/types/database'
@@ -62,6 +62,14 @@ export default async function AvaliacaoCampoPage({
               <span className="text-gray-300">·</span>
               <span>{alunos.length} atleta{alunos.length !== 1 ? 's' : ''}</span>
             </span>
+          }
+          action={
+            <Link
+              href={`/avaliacoes/${turmaId}/zonas`}
+              className="inline-flex items-center gap-1.5 text-sm text-sky-500 hover:underline"
+            >
+              <Gauge size={14} /> Zonas da turma
+            </Link>
           }
         />
       </div>

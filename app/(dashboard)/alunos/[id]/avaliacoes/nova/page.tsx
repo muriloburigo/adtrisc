@@ -4,6 +4,7 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import BackButton from '@/components/ui/BackButton'
 import AvaliacaoForm from './AvaliacaoForm'
+import { getConfigAvaliacao } from '@/lib/config-avaliacao'
 import type { AlunoRow } from '@/types/database'
 
 export default async function NovaAvaliacaoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -11,8 +12,10 @@ export default async function NovaAvaliacaoPage({ params }: { params: Promise<{ 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
-  const { data: alunoRaw } = await supabase
-    .from('alunos').select('id, nome').eq('id', id).single()
+  const [{ data: alunoRaw }, config] = await Promise.all([
+    supabase.from('alunos').select('id, nome').eq('id', id).single(),
+    getConfigAvaliacao(supabase),
+  ])
 
   if (!alunoRaw) notFound()
   const aluno = alunoRaw as Pick<AlunoRow, 'id' | 'nome'>
@@ -27,7 +30,7 @@ export default async function NovaAvaliacaoPage({ params }: { params: Promise<{ 
       />
 
       <Card>
-        <AvaliacaoForm alunoId={id} alunoNome={aluno.nome} />
+        <AvaliacaoForm alunoId={id} alunoNome={aluno.nome} alturaBancoPadrao={config.altura_banco_padrao} />
       </Card>
     </div>
   )

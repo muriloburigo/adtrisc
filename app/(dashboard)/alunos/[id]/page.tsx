@@ -11,7 +11,7 @@ import Avatar from '@/components/ui/Avatar'
 import AlunoTimeline from './AlunoTimeline'
 import FichaSection from './FichaSection'
 import AvaliacoesSection from './AvaliacoesSection'
-import ZonasTreinoSection from './ZonasTreinoSection'
+import TestesCampoSection from './TestesCampoSection'
 import { Pencil, User, MapPin, Phone, Users2 } from 'lucide-react'
 import { formatDate, calcularIdade, formatTelefone } from '@/lib/utils'
 import type { AlunoRow, ResponsavelRow } from '@/types/database'
@@ -143,7 +143,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
             <AvaliacoesSection alunoId={id} />
           </Card>
 
-          <ZonasTreinoSection alunoId={id} />
+          <TestesCampoSection alunoId={id} />
         </div>
 
         {/* Coluna direita: Responsáveis + Histórico */}

@@ -105,24 +105,19 @@ export type AvaliacaoFisicaRow = {
   ciclismo_2km_tempo: number | null
   ciclismo_2km_velocidade: number | null
   atividade_url: string | null
+  natacao_50m: number | null      // segundos
+  natacao_100m: number | null     // segundos
+  altura_banco: number | null     // cm — tronco = estatura_sentado - altura_banco
   observacoes: string | null
   created_at: string
   updated_at: string
 }
 
-export type ZonaTreinoRow = {
-  id: string
-  aluno_id: string
-  modalidade: 'corrida' | 'ciclismo'
-  zona: number
-  faixa_min: number | null   // corrida: pace em s/km · ciclismo: km/h
-  faixa_max: number | null
-  fc_min: number | null
-  fc_max: number | null
-  tempo_400m_min: number | null
-  tempo_400m_max: number | null
-  referencia_data: string | null
-  created_at: string
+export type ConfigAvaliacaoRow = {
+  id: number
+  zona_limites: number[]              // % da velocidade do teste, topo de Z1..Z5
+  altura_banco_padrao: number         // cm
+  natacao_100m_corte_s: number | null // tempo máximo p/ subir para a equipe
   updated_at: string
 }
 

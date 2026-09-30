@@ -7,9 +7,11 @@ import { saveAvaliacao } from '@/app/(dashboard)/avaliacoes/actions'
 export default function AvaliacaoForm({
   alunoId,
   alunoNome,
+  alturaBancoPadrao,
 }: {
   alunoId: string
   alunoNome: string
+  alturaBancoPadrao: number
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -93,8 +95,18 @@ export default function AvaliacaoForm({
         </div>
         <div>
           <label className={labelClass}>Estatura sentado (cm)</label>
-          <input name="estatura_sentado" type="number" step="0.1" min="0" placeholder="Em centímetros" className={inputClass} />
+          <input name="estatura_sentado" type="number" step="0.1" min="0" placeholder="Medida do chão" className={inputClass} />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={labelClass}>Altura do banco (cm)</label>
+          <input name="altura_banco" type="number" step="0.1" min="0" defaultValue={alturaBancoPadrao} className={inputClass} />
+        </div>
+        <p className="text-xs text-gray-400 self-end pb-2">
+          Descontada da estatura sentado para calcular a maturação. Use 0 se medir o tronco direto.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -141,9 +153,35 @@ export default function AvaliacaoForm({
         </div>
       </div>
 
-      <div>
-        <label className={labelClass}>Teste 12 min (m)</label>
-        <input name="natacao_12min" type="number" min="0" placeholder="Distância em metros" className={inputClass} />
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className={labelClass}>Natação 12 min (m)</label>
+          <input name="natacao_12min" type="number" min="0" placeholder="Metros" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Natação 50 m</label>
+          <input
+            name="natacao_50m"
+            type="text"
+            inputMode="decimal"
+            pattern="\d{1,3}:[0-5]\d(\.\d{1,2})?"
+            title="Formato MM:SS ou MM:SS.cc"
+            placeholder="MM:SS.cc"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Natação 100 m</label>
+          <input
+            name="natacao_100m"
+            type="text"
+            inputMode="decimal"
+            pattern="\d{1,3}:[0-5]\d(\.\d{1,2})?"
+            title="Formato MM:SS ou MM:SS.cc"
+            placeholder="MM:SS.cc"
+            className={inputClass}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -162,24 +200,6 @@ export default function AvaliacaoForm({
             placeholder="MM:SS.cc"
             className={inputClass}
           />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={labelClass}>Maturity offset (anos)</label>
-          <input name="maturity_offset" type="number" step="0.1" placeholder="Ex: -0.5 ou 1.2" className={inputClass} />
-        </div>
-        <div>
-          <label className={labelClass}>Classificação maturacional</label>
-          <input name="maturity_classificacao" list="maturity-classificacoes" placeholder="Ex: Janela do PHV" className={inputClass} />
-          <datalist id="maturity-classificacoes">
-            <option value="Pré PHV" />
-            <option value="Janela do PHV" />
-            <option value="Pós PHV inicial" />
-            <option value="Pós PHV intermediário" />
-            <option value="Pós PHV avançado" />
-          </datalist>
         </div>
       </div>
 

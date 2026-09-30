@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAudit } from '@/lib/audit'
+import { mmssToSeconds } from '@/lib/utils'
 import type { UserRole } from '@/types/database'
 
 async function assertAdmin() {
@@ -82,4 +83,43 @@ export async function deleteUser(userId: string): Promise<{ error?: string }> {
 
   revalidatePath('/configuracoes')
   return {}
+}
+
+// Parâmetros das avaliações: limites das zonas (% da velocidade do teste),
+// altura padrão do banco da estatura sentado e corte do 100 m para a equipe.
+export async function updateConfigAvaliacao(formData: FormData): Promise<{ error?: string } | void> {
+  const actor = await assertAdmin()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+
+  const limites = [1, 2, 3, 4, 5].map((z) => Number(formData.get(`z${z}`)))
+  if (limites.some((v) => !Number.isFinite(v) || v <= 0)) return { error: 'Preencha os 5 limites das zonas.' }
+  if (limites.some((v, i) => i > 0 && v <= limites[i - 1])) return { error: 'Cada zona precisa terminar acima da anterior.' }
+
+  const banco = Number(formData.get('altura_banco_padrao'))
+  if (!Number.isFinite(banco) || banco < 0) return { error: 'Altura do banco inválida.' }
+
+  const corteTxt = ((formData.get('natacao_100m_corte') as string) ?? '').trim()
+  let corte: number | null = null
+  if (corteTxt) {
+    corte = mmssToSeconds(corteTxt)
+    if (corte == null) return { error: 'Corte do 100 m no formato MM:SS ou MM:SS.cc.' }
+  }
+
+  const { data: before } = await supabase.from('config_avaliacao').select('*').eq('id', 1).maybeSingle()
+  const after = { zona_limites: limites, altura_banco_padrao: banco, natacao_100m_corte_s: corte, updated_at: new Date().toISOString() }
+  const { data: saved, error } = await supabase
+    .from('config_avaliacao').update(after).eq('id', 1).select('id').single()
+  if (error || !saved) return { error: 'Erro ao salvar as configurações.' }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'editar', resource: 'config',
+    resourceId: 'config_avaliacao', resourceLabel: 'Configurações das avaliações',
+    before, after,
+  })
+
+  revalidatePath('/configuracoes')
+  revalidatePath('/avaliacoes', 'layout')
+  revalidatePath('/alunos', 'layout')
 }

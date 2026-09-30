@@ -40,6 +40,15 @@ const DIAS_LABEL: Record<DiaSemana, string> = {
   sex: 'Sex', sab: 'Sáb', dom: 'Dom',
 }
 
+/** Idade em anos completos numa data específica (ex.: a data de uma avaliação). */
+export function idadeNaData(dataNascimento: string, data: string): number {
+  const [an, mn, dn] = dataNascimento.slice(0, 10).split('-').map(Number)
+  const [ad, md, dd] = data.slice(0, 10).split('-').map(Number)
+  let idade = ad - an
+  if (md < mn || (md === mn && dd < dn)) idade--
+  return idade
+}
+
 export function formatarDiaSemana(dia: DiaSemana): string {
   return DIAS_LABEL[dia]
 }

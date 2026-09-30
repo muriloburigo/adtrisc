@@ -13,13 +13,14 @@ type AlunoBasic = { id: string; nome: string }
 const CAMPOS_CM_PARA_M = new Set<keyof AvaliacaoFisicaRow>(['estatura', 'envergadura', 'estatura_sentado'])
 
 // Tempos digitados como MM:SS(.cc) e guardados em segundos.
-const CAMPOS_MMSS = new Set<keyof AvaliacaoFisicaRow>(['ciclismo_2km_tempo'])
+const CAMPOS_MMSS = new Set<keyof AvaliacaoFisicaRow>(['ciclismo_2km_tempo', 'natacao_50m', 'natacao_100m'])
 
 const CAMPOS: { key: keyof AvaliacaoFisicaRow; label: string }[] = [
   { key: 'massa_corporal',         label: 'Massa (kg)' },
   { key: 'estatura',               label: 'Estatura (cm)' },
   { key: 'envergadura',            label: 'Enverg. (cm)' },
   { key: 'estatura_sentado',       label: 'Est. sentado (cm)' },
+  { key: 'altura_banco',           label: 'Banco (cm)' },
   { key: 'perimetro_cintura',      label: 'Circ. abdom. (cm)' },
   { key: 'sentar_alcancar',        label: 'Sentar/alcançar (cm)' },
   { key: 'resistencia_6min',       label: "Resist. 6' (m)" },
@@ -28,10 +29,11 @@ const CAMPOS: { key: keyof AvaliacaoFisicaRow; label: string }[] = [
   { key: 'salto_horizontal',       label: 'Salto horiz. (m)' },
   { key: 'agilidade',              label: 'Agilidade (s)' },
   { key: 'corrida_20m',            label: 'Corrida 20m (s)' },
-  { key: 'natacao_12min',          label: "Teste 12' (m)" },
+  { key: 'natacao_12min',          label: "Nado 12' (m)" },
+  { key: 'natacao_50m',            label: 'Nado 50m (MM:SS)' },
+  { key: 'natacao_100m',           label: 'Nado 100m (MM:SS)' },
   { key: 'resistencia_5min_dabonneville', label: "Dabonneville 5' (m)" },
   { key: 'ciclismo_2km_tempo',     label: 'Ciclismo 2km (MM:SS)' },
-  { key: 'maturity_offset',        label: 'Maturity offset' },
 ]
 
 function CellInput({

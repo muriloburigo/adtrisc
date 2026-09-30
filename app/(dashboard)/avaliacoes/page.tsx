@@ -6,10 +6,18 @@ import FilterBar from '@/components/ui/FilterBar'
 import EmptyState from '@/components/ui/EmptyState'
 import AvaTurmaSelector from './AvaTurmaSelector'
 import DeleteAvaliacaoButton from './DeleteAvaliacaoButton'
-import { Dumbbell, Users2 } from 'lucide-react'
+import { Dumbbell, Users2, Gauge } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { getTurmaIdsForCoach } from '@/lib/turmas'
 import type { TurmaRow } from '@/types/database'
+
+// Medidas e testes da bateria (PROESP-Br). Uma linha só com testes de campo
+// não conta como sessão de avaliação da turma.
+const CAMPOS_BATERIA = [
+  'massa_corporal', 'estatura', 'envergadura', 'estatura_sentado', 'perimetro_cintura',
+  'sentar_alcancar', 'resistencia_6min', 'forca_abdominal', 'arremesso_medicineball',
+  'agilidade', 'salto_horizontal', 'corrida_20m', 'natacao_12min',
+]
 
 export const dynamic = 'force-dynamic'
 
@@ -95,7 +103,7 @@ export default async function AvaliacoesHubPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let histQuery: any = supabase
     .from('avaliacoes_fisicas')
-    .select('aluno_id, data')
+    .select(`aluno_id, data, ${CAMPOS_BATERIA.join(', ')}`)
     .is('deleted_at', null)
     .order('data', { ascending: false })
     .limit(2000)
@@ -112,6 +120,9 @@ export default async function AvaliacoesHubPage({
   // Agrupar por (turma_id, data)
   const sessaoMap = new Map<string, SessaoAva>()
   for (const row of rows ?? []) {
+    // Testes de campo avulsos (Dabonneville, ciclismo, natação registrados na
+    // página do atleta) não são uma "avaliação da turma" — ficam fora do histórico.
+    if (!CAMPOS_BATERIA.some((c) => row[c] != null)) continue
     const turmaId = alunosTurmaMap[row.aluno_id]
     if (!turmaId) continue
     const key = `${turmaId}__${row.data}`
@@ -174,6 +185,28 @@ export default async function AvaliacoesHubPage({
           <AvaTurmaSelector turmas={turmas} />
         )}
       </Card>
+
+      {turmas.length > 0 && (
+        <Card>
+          <h2 className="text-sm font-semibold text-navy-500 mb-1 flex items-center gap-2">
+            <Gauge size={15} className="text-sky-400" /> Zonas de treino
+          </h2>
+          <p className="text-xs text-gray-400 mb-3">
+            Calculadas do teste mais recente de cada atleta (Dabonneville 5&apos; e ciclismo 2 km).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {turmas.map((t) => (
+              <Link
+                key={t.id}
+                href={`/avaliacoes/${t.id}/zonas`}
+                className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-navy-500 hover:border-sky-400"
+              >
+                {t.nome}
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Histórico */}
       <div>

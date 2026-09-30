@@ -11,21 +11,68 @@ import { mmssToSeconds } from '@/lib/utils'
 // (mesma escala de "estatura", já usada assim antes desta correção).
 const CAMPOS_CM_PARA_M = new Set(['estatura', 'envergadura', 'estatura_sentado'])
 
-function calcularDerivados(massaCorporal: number | null, estaturaM: number | null, perimetroCintura: number | null) {
-  const altura_cm = estaturaM ? Math.round(estaturaM * 100 * 10) / 10 : null
-  const altura_ao_quadrado = estaturaM ? Math.round(estaturaM * estaturaM * 1_000_000) / 1_000_000 : null
-  const imc = massaCorporal && estaturaM
-    ? Math.round((massaCorporal / (estaturaM * estaturaM)) * 100) / 100
-    : null
-  const rce = perimetroCintura && altura_cm
-    ? Math.round((perimetroCintura / altura_cm) * 10_000) / 10_000
-    : null
-  return { altura_cm, altura_ao_quadrado, imc, rce }
+// Campos numéricos que a grade por turma pode gravar (tempos já chegam em segundos).
+const CAMPOS_EDITAVEIS = new Set([
+  'massa_corporal', 'estatura', 'envergadura', 'estatura_sentado', 'altura_banco', 'perimetro_cintura',
+  'sentar_alcancar', 'resistencia_6min', 'forca_abdominal', 'arremesso_medicineball', 'agilidade',
+  'salto_horizontal', 'corrida_20m', 'natacao_12min', 'resistencia_5min_dabonneville',
+  'ciclismo_2km_tempo', 'natacao_50m', 'natacao_100m',
+])
+
+// Testes de campo que podem ser registrados avulsos, fora da avaliação da turma.
+export type TipoTeste = 'dabonneville' | 'ciclismo_2km' | 'natacao_50m' | 'natacao_100m'
+const CAMPO_DO_TESTE: Record<TipoTeste, string> = {
+  dabonneville: 'resistencia_5min_dabonneville',
+  ciclismo_2km: 'ciclismo_2km_tempo',
+  natacao_50m:  'natacao_50m',
+  natacao_100m: 'natacao_100m',
 }
 
-// Velocidade média (km/h) do teste de 2 km de ciclismo a partir do tempo em segundos.
-function velocidadeCiclismo2km(tempoS: number | null) {
-  return tempoS ? Math.round((2 / (tempoS / 3600)) * 100) / 100 : null
+type Linha = Record<string, unknown>
+
+// IMC, RCE e velocidade do ciclismo, recalculados sempre a partir da linha completa.
+// (Maturação não é guardada aqui: depende de sexo/nascimento do aluno e é
+// calculada na exibição por lib/maturacao.ts.)
+function calcularDerivados(l: Linha) {
+  const massa = l.massa_corporal as number | null
+  const estaturaM = l.estatura as number | null
+  const perimetro = l.perimetro_cintura as number | null
+  const ciclismo = l.ciclismo_2km_tempo as number | null
+  const altura_cm = estaturaM ? Math.round(estaturaM * 100 * 10) / 10 : null
+  return {
+    altura_cm,
+    altura_ao_quadrado: estaturaM ? Math.round(estaturaM * estaturaM * 1_000_000) / 1_000_000 : null,
+    imc: massa && estaturaM ? Math.round((massa / (estaturaM * estaturaM)) * 100) / 100 : null,
+    rce: perimetro && altura_cm ? Math.round((perimetro / altura_cm) * 10_000) / 10_000 : null,
+    ciclismo_2km_velocidade: ciclismo ? Math.round((2 / (ciclismo / 3600)) * 100) / 100 : null,
+  }
+}
+
+// Grava `patch` na avaliação do aluno naquela data (uma linha por aluno+data),
+// criando a linha se ainda não existir.
+async function upsertPorData(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any, avaliadorId: string, alunoId: string, data: string, patch: Linha,
+): Promise<{ error?: string; before?: Linha | null }> {
+  const { data: existing } = await db
+    .from('avaliacoes_fisicas')
+    .select('*')
+    .eq('aluno_id', alunoId)
+    .eq('data', data)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (existing) {
+    const update = { ...patch, ...calcularDerivados({ ...existing, ...patch }) }
+    const { data: updated, error } = await db
+      .from('avaliacoes_fisicas').update(update).eq('id', existing.id).select('id').single()
+    if (error || !updated) return { error: friendlyError(error, 'Erro ao salvar.') }
+    return { before: existing }
+  }
+  const insert = { aluno_id: alunoId, avaliador_id: avaliadorId, data, ...patch, ...calcularDerivados(patch) }
+  const { error } = await db.from('avaliacoes_fisicas').insert(insert)
+  if (error) return { error: friendlyError(error, 'Erro ao salvar.') }
+  return { before: null }
 }
 
 export async function saveAvaliacao(formData: FormData): Promise<{ id?: string; error?: string }> {
@@ -35,43 +82,39 @@ export async function saveAvaliacao(formData: FormData): Promise<{ id?: string; 
 
   const alunoId = formData.get('aluno_id') as string
   const alunoNome = formData.get('aluno_nome') as string
+  const num = (k: string) => parseFloat(formData.get(k) as string) || null
+  const int = (k: string) => parseInt(formData.get(k) as string) || null
+  const tempo = (k: string) => mmssToSeconds((formData.get(k) as string) ?? '')
+  const cmParaM = (k: string) => { const v = num(k); return v ? v / 100 : null }
 
-  const massaCorporal   = parseFloat(formData.get('massa_corporal') as string) || null
-  const estaturaCm      = parseFloat(formData.get('estatura') as string) || null
-  const envergaduraCm   = parseFloat(formData.get('envergadura') as string) || null
-  const estaturaSentCm  = parseFloat(formData.get('estatura_sentado') as string) || null
-  const perimetro       = parseFloat(formData.get('perimetro_cintura') as string) || null
-  const ciclismoTempo   = mmssToSeconds((formData.get('ciclismo_2km_tempo') as string) ?? '')
-  const maturityOffset  = parseFloat(formData.get('maturity_offset') as string)
-
-  const estatura = estaturaCm ? estaturaCm / 100 : null
-  const derivados = calcularDerivados(massaCorporal, estatura, perimetro)
-
-  const payload = {
-    aluno_id:               alunoId,
-    avaliador_id:           actor.id,
-    data:                   formData.get('data') as string,
-    massa_corporal:         massaCorporal,
-    estatura,
-    envergadura:            envergaduraCm ? envergaduraCm / 100 : null,
-    estatura_sentado:       estaturaSentCm ? estaturaSentCm / 100 : null,
-    perimetro_cintura:      perimetro,
-    ...derivados,
-    sentar_alcancar:        parseFloat(formData.get('sentar_alcancar') as string) || null,
-    resistencia_6min:       parseInt(formData.get('resistencia_6min') as string) || null,
-    forca_abdominal:        parseInt(formData.get('forca_abdominal') as string) || null,
-    arremesso_medicineball: parseFloat(formData.get('arremesso_medicineball') as string) || null,
-    agilidade:              parseFloat(formData.get('agilidade') as string) || null,
-    salto_horizontal:       parseFloat(formData.get('salto_horizontal') as string) || null,
-    corrida_20m:            parseFloat(formData.get('corrida_20m') as string) || null,
-    natacao_12min:          parseInt(formData.get('natacao_12min') as string) || null,
-    resistencia_5min_dabonneville: parseInt(formData.get('resistencia_5min_dabonneville') as string) || null,
-    maturity_offset:        Number.isNaN(maturityOffset) ? null : maturityOffset,
-    maturity_classificacao: (formData.get('maturity_classificacao') as string)?.trim() || null,
-    ciclismo_2km_tempo:     ciclismoTempo,
-    ciclismo_2km_velocidade: velocidadeCiclismo2km(ciclismoTempo),
+  const campos: Linha = {
+    massa_corporal:         num('massa_corporal'),
+    estatura:               cmParaM('estatura'),
+    envergadura:            cmParaM('envergadura'),
+    estatura_sentado:       cmParaM('estatura_sentado'),
+    altura_banco:           num('altura_banco'),
+    perimetro_cintura:      num('perimetro_cintura'),
+    sentar_alcancar:        num('sentar_alcancar'),
+    resistencia_6min:       int('resistencia_6min'),
+    forca_abdominal:        int('forca_abdominal'),
+    arremesso_medicineball: num('arremesso_medicineball'),
+    agilidade:              num('agilidade'),
+    salto_horizontal:       num('salto_horizontal'),
+    corrida_20m:            num('corrida_20m'),
+    natacao_12min:          int('natacao_12min'),
+    resistencia_5min_dabonneville: int('resistencia_5min_dabonneville'),
+    ciclismo_2km_tempo:     tempo('ciclismo_2km_tempo'),
+    natacao_50m:            tempo('natacao_50m'),
+    natacao_100m:           tempo('natacao_100m'),
     atividade_url:          (formData.get('atividade_url') as string)?.trim() || null,
     observacoes:            (formData.get('observacoes') as string)?.trim() || null,
+  }
+  const payload = {
+    aluno_id:     alunoId,
+    avaliador_id: actor.id,
+    data:         formData.get('data') as string,
+    ...campos,
+    ...calcularDerivados(campos),
   }
 
   const { data: result, error } = await db
@@ -102,45 +145,58 @@ export async function saveAvaliacaoField(
   const db = (await createClient()) as any
   const actor = await requireStaff()
 
+  if (!CAMPOS_EDITAVEIS.has(field)) return { error: 'Campo inválido.' }
+
   let numValue = value === '' ? null : parseFloat(value)
+  if (numValue !== null && Number.isNaN(numValue)) return { error: 'Valor inválido.' }
   if (numValue !== null && CAMPOS_CM_PARA_M.has(field)) numValue = numValue / 100
 
-  // Check if record exists for this aluno+data (ignore soft-deleted)
-  const { data: existing } = await db
-    .from('avaliacoes_fisicas')
-    .select('id, massa_corporal, estatura, perimetro_cintura')
-    .eq('aluno_id', alunoId)
-    .eq('data', data)
-    .is('deleted_at', null)
-    .single()
+  const res = await upsertPorData(db, actor.id, alunoId, data, { [field]: numValue })
+  if (res.error) return { error: res.error }
 
-  if (existing) {
-    const update: Record<string, unknown> = { [field]: numValue }
-    const massa     = field === 'massa_corporal'    ? numValue : existing.massa_corporal
-    const estatura  = field === 'estatura'          ? numValue : existing.estatura
-    const perimetro = field === 'perimetro_cintura' ? numValue : existing.perimetro_cintura
-    Object.assign(update, calcularDerivados(massa, estatura, perimetro))
-    if (field === 'ciclismo_2km_tempo') update.ciclismo_2km_velocidade = velocidadeCiclismo2km(numValue)
-    const { data: updated, error } = await db
-      .from('avaliacoes_fisicas').update(update).eq('id', existing.id).select('id').single()
-    if (error || !updated) return { error: friendlyError(error, 'Erro ao salvar.') }
-  } else {
-    const insert: Record<string, unknown> = {
-      aluno_id: alunoId,
-      avaliador_id: actor.id,
-      data,
-      [field]: numValue,
-      ...calcularDerivados(
-        field === 'massa_corporal' ? numValue : null,
-        field === 'estatura' ? numValue : null,
-        field === 'perimetro_cintura' ? numValue : null,
-      ),
-      ...(field === 'ciclismo_2km_tempo' ? { ciclismo_2km_velocidade: velocidadeCiclismo2km(numValue) } : {}),
-    }
-    const { error } = await db.from('avaliacoes_fisicas').insert(insert)
-    if (error) return { error: friendlyError(error, 'Erro ao salvar.') }
+  revalidatePath('/avaliacoes')
+  revalidatePath(`/alunos/${alunoId}`)
+}
+
+// Registra um teste de campo avulso (ex.: Dabonneville refeito no meio do
+// semestre) direto na página do atleta, sem abrir avaliação para a turma.
+// `valor`: metros (dabonneville) ou tempo "MM:SS(.cc)" (ciclismo e natação).
+export async function registrarTeste(
+  alunoId: string,
+  data: string,
+  tipo: TipoTeste,
+  valor: string,
+  atividadeUrl?: string,
+): Promise<{ error?: string } | void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = (await createClient()) as any
+  const actor = await requireStaff()
+
+  const campo = CAMPO_DO_TESTE[tipo]
+  if (!campo) return { error: 'Tipo de teste inválido.' }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { error: 'Data inválida.' }
+
+  const resultado = tipo === 'dabonneville' ? parseInt(valor) : mmssToSeconds(valor)
+  if (!resultado || resultado <= 0) {
+    return { error: tipo === 'dabonneville' ? 'Informe a distância em metros.' : 'Informe o tempo no formato MM:SS ou MM:SS.cc.' }
   }
 
+  const patch: Linha = { [campo]: resultado }
+  if (atividadeUrl?.trim()) patch.atividade_url = atividadeUrl.trim()
+
+  const res = await upsertPorData(db, actor.id, alunoId, data, patch)
+  if (res.error) return { error: res.error }
+
+  const { data: aluno } = await db.from('alunos').select('nome').eq('id', alunoId).single()
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: res.before ? 'editar' : 'criar', resource: 'atleta',
+    resourceId: alunoId, resourceLabel: `Teste (${tipo}) de ${aluno?.nome ?? ''} — ${data}`,
+    before: res.before ? { [campo]: res.before[campo] } : null,
+    after: patch,
+  })
+
+  revalidatePath(`/alunos/${alunoId}`)
   revalidatePath('/avaliacoes')
 }
 
