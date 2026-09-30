@@ -170,6 +170,9 @@ export default async function AvaliacaoDetalhePage({
             <Stat label="Idade prevista do PHV" value={`${maturacao.idadePhv.toLocaleString('pt-BR')} anos`} />
             <Stat label="Classificação" value={maturacao.classificacao} />
           </dl>
+          <Link href="/avaliacoes/referencia#maturacao" className="inline-block mt-4 text-xs text-sky-500 hover:underline">
+            Como é calculada e o que significa cada faixa →
+          </Link>
         </Card>
       )}
 

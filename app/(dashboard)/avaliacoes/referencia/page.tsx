@@ -8,9 +8,11 @@ import {
   SAUDE, DESEMPENHO, RCE_CORTE, EM_CM, IDADE_MIN, IDADE_MAX,
   type NivelDesempenho, type Quad,
 } from '@/lib/proesp'
+import { FAIXAS_MATURACAO } from '@/lib/maturacao'
 import type { SexoEnum } from '@/types/database'
 
 const MANUAL_URL = 'https://lume.ufrgs.br/handle/10183/217804'
+const MIRWALD_URL = 'https://pubmed.ncbi.nlm.nih.gov/11932580/'
 
 const NIVEIS: NivelDesempenho[] = ['Fraco', 'Razoável', 'Bom', 'Muito bom', 'Excelência']
 
@@ -59,8 +61,8 @@ export default async function ReferenciaProespPage({
     <div className="p-4 sm:p-8 max-w-5xl">
       <BackButton />
       <PageHeader
-        title="Referência PROESP-Br"
-        subtitle="Tabelas usadas nos selos de classificação da avaliação física"
+        title="Referências da avaliação"
+        subtitle="PROESP-Br (selos de classificação) e maturação (Mirwald)"
       />
 
       <Card className="mb-4">
@@ -180,9 +182,83 @@ export default async function ReferenciaProespPage({
           </li>
           <li>
             Dabonneville 5&apos;, ciclismo 2 km e natação não têm classificação PROESP-Br. A maturação usa a equação
-            de Mirwald (2002).
+            de Mirwald (2002), <a href="#maturacao" className="text-sky-500 hover:underline">explicada abaixo</a>.
           </li>
         </ul>
+      </Card>
+
+      <h2 id="maturacao" className="scroll-mt-4 text-lg font-bold text-navy-500 mt-8 mb-3">Maturação (Mirwald)</h2>
+
+      <Card className="mb-4">
+        <div className="text-sm text-gray-700 space-y-3">
+          <p>
+            O <strong>maturity offset</strong> estima quantos anos faltam para o pico de velocidade de crescimento
+            (PHV, a fase em que o atleta mais cresce) ou quantos anos já se passaram desde ele. Negativo = antes do
+            pico; positivo = depois. A <strong>idade prevista do PHV</strong> é a idade na avaliação menos o offset.
+          </p>
+          <p>
+            Usa as equações de Mirwald et al. (2002), as mesmas da calculadora &quot;Maturity Offset and PHV
+            Calculator&quot; (Science for Sport) usada pela equipe técnica. Precisa de sexo e data de nascimento no
+            cadastro, e de massa, estatura e estatura sentado na avaliação.
+          </p>
+          <a href={MIRWALD_URL} target="_blank" rel="noopener noreferrer" className="inline-block text-sky-500 hover:underline">
+            Mirwald et al. An assessment of maturity from anthropometric measurements. Med Sci Sports Exerc.
+            2002;34(4):689–94 ↗
+          </a>
+        </div>
+      </Card>
+
+      <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-navy-500 mb-3">Classificação</h3>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-gray-500 text-xs">
+              <th className="text-left font-medium py-2">Classificação</th>
+              <th className="text-left font-medium py-2">Maturity offset (anos)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 text-gray-700">
+            {FAIXAS_MATURACAO.map((f, i) => {
+              const de = i > 0 ? FAIXAS_MATURACAO[i - 1].ate : null
+              const n = (v: number) => v.toLocaleString('pt-BR')
+              const faixa = de == null ? `menor que ${n(f.ate)}`
+                : f.ate === Infinity ? `${n(de)} ou mais`
+                : `de ${n(de)} a menos de ${n(f.ate)}`
+              return (
+                <tr key={f.rotulo}>
+                  <td className="py-1.5 font-medium">{f.rotulo}</td>
+                  <td className="py-1.5">{faixa}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        <p className="text-xs text-gray-400 mt-3">Faixas combinadas com a equipe técnica.</p>
+      </Card>
+
+      <Card className="mb-4">
+        <h3 className="text-sm font-semibold text-navy-500 mb-3">Como é calculado</h3>
+        <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 mb-3">
+          <li><strong>Tronco</strong> (altura sentado) = estatura sentado − altura do banco, quando foi usado banco.</li>
+          <li><strong>Perna</strong> = estatura − tronco.</li>
+          <li><strong>Idade</strong> em anos com casas decimais na data da avaliação (base 30/360, como na calculadora).</li>
+          <li>Medidas em cm e kg.</li>
+        </ul>
+        <div className="space-y-2 text-xs font-mono bg-gray-50 rounded-lg p-3 text-gray-700 overflow-x-auto">
+          <p className="whitespace-nowrap">
+            <span className="font-sans font-semibold text-navy-500">Masculino:</span> −9,236 + 0,0002708 × perna × tronco
+            − 0,001663 × idade × perna + 0,007216 × idade × tronco + 0,02292 × (massa ÷ estatura × 100)
+          </p>
+          <p className="whitespace-nowrap">
+            <span className="font-sans font-semibold text-navy-500">Feminino:</span> −9,376 + 0,0001882 × perna × tronco
+            + 0,0022 × idade × perna + 0,005841 × idade × tronco − 0,002658 × idade × massa + 0,07693 × (massa ÷
+            estatura × 100)
+          </p>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          É uma estimativa: o erro fica em torno de meio ano e cresce em atletas muito longe do pico (bem antes ou
+          bem depois).
+        </p>
       </Card>
     </div>
   )
