@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import AvatarUpload from '@/components/ui/AvatarUpload'
+import type { PossivelDuplicado } from '@/app/(dashboard)/alunos/actions'
 
 type Turma = { id: string; nome: string }
 
@@ -39,7 +40,7 @@ export default function AlunoForm({
   showStatus = false,
   defaultTurmaId,
 }: {
-  action: (fd: FormData) => Promise<{ error?: string } | void>
+  action: (fd: FormData) => Promise<{ error?: string; duplicados?: PossivelDuplicado[] } | void>
   aluno?: AlunoData
   turmas: Turma[]
   mae?: RespData
@@ -51,15 +52,32 @@ export default function AlunoForm({
   const [pending, startTransition] = useTransition()
   const [fotoUrl, setFotoUrl] = useState(aluno?.foto_url ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [duplicados, setDuplicados] = useState<PossivelDuplicado[]>([])
+  const ultimoEnvio = useRef<FormData | null>(null)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+  function enviar(fd: FormData) {
     setError(null)
+    setDuplicados([])
+    ultimoEnvio.current = fd
     startTransition(async () => {
       const res = await action(fd)
       if (res?.error) setError(res.error)
+      if (res?.duplicados?.length) setDuplicados(res.duplicados)
     })
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    enviar(new FormData(e.currentTarget))
+  }
+
+  // A equipe conferiu os cadastros parecidos e confirma que é outra pessoa.
+  function criarMesmoAssim() {
+    if (!ultimoEnvio.current) return
+    const fd = new FormData()
+    for (const [k, v] of ultimoEnvio.current.entries()) fd.append(k, v)
+    fd.set('confirmar_nao_duplicado', '1')
+    enviar(fd)
   }
 
   const labelClass = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5'
@@ -207,9 +225,37 @@ export default function AlunoForm({
       </div>
 
       {error && (
-        <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
-          {error}
-        </p>
+        <div className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
+          <p>{error}</p>
+          {duplicados.length > 0 && (
+            <>
+              <ul className="mt-3 space-y-2">
+                {duplicados.map((d) => (
+                  <li key={d.id} className="text-gray-700">
+                    <a href={`/alunos/${d.id}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-sky-500 hover:underline">
+                      {d.nome} ↗
+                    </a>
+                    <span className="block text-xs text-gray-500">
+                      {d.turma ?? 'sem turma'} · {d.status}
+                      {d.data_nascimento ? ` · nasc. ${d.data_nascimento.split('-').reverse().join('/')}` : ''} · {d.motivo}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-gray-500 mt-3">
+                Se for a mesma pessoa, não crie outro cadastro: abra o existente e reative, mude a turma ou corrija o nome.
+              </p>
+              <button
+                type="button"
+                onClick={criarMesmoAssim}
+                disabled={pending}
+                className="mt-2 text-xs font-semibold text-gray-600 underline hover:text-navy-500 disabled:opacity-50"
+              >
+                É outra pessoa, cadastrar mesmo assim
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       <button

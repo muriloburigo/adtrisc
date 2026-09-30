@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { mesmaPessoa, type Motivo } from '@/lib/nomes'
 import { logAudit } from '@/lib/audit'
 import { requireStaff } from '@/lib/assert'
 import { friendlyError } from '@/lib/errors'
@@ -50,7 +52,23 @@ async function upsertResponsavel(db: any, alunoId: string, formData: FormData, p
   }
 }
 
-export async function createAluno(formData: FormData): Promise<{ error?: string } | void> {
+export type PossivelDuplicado = { id: string; nome: string; turma: string | null; status: string; data_nascimento: string | null; motivo: Motivo }
+
+// Procura em TODOS os atletas (service role: o coach só enxerga as próprias
+// turmas, e o duplicado costuma estar em outra — ou desligado, sem turma).
+// Devolve só nome/turma/status/nascimento, o necessário para reconhecer a pessoa.
+async function buscarDuplicados(nome: string, dataNascimento: string | null): Promise<PossivelDuplicado[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createAdminClient() as any
+  const { data } = await admin.from('alunos').select('id, nome, status, data_nascimento, turmas:turma_id ( nome )')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).flatMap((a) => {
+    const motivo = mesmaPessoa({ nome, data_nascimento: dataNascimento }, a)
+    return motivo ? [{ id: a.id, nome: a.nome, turma: a.turmas?.nome ?? null, status: a.status, data_nascimento: a.data_nascimento, motivo }] : []
+  })
+}
+
+export async function createAluno(formData: FormData): Promise<{ error?: string; duplicados?: PossivelDuplicado[] } | void> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any
   const actor = await requireStaff()
@@ -69,6 +87,14 @@ export async function createAluno(formData: FormData): Promise<{ error?: string 
     observacoes:     (formData.get('observacoes') as string) || null,
     foto_url:        (formData.get('foto_url') as string) || null,
     status:          'ativo' as AlunoStatus,
+  }
+  payload.nome = (payload.nome ?? '').replace(/\s+/g, ' ').trim()
+
+  // Antes de criar, confere se a pessoa já tem cadastro (acento, abreviação,
+  // nome do meio...). Só cria assim mesmo se a equipe confirmar que é outra pessoa.
+  if (formData.get('confirmar_nao_duplicado') !== '1') {
+    const duplicados = await buscarDuplicados(payload.nome, payload.data_nascimento)
+    if (duplicados.length) return { error: 'Já existe cadastro parecido. Confira antes de criar outro.', duplicados }
   }
 
   const { data: aluno, error } = await db

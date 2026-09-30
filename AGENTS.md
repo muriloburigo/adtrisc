@@ -341,7 +341,12 @@ Staff reviews applicants and changes status (approve, reject, lottery draw, wait
 CRUD for turmas. Each class has a photo gallery (Supabase Storage bucket `fotos`). Staff can generate batch enrollment form links for all active athletes in a class.
 
 ### Athlete Management (`/alunos`)
-Full CRUD for athletes. Each athlete has:
+Full CRUD for athletes.
+
+- **No duplicate athletes.** `createAluno` checks every athlete (service role, so a coach also sees other turmas and desligados) with `mesmaPessoa()` from `lib/nomes.ts`. It ignores accents, case, extra spaces, particles (de/da/do...) and accepts abbreviations ("M." = "Maria") and a missing middle name. On a match, the form lists the existing records and creates a new one only after an explicit "É outra pessoa" confirmation. Siblings (same surname, different first name) are not flagged. On 30/09/2026, "Maitê"/"Maite de Moraes Matzenbacher" existed twice, split only by an accent, and were merged.
+- **Source of truth.** The ficha filled and signed by the parents always wins over any other source (Google Form, spreadsheets, manual entry), even when a value looks wrong. Raise the doubt with the family, never swap in another source's value.
+
+Each athlete has:
 - Parents/guardians (responsaveis) managed inline on the same form.
 - Timeline showing enrollment history, class changes, deactivations, and fitness assessments.
 - Avatar upload (Supabase Storage bucket `avatars`, max 3 MB, JPEG/PNG/WebP only — exact allowlist, not a `startsWith('image/')` prefix check, since that would also accept `image/svg+xml` and SVGs can carry `<script>`).
