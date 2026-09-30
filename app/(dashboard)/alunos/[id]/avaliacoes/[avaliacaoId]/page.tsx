@@ -10,6 +10,7 @@ import { classificarProesp, IDADE_MIN, IDADE_MAX, type ClassificacaoTeste } from
 import { calcularMaturacao } from '@/lib/maturacao'
 import { zonasCorrida, minSeg } from '@/lib/zonas'
 import DeleteAvaliacaoIndividualButton from './DeleteAvaliacaoIndividualButton'
+import AtividadeLinkEditor from './AtividadeLinkEditor'
 import type { AvaliacaoFisicaRow, SexoEnum } from '@/types/database'
 
 function Stat({ label, value, c }: { label: string; value: string | null; c?: ClassificacaoTeste }) {
@@ -137,11 +138,7 @@ export default async function AvaliacaoDetalhePage({
               : null}
           />
         </dl>
-        {av.atividade_url && (
-          <a href={av.atividade_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-sm text-sky-500 hover:underline">
-            Ver atividade do teste ↗
-          </a>
-        )}
+        <AtividadeLinkEditor alunoId={aluno.id} data={av.data} url={av.atividade_url} />
       </Card>
 
       {(av.natacao_12min != null || av.natacao_50m != null || av.natacao_100m != null) && (

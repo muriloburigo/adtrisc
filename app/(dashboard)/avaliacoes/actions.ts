@@ -158,6 +158,49 @@ export async function saveAvaliacaoField(
   revalidatePath(`/alunos/${alunoId}`)
 }
 
+// Link da atividade (Garmin, Polar, Strava) da avaliação do aluno naquela data.
+// Vazio apaga o link.
+export async function saveAtividadeUrl(
+  alunoId: string,
+  data: string,
+  url: string,
+): Promise<{ error?: string } | void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = (await createClient()) as any
+  const actor = await requireStaff()
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { error: 'Data inválida.' }
+  const link = url.trim() || null
+  if (link) {
+    let parsed: URL
+    try { parsed = new URL(link) } catch { return { error: 'Link inválido. Cole o endereço completo (https://…).' } }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return { error: 'Link inválido. Cole o endereço completo (https://…).' }
+    }
+  } else {
+    // Apagar o link não deve criar uma avaliação vazia.
+    const { data: existing } = await db.from('avaliacoes_fisicas').select('id')
+      .eq('aluno_id', alunoId).eq('data', data).is('deleted_at', null).maybeSingle()
+    if (!existing) return
+  }
+
+  const res = await upsertPorData(db, actor.id, alunoId, data, { atividade_url: link })
+  if (res.error) return { error: res.error }
+  if ((res.before?.atividade_url ?? null) === link) return
+
+  const { data: aluno } = await db.from('alunos').select('nome').eq('id', alunoId).single()
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: res.before ? 'editar' : 'criar', resource: 'atleta',
+    resourceId: alunoId, resourceLabel: `Link da atividade de ${aluno?.nome ?? ''} — ${data}`,
+    before: res.before ? { atividade_url: res.before.atividade_url } : null,
+    after: { atividade_url: link },
+  })
+
+  revalidatePath('/avaliacoes')
+  revalidatePath(`/alunos/${alunoId}`)
+}
+
 // Registra um teste de campo avulso (ex.: Dabonneville refeito no meio do
 // semestre) direto na página do atleta, sem abrir avaliação para a turma.
 // `valor`: metros (dabonneville) ou tempo "MM:SS(.cc)" (ciclismo e natação).

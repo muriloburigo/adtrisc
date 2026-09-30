@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { saveAvaliacaoField } from '../../actions'
+import { saveAvaliacaoField, saveAtividadeUrl } from '../../actions'
 import { mmssToSeconds, secondsToMmss } from '@/lib/utils'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 
@@ -85,6 +85,51 @@ function CellInput({
   )
 }
 
+function LinkInput({
+  alunoId,
+  data,
+  initialValue,
+}: {
+  alunoId: string
+  data: string
+  initialValue: string | null | undefined
+}) {
+  const [, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [salvo, setSalvo] = useState(initialValue ?? '')
+
+  function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const val = e.target.value.trim()
+    if (val === salvo) return
+    setError(null)
+    startTransition(async () => {
+      const res = await saveAtividadeUrl(alunoId, data, val)
+      if (res?.error) { setError(res.error); return }
+      setSalvo(val)
+    })
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="url"
+        defaultValue={initialValue ?? ''}
+        onBlur={handleBlur}
+        title={error ?? undefined}
+        className={`w-full border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400 ${
+          error ? 'border-red-400 bg-red-50' : 'border-gray-200'
+        }`}
+        placeholder="https://…"
+      />
+      {salvo && (
+        <a href={salvo} target="_blank" rel="noopener noreferrer" className="text-sky-500 text-xs shrink-0 hover:underline" title="Abrir atividade">
+          ↗
+        </a>
+      )}
+    </div>
+  )
+}
+
 export default function CriterioPanel({
   turmaId,
   data,
@@ -125,6 +170,10 @@ export default function CriterioPanel({
                     />
                   </div>
                 ))}
+                <div className="col-span-2">
+                  <label className="block text-[10px] text-gray-400 font-medium mb-1">Link da atividade</label>
+                  <LinkInput alunoId={a.id} data={data} initialValue={av.atividade_url} />
+                </div>
               </div>
             </div>
           )
@@ -144,6 +193,9 @@ export default function CriterioPanel({
                   {c.label}
                 </th>
               ))}
+              <th className="text-left px-3 py-3 text-gray-500 font-medium whitespace-nowrap text-xs min-w-[240px]">
+                Link da atividade
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -164,6 +216,9 @@ export default function CriterioPanel({
                       />
                     </td>
                   ))}
+                  <td className="px-3 py-2">
+                    <LinkInput alunoId={a.id} data={data} initialValue={av.atividade_url} />
+                  </td>
                 </tr>
               )
             })}
