@@ -2,12 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { logAudit, getSessionUser } from '@/lib/audit'
+import { logAudit } from '@/lib/audit'
+import { requireStaff } from '@/lib/assert'
 
 export async function updateCandidatoStatus(candidatoId: string, status: string) {
+  const actor = await requireStaff()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
-  const actor = await getSessionUser()
 
   const { data: before } = await supabase
     .from('candidatos').select('status, nome').eq('id', candidatoId).single()

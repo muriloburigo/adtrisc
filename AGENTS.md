@@ -173,7 +173,7 @@ requireStaff()  // throws if not admin or coach
 requireAdmin()  // throws if not admin
 ```
 
-These are called at the top of Server Actions to enforce authorization. The dashboard layout also does a redundant `redirect('/login')` check.
+These are called at the top of Server Actions to enforce authorization. `lib/audit.ts` is `server-only` (not `'use server'`): as a server action, `logAudit` could be called by any client to write fake audit rows with the service role. The dashboard layout also does a redundant `redirect('/login')` check.
 
 **Passwords (self-service)**
 - `/conta` ("Minha conta", in the sidebar for every role): change your own password — the current password is checked first with a throwaway, cookie-less client, then `auth.updateUser`.
@@ -372,7 +372,7 @@ Coach logs lessons per day (modalidade, objetivo, observações, which turmas), 
 Budget tracking per project (edital/patrocínio) and category, plus coach-submitted expense notes (notas fiscais). Four tabs (`FinanceiroTabs.tsx`): **Orçamento** (`/financeiro`, everyone) — pick a competência year, see every projeto that year as a card with orçado/consumido/saldo per categoria and a progress bar (green <70%, yellow 70–100%, red past 100%, computed by `lib/financeiro.ts`'s `percentConsumido()`/`progressoBarColor()`); **Notas Fiscais** (`/financeiro/notas`, everyone) — filterable list, "+ Nova nota" lets a coach log an expense (valor, categoria, data, optional anexo — PDF/JPG/PNG/WebP up to 10MB in the private `notas-fiscais` bucket) against their own name, admin can log on behalf of any coach and edit/delete anyone's; **Projetos** (`/financeiro/projetos`, admin-only) — CRUD for projects (nome, ano, descrição, objetivo, metas), per-projeto page has an inline-editable orçamento table per categoria (`OrcamentoTable.tsx` — each row is its own component with its own `useTransition`, so saving one category's value never disables another mid-edit) and a general attachments section (`ProjetoArquivosSection.tsx`, private `financeiro-arquivos` bucket, for plano de trabalho/convênio/edital docs); **Categorias** (`/financeiro/categorias`, admin-only) — manage the shared category list, rename inline, soft-disable (never hard-deleted, since budgets/notes reference them). No approval flow — a lançamento counts against the budget the moment it's saved. See the `### RLS Summary` note above for the read-open/write-scoped policy shape.
 
 ### User / Coach Management
-- `/coaches` — Admin creates/edits/deletes coach accounts using `auth.admin` APIs.
+- `/coaches` — Admin creates/edits/deletes coach accounts using `auth.admin` APIs. Every action in `coaches/actions.ts` starts with `requireAdmin()` and only acts on profiles with `role = 'coach'` — until 30/09/2026 they had **no** check (the page was admin-only, the actions weren't), so any logged-in user could reset any password, including an admin's. Rule: an action that uses `createAdminClient()` must authorize **inside the action**; guarding the page is not enough.
 - `/configuracoes` — Admin views all auth users, edits name/role, deletes users.
 - Passwords must meet 5 requirements: 8+ chars, uppercase, lowercase, digit, special character (validated in `lib/password.ts`).
 

@@ -1,7 +1,6 @@
-'use server'
+import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
 
 export type AuditAction =
   | 'criar' | 'editar' | 'excluir' | 'senha' | 'status' | 'sorteio'
@@ -51,20 +50,5 @@ export async function logAudit(params: AuditParams): Promise<void> {
     if (error) console.error('[audit]', error.message)
   } catch (e) {
     console.error('[audit] unexpected error:', e)
-  }
-}
-
-/** Fetches the logged-in user's id + display name. Cheap: getUser() uses cached JWT. */
-export async function getSessionUser(): Promise<{ id: string; name: string }> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = (await createClient()) as any
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { id: '', name: 'Sistema' }
-    const { data: p } = await supabase
-      .from('profiles').select('full_name').eq('id', user.id).single()
-    return { id: user.id, name: p?.full_name ?? user.email ?? 'Desconhecido' }
-  } catch {
-    return { id: '', name: 'Desconhecido' }
   }
 }
