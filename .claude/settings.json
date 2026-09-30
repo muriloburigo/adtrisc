@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(vercel)",
+      "Bash(vercel --prod*)",
+      "Bash(vercel -y*)",
+      "Bash(vercel --yes*)",
+      "Bash(vercel deploy*)",
+      "Bash(vercel redeploy*)",
+      "Bash(vercel promote*)",
+      "Bash(npx vercel*)"
+    ]
+  }
+}

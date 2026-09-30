@@ -408,12 +408,14 @@ brand-red-500 = #EB2127   (danger / logout button hover)
 
 ## Deployment
 
-Deployed on Vercel (project: `adtrisc`).
+Deployed on Vercel (project: `adtrisc`) via the GitHub integration: **every push to `main` on `muriloburigo/adtrisc` rebuilds production from the repo.**
 
 ```bash
-vercel          # Preview deploy
-vercel --prod   # Production deploy
+npm run build          # verify locally first
+git push origin main   # the only way to deploy to production
 ```
+
+**Never run `vercel` / `vercel --prod` / `vercel deploy` from the local folder.** A CLI deploy uploads the working tree, including uncommitted code. That code then disappears from production on the next push to `main`. This happened in Sep/2026: the `/financeiro` area went live via `vercel --prod` without being committed, and a later push took it offline for 9 days. The project's `.claude/settings.json` denies these commands.
 
 `vercel.json` sets framework to `nextjs` with standard build/install commands. No custom headers, rewrites, or edge functions configured.
 
@@ -529,7 +531,7 @@ This is the unlikely worst case. Steps, roughly in order:
 7. **Reconfigure things that live outside the database and aren't backed up at all:**
    - Supabase Auth settings: email templates, redirect URLs, site URL (Authentication → URL Configuration).
    - Any custom domain on Vercel, if one was ever added (currently just `adtrisc.vercel.app`).
-8. **Redeploy**: `vercel --prod` from the project root.
+8. **Redeploy**: Vercel dashboard → Deployments → latest `main` deployment → Redeploy (or push a commit to `main`). Don't use `vercel --prod` (see Deployment).
 9. Update `NEXT_PUBLIC_SUPABASE_URL` in this file's Environment Variables section and anywhere else the old project ref (`gjsbxpdkfmqtfwkdcbxh`) is hardcoded — notably `scripts/backup/backup.sh` (`DB_HOST`/`DB_USER`) and the `EXPECTED_PROJECT_REF` constant in both `scripts/backup/backup-storage.mjs` and `scripts/backup/restore-storage.mjs`.
 
 ### What a restore can never give back
