@@ -10,6 +10,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import Avatar from '@/components/ui/Avatar'
 import FichasTurmaButton from './FichasTurmaButton'
 import AdicionarAtletaButton from './AdicionarAtletaButton'
+import DesempenhoTurma, { DIRECAO_PADRAO, type OrdemDesempenho, type Direcao } from './DesempenhoTurma'
 import AlunoActionsMenu from '@/app/(dashboard)/alunos/AlunoActionsMenu'
 import { Users, Pencil, FileDown } from 'lucide-react'
 import { formatarDiasSemana, formatarHorario, calcularIdade, formatFaixaEtaria, formatSemestre } from '@/lib/utils'
@@ -18,8 +19,20 @@ import type { TurmaRow, DiaSemana } from '@/types/database'
 type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null } | null }
 type AlunoBasic = { id: string; nome: string; sexo: string | null; data_nascimento: string | null; status: string; foto_url: string | null; telefone: string | null }
 
-export default async function TurmaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+const ORDENS: OrdemDesempenho[] = ['nome', 'avaliacao', 'maturacao', 'corrida', 'ciclismo', 'natacao', 'proesp']
+
+export default async function TurmaDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ aba?: string; ordem?: string; dir?: string }>
+}) {
   const { id } = await params
+  const sp = await searchParams
+  const aba = sp.aba === 'desempenho' ? 'desempenho' : 'cadastro'
+  const ordem: OrdemDesempenho = ORDENS.includes(sp.ordem as OrdemDesempenho) ? (sp.ordem as OrdemDesempenho) : 'nome'
+  const dir: Direcao = sp.dir === 'asc' || sp.dir === 'desc' ? sp.dir : DIRECAO_PADRAO[ordem]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
 
@@ -160,7 +173,23 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
 
       {/* Alunos */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h2 className="text-base font-semibold text-navy-500">Atletas da turma</h2>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-base font-semibold text-navy-500">Atletas da turma</h2>
+          <div className="flex gap-1">
+            {(['cadastro', 'desempenho'] as const).map((a) => (
+              <Link
+                key={a}
+                href={a === 'cadastro' ? `/turmas/${id}` : `/turmas/${id}?aba=desempenho`}
+                scroll={false}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                  aba === a ? 'bg-navy-500 text-white' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                {a === 'cadastro' ? 'Cadastro' : 'Desempenho'}
+              </Link>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <FichasTurmaButton turmaId={id} initialResults={initialFichas} />
           <AdicionarAtletaButton turmaId={id} semTurma={semTurma} />
@@ -170,6 +199,8 @@ export default async function TurmaDetailPage({ params }: { params: Promise<{ id
       <Card padding={false}>
         {alunos.length === 0 ? (
           <EmptyState icon={Users} title="Nenhum(a) atleta nesta turma" />
+        ) : aba === 'desempenho' ? (
+          <DesempenhoTurma turmaId={id} alunos={alunos} ordem={ordem} dir={dir} />
         ) : (
           <>
             {/* Mobile */}
