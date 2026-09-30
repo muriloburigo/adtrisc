@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, LogOut, KeyRound, LayoutDashboard, Users, UserCheck, Users2, Settings, ClipboardCheck, Dumbbell, UserPlus, ScrollText, BookOpen, Trophy, Newspaper, Wallet } from 'lucide-react'
+import { Menu, X, LogOut, KeyRound, LayoutDashboard, Users, UserCheck, Users2, Settings, ClipboardCheck, Dumbbell, ListFilter, UserPlus, ScrollText, BookOpen, Trophy, Newspaper, Wallet } from 'lucide-react'
 import { cn, formatRole } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { Database, UserRole } from '@/types/database'
@@ -26,6 +26,7 @@ const navGroups: { label: string | null; items: { href: string; label: string; i
       { href: '/presencas',  label: 'Presenças',       icon: ClipboardCheck, roles: ['admin','coach'] },
       { href: '/diario',     label: 'Diário de Aulas', icon: BookOpen,       roles: ['admin','coach'] },
       { href: '/avaliacoes', label: 'Avaliações',      icon: Dumbbell,       roles: ['admin','coach'] },
+      { href: '/relatorios', label: 'Relatórios',      icon: ListFilter,     roles: ['admin','coach'] },
     ],
   },
   {

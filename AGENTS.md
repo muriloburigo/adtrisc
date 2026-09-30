@@ -76,6 +76,7 @@ adtrisc/
 │   │   ├── turmas/                 # Class CRUD + photo gallery + reports
 │   │   ├── presencas/              # Attendance tracking + export
 │   │   ├── avaliacoes/             # Fitness assessment grids by class/date
+│   │   ├── relatorios/             # Athlete report: combined filters over cadastro + ficha + avaliações (no export)
 │   │   ├── provas/                 # External competitions: categories + athlete results
 │   │   ├── imprensa/               # Press clippings: link + auto preview (title/description/image)
 │   │   ├── candidatos/             # Enrollment applicants queue
@@ -356,6 +357,16 @@ Staff selects a class and date, then marks each athlete present/absent/excused. 
 
 ### Fitness Assessments (`/avaliacoes`)
 Grid view per class and date. See the `avaliacoes_fisicas` table above for the exact field list (body mass, height, waist/seated-height/wingspan measurements, IMC auto-computed, sit-and-reach flexibility, 6-min run, abdominal strength, medicine ball throw, agility, standing long jump, 20m run, 12-min swim). Soft-deleted via `deleted_at`. Individual assessments also accessible from athlete detail page.
+
+### Reports (`/relatorios`)
+Admin and coach. One screen that answers "which athletes match these criteria". Filters over every athlete field combine with AND; a list filter's options combine with OR. Covered: cadastro, responsáveis, ficha, measures, PROESP tests and classification, field tests, maturação. Results update on screen as filters change. **No export by design.**
+- `lib/relatorio.ts` holds the field list (`CAMPOS`), row building (`montarLinhas`, server) and filtering (`aplicarFiltros`, client). It reuses `classificarProesp`/`calcularMaturacao`, so values match the athlete page.
+- The result is always one row per athlete. The "critérios de avaliação usam" selector picks which evaluation counts:
+  - the **most recent result of each test** (default);
+  - **any evaluation in a date range**, where one evaluation must satisfy all the evaluation criteria together, and the columns show the most recent matching one.
+- Scope: athletes come through the RLS client, so a coach sees only their turmas. Responsáveis/fichas use the service role, restricted to those athletes. CPF/RG fields (`admin: true`) are stripped on the server for non-admins.
+- **Evolução** (only in "most recent" mode) compares the two most recent results **of each test**, which may come from different dates. `tend_<test>` is Melhorou/Piorou/Manteve. `melhora_<test>` is positive whenever the athlete got better, so time tests are sign-flipped (`MENOR_MELHOR`). Body measures get only `var_<measure>`, a raw difference, since "better" doesn't apply to them. `intervalo_avaliacoes` is the number of days between the two latest evaluations.
+- State (filters, columns, sort) lives in `?r=` in the URL, so a report can be bookmarked or shared. The "Prontos" chips are presets of that same state.
 
 ### Competitions & Results (`/provas`)
 Staff registers external competitions (nome, local, data, observações) with one or more age-based categories, each defining an ordered list of leg distances (`etapas`: natação/ciclismo/corrida + distância em metros). Results are logged per athlete against a category: total time (stored in seconds, entered/displayed as `MM:SS` via `mmssToSeconds()`/`secondsToMmss()`), plus overall and category placement. One result per athlete per prova (upserted). Deleting a categoria cascades its results — confirmed with a warning showing the affected count.
