@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import Card from '@/components/ui/Card'
-import ResetPasswordForm from './ResetPasswordForm'
+import ResetPasswordForm from '@/components/usuarios/ResetPasswordForm'
+import { resetPassword } from '../../actions'
 import EditarCoachForm from './EditarCoachForm'
 import CoachAvatarCard from './CoachAvatarCard'
 
@@ -59,7 +60,7 @@ export default async function EditarCoachPage({
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">
           Redefinir senha
         </p>
-        <ResetPasswordForm coachId={id} />
+        <ResetPasswordForm action={resetPassword.bind(null, id)} />
       </Card>
     </div>
   )

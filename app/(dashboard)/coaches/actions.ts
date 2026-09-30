@@ -119,7 +119,7 @@ export async function resetPassword(
   })
 
   revalidatePath(`/coaches/${coachId}/editar`)
-  return null
+  return { done: true }
 }
 
 export async function updateCoachAvatar(id: string, url: string | null): Promise<{ error?: string }> {

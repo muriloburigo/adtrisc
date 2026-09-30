@@ -164,7 +164,6 @@ Supabase Auth with cookie sessions via `@supabase/ssr`.
 - `/inscricao`
 - `/regras-sorteio`
 - `/ficha/*`
-- `/esqueci-senha`, `/auth/callback` (password recovery — see below)
 
 **Server-side auth helpers** in `lib/assert.ts`:
 
@@ -175,11 +174,11 @@ requireAdmin()  // throws if not admin
 
 These are called at the top of Server Actions to enforce authorization. `lib/audit.ts` is `server-only` (not `'use server'`): as a server action, `logAudit` could be called by any client to write fake audit rows with the service role. The dashboard layout also does a redundant `redirect('/login')` check.
 
-**Passwords (self-service)**
+**Passwords**
 - `/conta` ("Minha conta", in the sidebar for every role): change your own password — the current password is checked first with a throwaway, cookie-less client, then `auth.updateUser`.
-- Recovery: login → "Esqueci minha senha" (`/esqueci-senha`) → `resetPasswordForEmail` with `redirectTo = <origin>/auth/callback?next=/redefinir-senha` → the route handler exchanges the code for a session (PKCE — the link must be opened in the same browser that asked for it) → `/redefinir-senha` sets the new password. The request always answers "se este e-mail estiver cadastrado…", so it can't be used to discover accounts.
-- New passwords follow `validarNovaSenha()` in `lib/password.ts` (same 5 requirements as `PasswordInput`). Both flows log `action: 'senha'` in `audit_logs`.
-- ⚠️ Recovery e-mail depends on **Supabase Auth settings, not code**: Site URL and Redirect URLs must include `https://adtrisc.vercel.app/auth/callback`, and without custom SMTP Supabase only delivers auth e-mails to members of the Supabase org (and ~2/hour). Since 30/09/2026 (set via the Supabase Management API): Site URL `https://adtrisc.vercel.app`, redirect allow list `https://adtrisc.vercel.app/auth/callback` + `http://localhost:3000/auth/callback`, recovery e-mail subject/template in Portuguese, and **public sign-up disabled** (`disable_signup = true` — accounts are only created by an admin via `auth.admin.createUser`, which still works). **Custom SMTP is still missing**, so recovery e-mails only reach members of the Supabase org until it's configured (Authentication → SMTP Settings).
+- New passwords follow `validatePassword()`/`validarNovaSenha()` in `lib/password.ts` (same 5 requirements as `PasswordInput`), checked on the server in every flow. All of them log `action: 'senha'` in `audit_logs`.
+- **No self-service recovery.** A "Esqueci minha senha" flow existed briefly (30/09/2026) and was removed on request, because without custom SMTP Supabase only e-mails members of the Supabase org. Someone who forgot their password asks an admin, who sets a new one in **Configurações → Editar usuário → Redefinir senha** (any account except their own; `redefinirSenhaUsuario`) or **Treinadores → Editar → Redefinir senha** (coaches only). Both use `components/usuarios/ResetPasswordForm.tsx`; the person then changes it in `/conta`.
+- Supabase Auth config left from that attempt (harmless): Site URL `https://adtrisc.vercel.app`, redirect allow list `…/auth/callback`, recovery template in Portuguese. **Public sign-up is disabled** (`disable_signup = true`); accounts are only created by an admin via `auth.admin.createUser`.
 
 **Roles** (stored in `profiles.role`):
 
@@ -373,7 +372,7 @@ Budget tracking per project (edital/patrocínio) and category, plus coach-submit
 
 ### User / Coach Management
 - `/coaches` — Admin creates/edits/deletes coach accounts using `auth.admin` APIs. Every action in `coaches/actions.ts` starts with `requireAdmin()` and only acts on profiles with `role = 'coach'` — until 30/09/2026 they had **no** check (the page was admin-only, the actions weren't), so any logged-in user could reset any password, including an admin's. Rule: an action that uses `createAdminClient()` must authorize **inside the action**; guarding the page is not enough.
-- `/configuracoes` — Admin views all auth users, edits name/role, deletes users.
+- `/configuracoes` — Admin views all auth users, edits name/role, resets another user's password, deletes users.
 - Passwords must meet 5 requirements: 8+ chars, uppercase, lowercase, digit, special character (validated in `lib/password.ts`).
 
 ---

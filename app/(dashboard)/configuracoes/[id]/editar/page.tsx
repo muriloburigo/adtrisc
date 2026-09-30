@@ -4,6 +4,8 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import BackButton from '@/components/ui/BackButton'
 import UserEditForm from './UserEditForm'
+import ResetPasswordForm from '@/components/usuarios/ResetPasswordForm'
+import { redefinirSenhaUsuario } from '../../actions'
 import type { ProfileRow, UserRole } from '@/types/database'
 
 export default async function EditarUsuarioPage({
@@ -39,6 +41,13 @@ export default async function EditarUsuarioPage({
           email={profile.email ?? ''}
         />
       </Card>
+
+      {profile.id !== me.id && (
+        <Card className="mt-6">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Redefinir senha</p>
+          <ResetPasswordForm action={redefinirSenhaUsuario.bind(null, profile.id)} />
+        </Card>
+      )}
     </div>
   )
 }

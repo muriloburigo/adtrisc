@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logAudit } from '@/lib/audit'
 import { mmssToSeconds } from '@/lib/utils'
+import { validatePassword } from '@/lib/password'
+import type { ResetPasswordState } from '@/components/usuarios/ResetPasswordForm'
 import type { UserRole } from '@/types/database'
 
 async function assertAdmin() {
@@ -58,6 +60,36 @@ export async function updateUser(
 
   revalidatePath('/configuracoes')
   redirect('/configuracoes')
+}
+
+// Admin define uma nova senha para qualquer outra conta (treinador, outro
+// admin...). A própria senha cada um troca em /conta, conferindo a atual.
+export async function redefinirSenhaUsuario(
+  userId: string,
+  _prev: ResetPasswordState,
+  formData: FormData,
+): Promise<ResetPasswordState> {
+  const actor = await assertAdmin()
+  if (userId === actor.id) return { error: 'Para a sua própria senha, use "Minha conta".' }
+
+  const password = (formData.get('password') as string) ?? ''
+  const senhaFraca = validatePassword(password)
+  if (senhaFraca) return { error: senhaFraca }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createAdminClient() as any
+  const { data: alvo } = await admin.from('profiles').select('full_name, email').eq('id', userId).single()
+  if (!alvo) return { error: 'Usuário não encontrado.' }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, { password })
+  if (error) return { error: 'Não foi possível redefinir a senha.' }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'senha', resource: 'usuario',
+    resourceId: userId, resourceLabel: alvo.full_name ?? alvo.email,
+  })
+  return { done: true }
 }
 
 export async function deleteUser(userId: string): Promise<{ error?: string }> {

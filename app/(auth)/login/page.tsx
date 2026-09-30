@@ -155,12 +155,6 @@ export default function LoginPage() {
               />
             </div>
 
-            <p className="text-right -mt-2">
-              <a href="/esqueci-senha" className="text-xs text-gray-400 hover:text-sky-400 underline underline-offset-2 transition-colors">
-                Esqueci minha senha
-              </a>
-            </p>
-
             {error && (
               <div
                 className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
