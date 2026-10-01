@@ -8,6 +8,7 @@ import { criarMultiplosRegistros, salvarResumoDiario } from './actions'
 import { friendlyError } from '@/lib/errors'
 import { setFotoDoDia, removerFotoDoDia, type FotoDoDia } from './fotoActions'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import QuadroGovBr from '@/components/documentos/QuadroGovBr'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 // ── Report constants ────────────────────────────────────────────────────────
@@ -525,7 +526,10 @@ export default function DiarioClientView({
             <p style={{ margin: '0 0 36px 0' }}>{coachName}{cref ? ` – CREF ${cref}` : ''}</p>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <AssinaturaImpressa assinatura={incluirAssinatura ? assinatura : null} largura={300} espacoSemAssinatura={0} />
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+              <AssinaturaImpressa assinatura={incluirAssinatura ? assinatura : null} largura={300} espacoSemAssinatura={0} />
+              <QuadroGovBr />
+            </div>
             <p style={{ margin: 0 }}>
               {cidade || 'São José'}, {ultimoDia(ano, mes)} de {MESES_EXTENSO[mes]} de {ano}.
             </p>

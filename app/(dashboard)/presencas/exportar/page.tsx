@@ -7,6 +7,7 @@ import Card from '@/components/ui/Card'
 import ExportForm from './ExportForm'
 import PrintButton from './PrintButton'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import QuadroGovBr from '@/components/documentos/QuadroGovBr'
 import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
 import { formatarDiasSemana, formatarHorario, formatTelefone } from '@/lib/utils'
 import { getTurmaIdsForCoach } from '@/lib/turmas'
@@ -170,7 +171,7 @@ export default async function ExportarPresencasPage({
   if (hasData && turma) {
     const { data: docsRaw } = await supabase
       .from('documentos_assinados')
-      .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
+      .select('id, nome_arquivo, storage_path, enviado_em, assinaturas_digitais, enviado_por:profiles(full_name)')
       .eq('turma_id', turma.id)
       .eq('tipo', 'presenca_exportar')
       .eq('periodo', periodo)
@@ -191,6 +192,7 @@ export default async function ExportarPresencasPage({
           enviadoEm: d.enviado_em,
           enviadoPorNome: d.enviado_por?.full_name ?? null,
           signedUrl: signed?.signedUrl ?? null,
+          assinaturasDigitais: d.assinaturas_digitais ?? null,
         }
       }),
     )
@@ -471,6 +473,7 @@ function AttendanceGrid({
             )}
           </p>
         </div>
+        <QuadroGovBr />
         <div style={{ width: 160 }}>
           <div style={{ borderBottom: '1px solid #555', paddingBottom: 24, marginBottom: 4 }} />
           <p>Data</p>

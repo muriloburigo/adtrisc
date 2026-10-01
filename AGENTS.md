@@ -277,7 +277,13 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `id`, `url`, `titulo`, `descricao`, `imagem_url`, `site`, `criado_por` (FK → profiles), `created_at`
 
 **`documentos_assinados`** — signed PDFs sent back after digital signature (relatório de turma, presença exportada, diário de aula)
-- `id`, `turma_id` (nullable — null for diário docs, which are per-coach instead), `coach_id` (FK → profiles, nullable), `tipo` (`relatorio_turma` | `presenca_exportar` | `diario_aula`), `periodo`, `nome_arquivo`, `storage_path`, `enviado_por` (FK → profiles), `enviado_em`
+- `id`, `turma_id` (nullable — null for diário docs, which are per-coach instead), `coach_id` (FK → profiles, nullable), `tipo` (`relatorio_turma` | `presenca_exportar` | `diario_aula`), `periodo`, `nome_arquivo`, `storage_path`, `enviado_por` (FK → profiles), `enviado_em`, `assinaturas_digitais` (jsonb; `[]` = PDF without digital signature, `null` = sent before this check existed)
+- **gov.br signature.** The gov.br signing API is only open to public bodies (credentials requested by a public manager), so the coach signs the PDF at assinador.iti.br and drags the stamp onto the "Assinatura digital gov.br" box in the report footer (`QuadroGovBr`), next to the drawn signature. The final file therefore carries both. The section has a "Como assinar no gov.br" step-by-step.
+- **Upload goes straight from the browser to Storage**, because server actions and Vercel functions reject bodies over ~4.5 MB:
+  1. `prepararEnvioDocumento` authorizes and returns a single-use signed upload URL.
+  2. The browser calls `uploadToSignedUrl`.
+  3. `registrarDocumentoAssinado` downloads the file and checks that it is a PDF of at most 10 MB. It reads the digital signatures with `lib/pdfAssinaturas.ts` and inserts the row through the RLS client; on any failure it deletes the file.
+- **What the signature check does.** `lerAssinaturasPdf` IDENTIFIES the signatures (signer CN without the CPF, issuing AC, gov.br/ICP-Brasil, `/M` date). It does **not** verify the cryptography; official validation is at validar.iti.gov.br, linked next to each document. The browser runs the same reader before sending, to warn when a PDF has no digital signature.
 
 **`turma_coaches`** — junction table for turmas with more than one coach (assistant coaches)
 - `turma_id`, `coach_id`, `created_at`. Read by `coach_has_turma()` — see RLS Summary.
@@ -579,6 +585,7 @@ This is the unlikely worst case. Steps, roughly in order:
    26. `relatorios_salvos.sql` — saved reports of `/relatorios` (only needs `get_my_role()` from #1)
    27. `processos_sgpe.sql` — `processos_sgpe` table + `turmas.processo_sgpe_id` + seed of the 2026 process (needs `get_my_role()` from #1)
    28. `assinaturas.sql` — `profiles.assinatura` + `assinatura_atualizada_em`
+   29. `documentos_assinaturas_digitais.sql` — `documentos_assinados.assinaturas_digitais`
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

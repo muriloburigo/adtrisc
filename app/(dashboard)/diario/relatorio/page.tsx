@@ -9,6 +9,7 @@ import Card from '@/components/ui/Card'
 import RelatorioForm from './RelatorioForm'
 import PrintButton from './PrintButton'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import QuadroGovBr from '@/components/documentos/QuadroGovBr'
 import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 import type { TurmaFotoRow } from '@/types/database'
@@ -151,7 +152,7 @@ export default async function DiarioRelatorioPage({
   if (targetCoachId) {
     const { data: docsRaw } = await supabase
       .from('documentos_assinados')
-      .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
+      .select('id, nome_arquivo, storage_path, enviado_em, assinaturas_digitais, enviado_por:profiles(full_name)')
       .eq('coach_id', targetCoachId)
       .eq('tipo', 'diario_aula')
       .eq('periodo', periodo)
@@ -172,6 +173,7 @@ export default async function DiarioRelatorioPage({
           enviadoEm: d.enviado_em,
           enviadoPorNome: d.enviado_por?.full_name ?? null,
           signedUrl: signed?.signedUrl ?? null,
+          assinaturasDigitais: d.assinaturas_digitais ?? null,
         }
       }),
     )
@@ -352,14 +354,17 @@ export default async function DiarioRelatorioPage({
             {/* Footer */}
             <div style={{ marginTop: 32, borderTop: '1px solid #ccc', paddingTop: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <AssinaturaImpressa assinatura={incluirAssinatura ? assinaturaCoach : null} largura={260} espacoSemAssinatura={22} />
-                  <p style={{ margin: 0, fontWeight: 700 }}>Treinador Responsável</p>
-                  {coachName && (
-                    <p style={{ margin: '3px 0 0' }}>
-                      {coachName}{cref ? ` – CREF ${cref}` : ''}
-                    </p>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+                  <div>
+                    <AssinaturaImpressa assinatura={incluirAssinatura ? assinaturaCoach : null} largura={260} espacoSemAssinatura={22} />
+                    <p style={{ margin: 0, fontWeight: 700 }}>Treinador Responsável</p>
+                    {coachName && (
+                      <p style={{ margin: '3px 0 0' }}>
+                        {coachName}{cref ? ` – CREF ${cref}` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <QuadroGovBr />
                 </div>
                 <p style={{ margin: 0 }}>
                   {cidade}, {ultimoDia(ano, mes)} de {MESES_EXTENSO[mes]} de {ano}.

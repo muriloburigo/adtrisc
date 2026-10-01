@@ -14,6 +14,7 @@ import type { TurmaRow, DiaSemana } from '@/types/database'
 import RelatorioForm from './RelatorioForm'
 import PrintButton from './PrintButton'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import QuadroGovBr from '@/components/documentos/QuadroGovBr'
 import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
@@ -118,7 +119,7 @@ export default async function RelatorioTurmaPage({
   const periodo = `${ano}-${String(mes).padStart(2, '0')}`
   const { data: docsRaw } = await supabase
     .from('documentos_assinados')
-    .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
+    .select('id, nome_arquivo, storage_path, enviado_em, assinaturas_digitais, enviado_por:profiles(full_name)')
     .eq('turma_id', id)
     .eq('tipo', 'relatorio_turma')
     .eq('periodo', periodo)
@@ -139,6 +140,7 @@ export default async function RelatorioTurmaPage({
         enviadoEm: d.enviado_em,
         enviadoPorNome: d.enviado_por?.full_name ?? null,
         signedUrl: signed?.signedUrl ?? null,
+        assinaturasDigitais: d.assinaturas_digitais ?? null,
       }
     }),
   )
@@ -396,14 +398,17 @@ export default async function RelatorioTurmaPage({
 
             {/* ── Rodapé de assinatura ── */}
             <div className="print-footer mt-6 flex justify-between items-end" style={{ fontSize: 10, breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <div>
-                <AssinaturaImpressa assinatura={incluirAssinatura ? assinaturaCoach : null} largura={280} espacoSemAssinatura={20} />
-                <p style={{ margin: 0, fontWeight: 700 }}>Treinador(a) Responsável</p>
-                {coachName && (
-                  <p style={{ margin: '2px 0 0' }}>
-                    {coachName}{coachCref ? ` – CREF ${coachCref}` : ''}
-                  </p>
-                )}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
+                <div>
+                  <AssinaturaImpressa assinatura={incluirAssinatura ? assinaturaCoach : null} largura={280} espacoSemAssinatura={20} />
+                  <p style={{ margin: 0, fontWeight: 700 }}>Treinador(a) Responsável</p>
+                  {coachName && (
+                    <p style={{ margin: '2px 0 0' }}>
+                      {coachName}{coachCref ? ` – CREF ${coachCref}` : ''}
+                    </p>
+                  )}
+                </div>
+                <QuadroGovBr />
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ margin: 0 }}>

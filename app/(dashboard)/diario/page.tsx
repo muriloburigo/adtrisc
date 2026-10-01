@@ -172,7 +172,7 @@ export default async function DiarioPage({
   if (targetCoachId) {
     const { data: docsRaw } = await supabase
       .from('documentos_assinados')
-      .select('id, nome_arquivo, storage_path, enviado_em, enviado_por:profiles(full_name)')
+      .select('id, nome_arquivo, storage_path, enviado_em, assinaturas_digitais, enviado_por:profiles(full_name)')
       .eq('coach_id', targetCoachId)
       .eq('tipo', 'diario_aula')
       .order('enviado_em', { ascending: false })
@@ -192,6 +192,7 @@ export default async function DiarioPage({
           enviadoEm: d.enviado_em,
           enviadoPorNome: d.enviado_por?.full_name ?? null,
           signedUrl: signed?.signedUrl ?? null,
+          assinaturasDigitais: d.assinaturas_digitais ?? null,
         }
       }),
     )
