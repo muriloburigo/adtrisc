@@ -6,6 +6,8 @@ import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import DeleteUserButton from './DeleteUserButton'
 import ConfigAvaliacaoForm from './ConfigAvaliacaoForm'
+import ProcessosSgpeForm from './ProcessosSgpeForm'
+import { getProcessosSgpe } from '@/lib/processoSgpe'
 import { getConfigAvaliacao } from '@/lib/config-avaliacao'
 import { Pencil } from 'lucide-react'
 import type { ProfileRow, UserRole } from '@/types/database'
@@ -26,7 +28,7 @@ export default async function ConfiguracoesPage() {
     .order('role')
 
   const users = (usersRaw ?? []) as ProfileRow[]
-  const configAvaliacao = await getConfigAvaliacao(supabase)
+  const [configAvaliacao, processosSgpe] = await Promise.all([getConfigAvaliacao(supabase), getProcessosSgpe(supabase)])
 
   const roleLabel: Record<UserRole, string> = {
     admin: 'Administrador(a)', coach: 'Treinador(a)', aluno: 'Atleta', pai: 'Responsável',
@@ -120,6 +122,11 @@ export default async function ConfiguracoesPage() {
       <Card className="mt-6">
         <h2 className="text-sm font-semibold text-navy-500 mb-4">Avaliações</h2>
         <ConfigAvaliacaoForm config={configAvaliacao} />
+      </Card>
+
+      <Card className="mt-6">
+        <h2 className="text-sm font-semibold text-navy-500 mb-2">Processos SGPE</h2>
+        <ProcessosSgpeForm processos={processosSgpe} />
       </Card>
     </div>
   )

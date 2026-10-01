@@ -155,3 +155,59 @@ export async function updateConfigAvaliacao(formData: FormData): Promise<{ error
   revalidatePath('/avaliacoes', 'layout')
   revalidatePath('/alunos', 'layout')
 }
+
+// Processos SGPE por projeto e ano — pré-preenchem relatório da turma, diário
+// e ficha de inscrição (lib/processoSgpe.ts). `id` vazio = novo.
+export async function salvarProcessoSgpe(formData: FormData): Promise<{ error?: string } | void> {
+  const actor = await assertAdmin()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+
+  const id = String(formData.get('id') ?? '').trim()
+  const projeto = String(formData.get('projeto') ?? '').replace(/\s+/g, ' ').trim()
+  const processo = String(formData.get('processo') ?? '').replace(/\s+/g, ' ').trim()
+  const ano = Number(formData.get('ano'))
+  if (!projeto) return { error: 'Informe o projeto.' }
+  if (!processo) return { error: 'Informe o processo (ex.: FESPORTE 5217/2025).' }
+  if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) return { error: 'Ano inválido.' }
+
+  const dados = { projeto, ano, processo, updated_at: new Date().toISOString() }
+  const { data: before } = id ? await supabase.from('processos_sgpe').select('projeto, ano, processo').eq('id', id).maybeSingle() : { data: null }
+  const { data: salvo, error } = id
+    ? await supabase.from('processos_sgpe').update(dados).eq('id', id).select('id').single()
+    : await supabase.from('processos_sgpe').insert(dados).select('id').single()
+  if (error || !salvo) {
+    return { error: error?.code === '23505' ? 'Já existe esse projeto nesse ano.' : 'Erro ao salvar o processo.' }
+  }
+
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: id ? 'editar' : 'criar', resource: 'config',
+    resourceId: salvo.id, resourceLabel: `Processo SGPE ${processo} (${projeto}, ${ano})`,
+    before, after: { projeto, ano, processo },
+  })
+  revalidatePath('/configuracoes')
+  revalidatePath('/turmas', 'layout')
+  revalidatePath('/diario', 'layout')
+}
+
+export async function excluirProcessoSgpe(id: string): Promise<{ error?: string } | void> {
+  const actor = await assertAdmin()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = (await createClient()) as any
+
+  const { data: before, error } = await supabase.from('processos_sgpe').delete().eq('id', id).select('projeto, ano, processo').maybeSingle()
+  if (error) return { error: 'Erro ao excluir o processo.' }
+  if (!before) return { error: 'Processo não encontrado.' }
+
+  // Turmas que apontavam para ele voltam a usar o processo do ano (on delete set null).
+  await logAudit({
+    userId: actor.id, userName: actor.name,
+    action: 'excluir', resource: 'config',
+    resourceId: id, resourceLabel: `Processo SGPE ${before.processo} (${before.projeto}, ${before.ano})`,
+    before,
+  })
+  revalidatePath('/configuracoes')
+  revalidatePath('/turmas', 'layout')
+  revalidatePath('/diario', 'layout')
+}

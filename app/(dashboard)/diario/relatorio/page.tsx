@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { requireStaff } from '@/lib/assert'
 import { createClient } from '@/lib/supabase/server'
+import { processoDoTreinador } from '@/lib/processoSgpe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Card from '@/components/ui/Card'
 import RelatorioForm from './RelatorioForm'
@@ -59,7 +60,7 @@ export default async function DiarioRelatorioPage({
   const ano      = Number(sp.ano)      || now.getFullYear()
   const cref     = sp.cref     ?? ''
   const cidade   = sp.cidade   ?? 'São José'
-  const processo = sp.processo ?? ''
+  let processo = sp.processo ?? ''
   const resumo   = sp.resumo   ?? ''
 
   const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`
@@ -71,6 +72,8 @@ export default async function DiarioRelatorioPage({
 
   // Determine which coach's data to show
   const targetCoachId: string | null = isAdmin ? (sp.coach ?? null) : actor.id
+  // Sem processo na URL: o das Configurações (comum às turmas do treinador).
+  if (sp.processo === undefined && targetCoachId) processo = await processoDoTreinador(supabase, targetCoachId, ano)
 
   // Fetch registros filtered by coach
   let query = supabase
@@ -249,7 +252,7 @@ export default async function DiarioRelatorioPage({
                 {cref && <span style={{ marginLeft: 32 }}><strong>CREF</strong> {cref}</span>}
               </p>
               <p><strong>Mês/Ano:</strong> {MESES_LABEL[mes]}/{ano}</p>
-              {processo && <p style={{ marginTop: 4, fontSize: 10, color: '#555' }}>Processo SGPE FESPORTE {processo}</p>}
+              {processo && <p style={{ marginTop: 4, fontSize: 10, color: '#555' }}>Processo SGPE {processo}</p>}
             </div>
 
             {/* Orientações */}

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { processoDoTreinador } from '@/lib/processoSgpe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireStaff } from '@/lib/assert'
 import Card from '@/components/ui/Card'
@@ -154,7 +155,8 @@ export default async function DiarioPage({
       .eq('mes', mes)
       .maybeSingle()
     cidade   = resumoRow?.cidade   ?? ''
-    processo = resumoRow?.processo ?? ''
+    // Processo salvo no resumo do mês vence; vazio = o das Configurações.
+    processo = resumoRow?.processo || (await processoDoTreinador(supabase, targetCoachId, ano))
     resumo   = resumoRow?.resumo   ?? ''
   }
 

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-type TurmaBasic = { id: string; nome: string; modalidade: string }
+type TurmaBasic = { id: string; nome: string; modalidade: string; processoPadrao: string }
 
 const MODALIDADE_LABEL: Record<string, string> = {
   natacao: 'Natação',
@@ -58,7 +58,8 @@ export default function ExportForm({
   const [inicio, setInicio] = useState(initialInicio || defaultDates.inicio)
   const [fim, setFim] = useState(initialFim || defaultDates.fim)
   const [local, setLocal] = useState(initialLocal || 'Beira Mar São José')
-  const [processo, setProcesso] = useState(initialProcesso || '')
+  // Processo SGPE: vem das Configurações para a turma escolhida; editável.
+  const [processo, setProcesso] = useState(initialProcesso)
 
   function applyPreset(fn: () => { inicio: string; fim: string }) {
     const { inicio: i, fim: f } = fn()
@@ -69,7 +70,7 @@ export default function ExportForm({
   function visualizar() {
     if (!turmaId || !inicio || !fim) return
     const params = new URLSearchParams({ turma: turmaId, inicio, fim, local })
-    if (processo) params.set('processo', processo)
+    params.set('processo', processo) // vazio também vale: a pessoa apagou de propósito
     router.push(`/presencas/exportar?${params}`)
   }
 
@@ -83,7 +84,10 @@ export default function ExportForm({
         </label>
         <select
           value={turmaId}
-          onChange={(e) => setTurmaId(e.target.value)}
+          onChange={(e) => {
+            setTurmaId(e.target.value)
+            setProcesso(turmas.find((t) => t.id === e.target.value)?.processoPadrao ?? '')
+          }}
           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
         >
           <option value="" disabled>Selecione a turma</option>
@@ -113,13 +117,13 @@ export default function ExportForm({
         </div>
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Processo SGPE <span className="normal-case font-normal text-gray-400">(opcional)</span>
+            Processo SGPE <span className="normal-case font-normal text-gray-400">(vem das Configurações; pode editar)</span>
           </label>
           <input
             type="text"
             value={processo}
             onChange={(e) => setProcesso(e.target.value)}
-            placeholder="Ex: 5217/2025"
+            placeholder="Ex: FESPORTE 5217/2025"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
           />
         </div>

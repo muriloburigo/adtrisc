@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import TurmaForm from '@/components/turmas/TurmaForm'
+import { getProcessosSgpe } from '@/lib/processoSgpe'
 import BackButton from '@/components/ui/BackButton'
 import { createTurma } from '../actions'
 
@@ -22,13 +23,14 @@ export default async function NovaTurmaPage() {
     .order('full_name')
 
   const coaches = (data ?? []) as { id: string; full_name: string | null }[]
+  const processos = await getProcessosSgpe(supabase)
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl">
       <BackButton />
       <PageHeader title="Nova Turma" subtitle="Preencha os dados da turma" />
       <Card>
-        <TurmaForm action={createTurma} coaches={coaches} auxiliaryCoachIds={[]} submitLabel="Criar Turma" />
+        <TurmaForm action={createTurma} coaches={coaches} auxiliaryCoachIds={[]} processos={processos} submitLabel="Criar Turma" />
       </Card>
     </div>
   )

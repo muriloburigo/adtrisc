@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import Image from 'next/image'
 import FichaForm from './FichaForm'
+import { getProcessosSgpe, processoDaTurma, processoComum } from '@/lib/processoSgpe'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -62,6 +63,13 @@ export default async function FichaPage({ params }: { params: Promise<{ token: s
     )
   }
 
+  // Processo SGPE da turma do atleta (Configurações → Processos SGPE).
+  const { data: aluno } = await db.from('alunos').select('turmas:turma_id ( ano, processo_sgpe_id )').eq('id', ficha.aluno_id).maybeSingle()
+  const processos = await getProcessosSgpe(db)
+  const processo = (aluno?.turmas
+    ? processoDaTurma(processos, aluno.turmas)
+    : processoComum(processos, [], new Date().getFullYear()))?.processo ?? null
+
   return (
     <div className="min-h-screen" style={{ background: '#f8fafc' }}>
       <header className="shadow-sm py-4 px-5 flex items-center gap-3 sticky top-0 z-10" style={{ background: '#0C143D' }}>
@@ -87,7 +95,7 @@ export default async function FichaPage({ params }: { params: Promise<{ token: s
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-5">
-        <FichaForm ficha={ficha} token={token} />
+        <FichaForm ficha={ficha} token={token} processo={processo} />
       </div>
     </div>
   )

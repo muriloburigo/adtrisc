@@ -103,7 +103,7 @@ export default function RelatorioForm({
           <label className={labelCls}>Processo SGPE <span className="normal-case font-normal text-gray-400">(opcional)</span></label>
           <input type="text" value={processo} onChange={(e) => setProcesso(e.target.value)}
             onBlur={() => pushUrl(mes, ano, cref, cidade, processo, resumo)}
-            placeholder="Ex: 5217/2025" className={inputCls} />
+            placeholder="Ex: FESPORTE 5217/2025" className={inputCls} />
         </div>
       </div>
       <div>

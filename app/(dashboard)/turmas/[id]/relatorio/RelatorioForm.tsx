@@ -94,14 +94,14 @@ export default function RelatorioForm({
         </div>
         <div>
           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Processo SGPE <span className="normal-case font-normal text-gray-400">(opcional)</span>
+            Processo SGPE <span className="normal-case font-normal text-gray-400">(vem das Configurações; pode editar)</span>
           </label>
           <input
             type="text"
             value={processo}
             onChange={(e) => setProcesso(e.target.value)}
             onBlur={() => navigate(mes, ano, local, cidade, processo)}
-            placeholder="Ex: 5217/2025"
+            placeholder="Ex: FESPORTE 5217/2025"
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white"
           />
         </div>

@@ -412,7 +412,7 @@ export default function DiarioClientView({
             {cref && <span style={{ marginLeft: 48 }}><strong>CREF</strong> {cref}</span>}
           </p>
           <p style={{ marginBottom: 0 }}><strong>Mês/Ano:</strong> {MESES_LABEL[mes]}/{ano}</p>
-          {processo && <p style={{ marginTop: 4, fontSize: 10, color: '#555' }}>Processo SGPE FESPORTE {processo}</p>}
+          {processo && <p style={{ marginTop: 4, fontSize: 10, color: '#555' }}>Processo SGPE {processo}</p>}
         </div>
 
         {/* Orientações */}
@@ -573,7 +573,7 @@ export default function DiarioClientView({
                   <label className={labelCls}>Processo SGPE <span className="normal-case font-normal text-gray-400">(opcional)</span></label>
                   <input type="text" value={processo}
                     onChange={(e) => setMeta(setProcesso)(e.target.value)}
-                    placeholder="Ex: 5217/2025" className={inputCls} />
+                    placeholder="Ex: FESPORTE 5217/2025" className={inputCls} />
                 </div>
               </div>
               <div>

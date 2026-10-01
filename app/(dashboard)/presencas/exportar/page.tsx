@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getProcessosSgpe, processoDaTurma } from '@/lib/processoSgpe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -21,6 +22,7 @@ type TurmaBasic = {
   dias_semana: DiaSemana[]
   horario_inicio: string
   horario_fim: string
+  processoPadrao: string
 }
 type AlunoBasic = {
   id: string
@@ -54,14 +56,14 @@ export default async function ExportarPresencasPage({
 
   let turmasQuery = supabase
     .from('turmas')
-    .select('id, nome, modalidade, coach_id, dias_semana, horario_inicio, horario_fim, profiles!turmas_coach_id_fkey(full_name, cref)')
+    .select('id, nome, modalidade, coach_id, dias_semana, horario_inicio, horario_fim, ano, processo_sgpe_id, profiles!turmas_coach_id_fkey(full_name, cref)')
     .eq('status', 'ativa')
     .order('nome')
   if (profile?.role === 'coach') {
     const turmaIdsCoach = await getTurmaIdsForCoach(supabase, user?.id)
     turmasQuery = turmasQuery.in('id', turmaIdsCoach.length > 0 ? turmaIdsCoach : ['__none__'])
   }
-  const { data: turmasRaw } = await turmasQuery
+  const [{ data: turmasRaw }, processosSgpe] = await Promise.all([turmasQuery, getProcessosSgpe(supabase)])
 
   const turmas: TurmaBasic[] = (turmasRaw ?? []).map(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -75,6 +77,7 @@ export default async function ExportarPresencasPage({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       coach_nome: (t.profiles as any)?.full_name ?? null,
       coach_cref: (t.profiles as any)?.cref ?? null,
+      processoPadrao: processoDaTurma(processosSgpe, t)?.processo ?? '',
     }),
   )
 
@@ -83,7 +86,8 @@ export default async function ExportarPresencasPage({
   const dataInicio = params.inicio   ?? ''
   const dataFim    = params.fim      ?? ''
   const local      = params.local    ?? 'Beira Mar São José'
-  const processo   = params.processo ?? ''
+  // Sem processo na URL: o da turma nas Configurações.
+  const processo   = params.processo ?? (turmas.find((t) => t.id === params.turma)?.processoPadrao ?? '')
 
   let turma: TurmaBasic | null = null
   let alunos: AlunoBasic[] = []
@@ -325,7 +329,7 @@ function AttendanceGrid({
             Associação Desportiva Triatlética de Santa Catarina/ADTRISC
             {processo && (
               <span style={{ marginLeft: 24 }}>
-                <span className={infoLabel}>Processo SGPE FESPORTE: </span>{processo}
+                <span className={infoLabel}>Processo SGPE: </span>{processo}
               </span>
             )}
           </div>

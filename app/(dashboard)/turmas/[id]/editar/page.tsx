@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import TurmaForm from '@/components/turmas/TurmaForm'
+import { getProcessosSgpe } from '@/lib/processoSgpe'
 import BackButton from '@/components/ui/BackButton'
 import { updateTurma } from '../../actions'
 import type { TurmaRow } from '@/types/database'
@@ -17,6 +18,7 @@ export default async function EditarTurmaPage({ params }: { params: Promise<{ id
     supabase.from('profiles').select('id, full_name').eq('role', 'coach').order('full_name'),
     supabase.from('turma_coaches').select('coach_id').eq('turma_id', id),
   ])
+  const processos = await getProcessosSgpe(supabase)
 
   if (!turmaRaw) notFound()
 
@@ -35,6 +37,7 @@ export default async function EditarTurmaPage({ params }: { params: Promise<{ id
           turma={turma}
           coaches={coaches}
           auxiliaryCoachIds={auxiliaryCoachIds}
+          processos={processos}
           submitLabel="Salvar alterações"
         />
       </Card>

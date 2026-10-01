@@ -40,7 +40,7 @@ function SuccessScreen({ nome }: { nome: string }) {
   )
 }
 
-export default function FichaForm({ ficha, token }: { ficha: Ficha; token: string }) {
+export default function FichaForm({ ficha, token, processo }: { ficha: Ficha; token: string; processo: string | null }) {
   const [sigData, setSigData] = useState<string | null>(null)
   const [aceite, setAceite] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -72,7 +72,7 @@ export default function FichaForm({ ficha, token }: { ficha: Ficha; token: strin
         <div className="bg-sky-50 rounded-xl p-4 text-sm space-y-1 text-gray-700 border border-sky-100">
           <p><span className="font-medium">OSC:</span> Associação Desportiva Triatlética de Santa Catarina — ADTRISC</p>
           <p><span className="font-medium">Modalidade:</span> Triathlon</p>
-          <p><span className="font-medium">Processo:</span> SGPE FESPORTE 5217/2025</p>
+          {processo && <p><span className="font-medium">Processo:</span> SGPE {processo}</p>}
           <div className="pt-2 border-t border-sky-100 mt-2">
             <p className="font-medium mb-1">Dias e horários:</p>
             <ul className="space-y-0.5 text-xs text-gray-600">

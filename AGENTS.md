@@ -216,7 +216,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `id` (uuid, FK → auth.users), `email`, `full_name`, `role` (UserRole), `avatar_url`, `cref` (coach's professional registration number, nullable)
 
 **`turmas`** — training classes
-- `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `status` (TurmaStatus), `observacoes`
+- `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `status` (TurmaStatus), `observacoes`, `processo_sgpe_id` (FK → processos_sgpe, nullable; null = use the year's process when the year has exactly one)
 
 **`alunos`** — athletes/students
 - `id`, `turma_id` (FK → turmas), `profile_id` (FK → profiles, nullable), `nome`, `telefone`, `sexo` (SexoEnum), `data_nascimento`, address fields (`rua`, `numero`, `bairro`, `cep`, `cidade`), `foto_url`, `status` (AlunoStatus), `observacoes`
@@ -291,6 +291,13 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 **`diario_resumos`** — monthly free-text summary per coach, feeding the signed diário report
 - `coach_id` (FK → profiles), `ano`, `mes`, `cidade`, `processo`, `resumo`, `updated_at`
 - Unique per `(coach_id, ano, mes)` — upserted
+
+**`processos_sgpe`** — SGPE process per project and year (`processos_sgpe.sql`), managed in **Configurações → Processos SGPE** (admin)
+- `id`, `projeto`, `ano`, `processo` (stored as printed after "Processo SGPE", e.g. `FESPORTE 5217/2025`), unique `(ano, projeto)`. Staff reads, admin writes.
+- It **pre-fills** the process field in the class report, the attendance export, the diário (monthly summary and its report) and the public ficha. Every field stays editable.
+- Resolution lives in `lib/processoSgpe.ts`. A turma uses its `processo_sgpe_id`; without one, it uses the year's process if the year has exactly one. The diário uses the process shared by all of the coach's active turmas (`processoDoTreinador`), or stays empty if they differ.
+- A value saved in `diario_resumos.processo`, or passed as `?processo=` in a report URL, wins over the default.
+- Until 30/09/2026 every report asked for the number by hand, and the ficha had `SGPE FESPORTE 5217/2025` hardcoded.
 
 **`relatorios_salvos`** — saved report setups on `/relatorios` (`relatorios_salvos.sql`)
 - `id`, `user_id` (FK → profiles, default `auth.uid()`), `nome` (1–80 chars, unique per user), `estado` (jsonb — the same JSON as the page's `?r=`), `created_at`, `updated_at`. RLS: each admin/coach sees and writes only their own rows.
@@ -569,6 +576,7 @@ This is the unlikely worst case. Steps, roughly in order:
    24. `avaliacoes_extras_zonas.sql` — new `avaliacoes_fisicas` columns (Dabonneville, maturação, ciclismo 2 km, link) + `zonas_treino` table (needs `coach_has_turma()`, #3)
    25. `testes_campo_proesp.sql` — natação 50/100 m + `altura_banco` columns, `config_avaliacao` table, drops `zonas_treino` (needs #24)
    26. `relatorios_salvos.sql` — saved reports of `/relatorios` (only needs `get_my_role()` from #1)
+   27. `processos_sgpe.sql` — `processos_sgpe` table + `turmas.processo_sgpe_id` + seed of the 2026 process (needs `get_my_role()` from #1)
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

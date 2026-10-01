@@ -9,6 +9,7 @@ import type { Database, DiaSemana, TurmaModalidade, TurmaStatus } from '@/types/
 
 type Turma = Database['public']['Tables']['turmas']['Row']
 type Coach = { id: string; full_name: string | null }
+type Processo = { id: string; projeto: string; ano: number; processo: string }
 
 const DIAS: { value: DiaSemana; label: string }[] = [
   { value: 'seg', label: 'Segunda' },
@@ -38,12 +39,14 @@ export default function TurmaForm({
   turma,
   coaches,
   auxiliaryCoachIds = [],
+  processos = [],
   submitLabel = 'Salvar',
 }: {
   action: (formData: FormData) => Promise<{ error?: string } | void>
   turma?: Turma
   coaches: Coach[]
   auxiliaryCoachIds?: string[]
+  processos?: Processo[]
   submitLabel?: string
 }) {
   const [state, formAction, isPending] = useActionState(
@@ -122,6 +125,16 @@ export default function TurmaForm({
           options={[
             { value: '1', label: '1º Semestre' },
             { value: '2', label: '2º Semestre' },
+          ]}
+        />
+
+        <Select
+          label="Processo SGPE"
+          name="processo_sgpe_id"
+          defaultValue={turma?.processo_sgpe_id ?? ''}
+          options={[
+            { value: '', label: 'Automático (o processo do ano, se houver um só)' },
+            ...processos.map((p) => ({ value: p.id, label: `${p.ano} · SGPE ${p.processo} — ${p.projeto}` })),
           ]}
         />
 

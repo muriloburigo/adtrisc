@@ -27,6 +27,7 @@ export type TurmaRow = {
   idade_max: number | null
   captacao_aberta: boolean
   observacoes: string | null
+  processo_sgpe_id: string | null
   created_at: string
   updated_at: string
 }

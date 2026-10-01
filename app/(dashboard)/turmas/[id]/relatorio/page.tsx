@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { getProcessosSgpe, processoDaTurma } from '@/lib/processoSgpe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Card from '@/components/ui/Card'
 import { ArrowLeft } from 'lucide-react'
@@ -76,7 +77,6 @@ export default async function RelatorioTurmaPage({
   const ano    = Number(sp.ano)  || now.getFullYear()
   const local    = sp.local    ?? 'Beira Mar São José'
   const cidade   = sp.cidade   ?? 'São José'
-  const processo = sp.processo ?? ''
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
@@ -107,6 +107,11 @@ export default async function RelatorioTurmaPage({
   ])
 
   if (!turmaRaw) notFound()
+
+  // Processo SGPE: o da turma (ou o único do ano), editável no formulário —
+  // o que for digitado vai na URL e vale só para este relatório.
+  const processoPadrao = processoDaTurma(await getProcessosSgpe(supabase), turmaRaw, ano)?.processo ?? ''
+  const processo = sp.processo ?? processoPadrao
 
   const periodo = `${ano}-${String(mes).padStart(2, '0')}`
   const { data: docsRaw } = await supabase
@@ -258,7 +263,7 @@ export default async function RelatorioTurmaPage({
                   Associação Desportiva Triatlética de Santa Catarina/ADTRISC
                   {processo && (
                     <span style={{ marginLeft: 24 }}>
-                      <span className="font-bold uppercase">Processo SGPE FESPORTE: </span>{processo}
+                      <span className="font-bold uppercase">Processo SGPE: </span>{processo}
                     </span>
                   )}
                 </div>
