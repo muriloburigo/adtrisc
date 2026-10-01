@@ -7,6 +7,7 @@ import ResetPasswordForm from '@/components/usuarios/ResetPasswordForm'
 import { resetPassword } from '../../actions'
 import EditarCoachForm from './EditarCoachForm'
 import CoachAvatarCard from './CoachAvatarCard'
+import AssinaturaCard from '@/components/usuarios/AssinaturaCard'
 
 export default async function EditarCoachPage({
   params,
@@ -24,7 +25,7 @@ export default async function EditarCoachPage({
   const { id } = await params
   const { data: coach } = await supabase
     .from('profiles')
-    .select('id, full_name, email, cref, avatar_url')
+    .select('id, full_name, email, cref, avatar_url, assinatura, assinatura_atualizada_em')
     .eq('id', id)
     .eq('role', 'coach')
     .single()
@@ -55,6 +56,8 @@ export default async function EditarCoachPage({
       <Card>
         <EditarCoachForm id={id} fullName={coach.full_name ?? ''} cref={coach.cref ?? ''} />
       </Card>
+
+      <AssinaturaCard perfilId={id} atual={coach.assinatura ?? null} atualizadaEm={coach.assinatura_atualizada_em ?? null} proprio={id === user.id} />
 
       <Card>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">

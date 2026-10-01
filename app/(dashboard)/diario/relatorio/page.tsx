@@ -8,6 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import Card from '@/components/ui/Card'
 import RelatorioForm from './RelatorioForm'
 import PrintButton from './PrintButton'
+import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 import type { TurmaFotoRow } from '@/types/database'
 
@@ -74,6 +76,12 @@ export default async function DiarioRelatorioPage({
   const targetCoachId: string | null = isAdmin ? (sp.coach ?? null) : actor.id
   // Sem processo na URL: o das Configurações (comum às turmas do treinador).
   if (sp.processo === undefined && targetCoachId) processo = await processoDoTreinador(supabase, targetCoachId, ano)
+  // Assinatura cadastrada do treinador do diário (desmarcável com ?assinatura=0).
+  const incluirAssinatura = sp.assinatura !== '0'
+  const { data: perfilCoach } = targetCoachId
+    ? await supabase.from('profiles').select('assinatura, full_name').eq('id', targetCoachId).single()
+    : { data: null }
+  const assinaturaCoach: string | null = perfilCoach?.assinatura ?? null
 
   // Fetch registros filtered by coach
   let query = supabase
@@ -205,6 +213,16 @@ export default async function DiarioRelatorioPage({
               cref={cref} cidade={cidade} processo={processo} resumo={resumo}
               coachId={targetCoachId ?? undefined}
             />
+            {targetCoachId && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <IncluirAssinatura
+                  temAssinatura={!!assinaturaCoach}
+                  incluir={incluirAssinatura}
+                  nomeTreinador={perfilCoach?.full_name ?? null}
+                  linkCadastro={targetCoachId === actor.id ? '/conta' : isAdmin ? `/coaches/${targetCoachId}/editar` : null}
+                />
+              </div>
+            )}
           </Card>
 
           {targetCoachId && (
@@ -335,7 +353,7 @@ export default async function DiarioRelatorioPage({
             <div style={{ marginTop: 32, borderTop: '1px solid #ccc', paddingTop: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div>
-                  <div style={{ borderBottom: '1px solid #555', width: 260, paddingBottom: 22, marginBottom: 5 }} />
+                  <AssinaturaImpressa assinatura={incluirAssinatura ? assinaturaCoach : null} largura={260} espacoSemAssinatura={22} />
                   <p style={{ margin: 0, fontWeight: 700 }}>Treinador Responsável</p>
                   {coachName && (
                     <p style={{ margin: '3px 0 0' }}>

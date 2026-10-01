@@ -7,6 +7,7 @@ import { formatDate } from '@/lib/utils'
 import { criarMultiplosRegistros, salvarResumoDiario } from './actions'
 import { friendlyError } from '@/lib/errors'
 import { setFotoDoDia, removerFotoDoDia, type FotoDoDia } from './fotoActions'
+import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 // ── Report constants ────────────────────────────────────────────────────────
@@ -210,6 +211,7 @@ export default function DiarioClientView({
   coachName,
   initialCref, initialCidade, initialProcesso, initialResumo,
   periodo, documentos,
+  assinatura, linkCadastroAssinatura,
 }: {
   initialDays: InitialDay[]
   allTurmas: TurmaBasic[]
@@ -219,7 +221,10 @@ export default function DiarioClientView({
   initialCref: string; initialCidade: string; initialProcesso: string; initialResumo: string
   periodo: string
   documentos: DocumentoAssinadoItem[]
+  assinatura: string | null              // assinatura cadastrada do treinador
+  linkCadastroAssinatura: string | null
 }) {
+  const [incluirAssinatura, setIncluirAssinatura] = useState(true)
   const storageKey    = `diario-draft-${targetCoachId ?? 'self'}-${ano}-${mes}`
   const hasUserEdited = useRef(false)
   const addCounter    = useRef(0)
@@ -520,7 +525,7 @@ export default function DiarioClientView({
             <p style={{ margin: '0 0 36px 0' }}>{coachName}{cref ? ` – CREF ${cref}` : ''}</p>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div style={{ borderBottom: '1px solid #555', width: 300 }} />
+            <AssinaturaImpressa assinatura={incluirAssinatura ? assinatura : null} largura={300} espacoSemAssinatura={0} />
             <p style={{ margin: 0 }}>
               {cidade || 'São José'}, {ultimoDia(ano, mes)} de {MESES_EXTENSO[mes]} de {ano}.
             </p>
@@ -555,6 +560,19 @@ export default function DiarioClientView({
                   <Printer size={14} />
                   Imprimir / PDF
                 </button>
+              </div>
+              <div className="mb-3 text-sm text-gray-600">
+                {assinatura ? (
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={incluirAssinatura} onChange={(e) => setIncluirAssinatura(e.target.checked)} />
+                    Incluir a assinatura de {coachName || 'treinador(a)'} no rodapé
+                  </label>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    {coachName || 'Treinador(a)'} não tem assinatura cadastrada
+                    {linkCadastroAssinatura && <> · <a href={linkCadastroAssinatura} className="text-sky-500 hover:underline">cadastrar</a></>}
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                 <div>

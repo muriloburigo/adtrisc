@@ -213,7 +213,8 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 ### Tables
 
 **`profiles`** — mirrors `auth.users`; auto-created by trigger on user signup
-- `id` (uuid, FK → auth.users), `email`, `full_name`, `role` (UserRole), `avatar_url`, `cref` (coach's professional registration number, nullable)
+- `id` (uuid, FK → auth.users), `email`, `full_name`, `role` (UserRole), `avatar_url`, `cref` (coach's professional registration number, nullable), `assinatura` (drawn signature as a PNG data URL, ≤ 400 KB, nullable), `assinatura_atualizada_em` (`assinaturas.sql`)
+- **Coach signature.** It is registered in **Minha conta** by the coach, or in **Treinadores → Editar** by an admin (`salvarAssinatura` in `conta/assinatura-actions.ts`; the image itself never goes to the audit log). It is placed automatically above the signature line of the class report, the attendance export, the diário report and the diário print (`components/documentos/AssinaturaImpressa.tsx`). Each of those screens has an "incluir assinatura" checkbox; on the server-rendered ones, unchecking sets `?assinatura=0`. It is a drawn (simple electronic) signature; the upload of officially signed PDFs (`documentos_assinados`) stays as is.
 
 **`turmas`** — training classes
 - `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `status` (TurmaStatus), `observacoes`, `processo_sgpe_id` (FK → processos_sgpe, nullable; null = use the year's process when the year has exactly one)
@@ -577,6 +578,7 @@ This is the unlikely worst case. Steps, roughly in order:
    25. `testes_campo_proesp.sql` — natação 50/100 m + `altura_banco` columns, `config_avaliacao` table, drops `zonas_treino` (needs #24)
    26. `relatorios_salvos.sql` — saved reports of `/relatorios` (only needs `get_my_role()` from #1)
    27. `processos_sgpe.sql` — `processos_sgpe` table + `turmas.processo_sgpe_id` + seed of the 2026 process (needs `get_my_role()` from #1)
+   28. `assinaturas.sql` — `profiles.assinatura` + `assinatura_atualizada_em`
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

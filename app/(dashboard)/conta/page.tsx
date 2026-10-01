@@ -4,13 +4,14 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import { formatRole } from '@/lib/utils'
 import TrocarSenhaForm from './TrocarSenhaForm'
+import AssinaturaCard from '@/components/usuarios/AssinaturaCard'
 
 export default async function MinhaContaPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  const { data: p } = await supabase.from('profiles').select('full_name, role').eq('id', user.id).single()
+  const { data: p } = await supabase.from('profiles').select('full_name, role, assinatura, assinatura_atualizada_em').eq('id', user.id).single()
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl space-y-6">
@@ -19,6 +20,9 @@ export default async function MinhaContaPage() {
         <h2 className="text-sm font-semibold text-navy-500 mb-4">Alterar senha</h2>
         <TrocarSenhaForm />
       </Card>
+      {(p?.role === 'coach' || p?.role === 'admin') && (
+        <AssinaturaCard perfilId={user.id} atual={p.assinatura ?? null} atualizadaEm={p.assinatura_atualizada_em ?? null} proprio />
+      )}
     </div>
   )
 }

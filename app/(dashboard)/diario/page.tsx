@@ -160,6 +160,12 @@ export default async function DiarioPage({
     resumo   = resumoRow?.resumo   ?? ''
   }
 
+  // ── Assinatura cadastrada do treinador (rodapé da impressão) ─────────────
+  const { data: perfilAssinatura } = targetCoachId
+    ? await supabase.from('profiles').select('assinatura').eq('id', targetCoachId).single()
+    : { data: null }
+  const assinaturaCoach: string | null = perfilAssinatura?.assinatura ?? null
+
   // ── Documentos assinados do diário ──────────────────────────────────────
   const periodo = `${ano}-${String(mes).padStart(2, '0')}`
   let documentos: DocumentoAssinadoItem[] = []
@@ -242,6 +248,8 @@ export default async function DiarioPage({
             initialResumo={resumo}
             periodo={periodo}
             documentos={documentos}
+            assinatura={assinaturaCoach}
+            linkCadastroAssinatura={targetCoachId === actor.id ? '/conta' : isAdmin && targetCoachId ? `/coaches/${targetCoachId}/editar` : null}
           />
         )}
 

@@ -6,6 +6,8 @@ import { ArrowLeft } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import ExportForm from './ExportForm'
 import PrintButton from './PrintButton'
+import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
 import { formatarDiasSemana, formatarHorario, formatTelefone } from '@/lib/utils'
 import { getTurmaIdsForCoach } from '@/lib/turmas'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
@@ -23,6 +25,7 @@ type TurmaBasic = {
   horario_inicio: string
   horario_fim: string
   processoPadrao: string
+  coach_id: string | null
 }
 type AlunoBasic = {
   id: string
@@ -78,6 +81,7 @@ export default async function ExportarPresencasPage({
       coach_nome: (t.profiles as any)?.full_name ?? null,
       coach_cref: (t.profiles as any)?.cref ?? null,
       processoPadrao: processoDaTurma(processosSgpe, t)?.processo ?? '',
+      coach_id: t.coach_id ?? null,
     }),
   )
 
@@ -90,6 +94,8 @@ export default async function ExportarPresencasPage({
   const processo   = params.processo ?? (turmas.find((t) => t.id === params.turma)?.processoPadrao ?? '')
 
   let turma: TurmaBasic | null = null
+  let assinaturaCoach: string | null = null
+  const incluirAssinatura = params.assinatura !== '0'
   let alunos: AlunoBasic[] = []
   let presencas: PresencaEntry[] = []
   let datas: string[] = []
@@ -97,6 +103,10 @@ export default async function ExportarPresencasPage({
 
   if (turmaId && dataInicio && dataFim) {
     turma = turmas.find((t) => t.id === turmaId) ?? null
+    if (turma?.coach_id) {
+      const { data: c } = await supabase.from('profiles').select('assinatura').eq('id', turma.coach_id).single()
+      assinaturaCoach = c?.assinatura ?? null
+    }
 
     if (turma) {
       const [{ data: alunosRaw }, { data: presencasRaw }] = await Promise.all([
@@ -256,7 +266,18 @@ export default async function ExportarPresencasPage({
               />
             </div>
 
+            <div className="print:hidden mb-4">
+              <IncluirAssinatura
+                temAssinatura={!!assinaturaCoach}
+                incluir={incluirAssinatura}
+                nomeTreinador={turma.coach_nome}
+                linkCadastro={turma.coach_id && user?.id === turma.coach_id ? '/conta'
+                  : profile?.role === 'admin' && turma.coach_id ? `/coaches/${turma.coach_id}/editar` : null}
+              />
+            </div>
+
             <AttendanceGrid
+              assinatura={incluirAssinatura ? assinaturaCoach : null}
               turma={turma}
               alunos={alunos}
               datas={datas}
@@ -282,7 +303,9 @@ function AttendanceGrid({
   local,
   processo,
   coachCref,
+  assinatura,
 }: {
+  assinatura: string | null
   turma: TurmaBasic
   alunos: AlunoBasic[]
   datas: string[]
@@ -438,7 +461,7 @@ function AttendanceGrid({
       {/* ── Assinatura (só impressão) ── */}
       <div className="hidden print:flex mt-8 gap-16 text-xs text-gray-500">
         <div className="flex-1">
-          <div style={{ borderBottom: '1px solid #555', paddingBottom: 24, marginBottom: 4 }} />
+          <AssinaturaImpressa assinatura={assinatura} espacoSemAssinatura={24} />
           <p>
             Assinatura do Treinador
             {(turma.coach_nome || coachCref) && (

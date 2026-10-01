@@ -13,6 +13,8 @@ import {
 import type { TurmaRow, DiaSemana } from '@/types/database'
 import RelatorioForm from './RelatorioForm'
 import PrintButton from './PrintButton'
+import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 export const dynamic = 'force-dynamic'
@@ -45,7 +47,7 @@ const MESES_EXTENSO = [
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
 ]
 
-type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null; cref: string | null } | null }
+type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null; cref: string | null; assinatura: string | null } | null }
 type AlunoBasic = {
   id: string
   nome: string
@@ -87,7 +89,7 @@ export default async function RelatorioTurmaPage({
   const [{ data: turmaRaw }, { data: alunosRaw }, { data: presencasRaw }] = await Promise.all([
     supabase
       .from('turmas')
-      .select('*, coaches:coach_id ( full_name, cref )')
+      .select('*, coaches:coach_id ( full_name, cref, assinatura )')
       .eq('id', id)
       .single(),
     supabase
@@ -176,6 +178,13 @@ export default async function RelatorioTurmaPage({
   const year = ano
   const coachName = turma.coaches?.full_name ?? ''
   const coachCref = turma.coaches?.cref ?? ''
+  // Assinatura cadastrada do treinador responsável (desmarcável com ?assinatura=0).
+  const incluirAssinatura = sp.assinatura !== '0'
+  const assinaturaCoach: string | null = turma.coaches?.assinatura ?? null
+  const { data: { user: viewer } } = await supabase.auth.getUser()
+  const { data: viewerPerfil } = viewer ? await supabase.from('profiles').select('role').eq('id', viewer.id).single() : { data: null }
+  const linkCadastroAssinatura = turma.coach_id && viewer?.id === turma.coach_id ? '/conta'
+    : viewerPerfil?.role === 'admin' && turma.coach_id ? `/coaches/${turma.coach_id}/editar` : null
 
   const dateColW = datas.length <= 18 ? 26 : datas.length <= 26 ? 22 : 18
 
@@ -220,6 +229,14 @@ export default async function RelatorioTurmaPage({
 
           <Card>
             <RelatorioForm mes={mes} ano={ano} local={local} cidade={cidade} processo={processo} />
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <IncluirAssinatura
+                temAssinatura={!!assinaturaCoach}
+                incluir={incluirAssinatura}
+                nomeTreinador={coachName || null}
+                linkCadastro={linkCadastroAssinatura}
+              />
+            </div>
           </Card>
 
           <div className="mt-4">
@@ -380,7 +397,7 @@ export default async function RelatorioTurmaPage({
             {/* ── Rodapé de assinatura ── */}
             <div className="print-footer mt-6 flex justify-between items-end" style={{ fontSize: 10, breakInside: 'avoid', pageBreakInside: 'avoid' }}>
               <div>
-                <div style={{ borderBottom: '1px solid #555', width: 280, paddingBottom: 20, marginBottom: 4 }} />
+                <AssinaturaImpressa assinatura={incluirAssinatura ? assinaturaCoach : null} largura={280} espacoSemAssinatura={20} />
                 <p style={{ margin: 0, fontWeight: 700 }}>Treinador(a) Responsável</p>
                 {coachName && (
                   <p style={{ margin: '2px 0 0' }}>
