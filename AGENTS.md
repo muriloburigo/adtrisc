@@ -98,13 +98,17 @@ adtrisc/
 │   ├── turmas/TurmaForm.tsx        # Create/edit class form
 │   ├── provas/                     # Categoria/resultado forms + cards for the Provas detail page
 │   ├── imprensa/                   # MateriaForm.tsx (add link) + MateriaCard.tsx (preview + delete)
-│   ├── documentos/                 # DocumentosAssinadosSection.tsx — upload/list/delete signed PDFs
-│   ├── enrollment/                 # CamposComuns.tsx — fields shared by /inscricao and /ficha/[token]
+│   ├── avaliacoes/                 # ProespBadges.tsx (PROESP seals) + TabelaZonas.tsx (training zones)
+│   ├── documentos/                 # DocumentosAssinadosSection.tsx (signed PDFs: upload, gov.br check, list),
+│   │                               #   AssinaturaImpressa / IncluirAssinatura (coach signature in report footers),
+│   │                               #   QuadroGovBr (box for the gov.br stamp), AssinarGovBrButton (assinador.iti.br)
+│   ├── enrollment/                 # CamposComuns.tsx — fields shared by /inscricao and /ficha/[token] (incl. SignaturePad)
+│   ├── usuarios/                   # ResetPasswordForm.tsx + AssinaturaCard.tsx (coach's drawn signature)
 │   ├── layout/
 │   │   ├── Sidebar.tsx             # Desktop nav (role-filtered)
 │   │   └── MobileHeader.tsx        # Mobile nav header
 │   └── ui/                         # Reusable primitives: Button, Card, Badge,
-│                                   #   Input, Select, Avatar, FilterBar, etc.
+│                                   #   Input, Select, Avatar, FilterBar (fixedParams keeps e.g. ?aba), etc.
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts               # Browser Supabase client
@@ -112,17 +116,28 @@ adtrisc/
 │   │   └── admin.ts                # Service-role client (bypasses RLS)
 │   ├── assert.ts                   # requireStaff() / requireAdmin() guards
 │   ├── audit.ts                    # logAudit() + getSessionUser()
-│   ├── documentosAssinados.ts      # Signed-PDF upload/delete (bucket `documentos`)
+│   ├── config-avaliacao.ts         # getConfigAvaliacao() — zone limits, bench height, 100 m cut-off
+│   ├── documentosAssinados.ts      # Signed PDFs: signed-URL upload straight to Storage, register + delete (bucket `documentos`)
 │   ├── errors.ts                   # friendlyError() — translates Supabase/RLS errors for the UI
 │   ├── faltasAlerta.ts             # Computes attendance-alert thresholds per athlete
+│   ├── fichaCadastro.ts            # aplicarFichaNoCadastro() — filled ficha → alunos + responsaveis
+│   ├── financeiro.ts               # Budget % and progress-bar colour helpers
 │   ├── linkPreview.ts              # Open Graph scraper + slug-based title fallback (Imprensa).
 │                                   #   Resolves DNS and blocks private/loopback/link-local IPs
 │                                   #   (incl. on every redirect hop) — SSRF guard, don't remove.
+│   ├── maturacao.ts                # Mirwald (2002) maturity offset + classification bands
+│   ├── nomes.ts                    # mesmaPessoa() — duplicate-athlete check (accents, abbreviations)
 │   ├── password.ts                 # Password validation rules
+│   ├── pdfAssinaturas.ts           # lerAssinaturasPdf() — identifies gov.br/ICP-Brasil signatures in a PDF
+│   ├── processoSgpe.ts             # SGPE process per turma/coach (pre-fills reports, diário, ficha)
+│   ├── proesp.ts                   # PROESP-Br 2021 norms + classificarProesp()
 │   ├── provas.ts                   # Etapa/status labels + helpers for the Provas feature
+│   ├── relatorio.ts                # /relatorios: field list, row building, filters, evolução
 │   ├── termos.ts                   # Enrollment terms & conditions text (shared by inscricao/ficha)
-│   ├── turmas.ts                   # getTurmaIdsForCoach() — turma scoping for coach-only actions
-│   └── utils.ts                    # cn(), formatDate(), formatTelefone(), etc.
+│   ├── transferencias.ts           # Pending athlete transfers per user (who must answer)
+│   ├── turmas.ts                   # getTurmaIdsForCoach() — turma scoping (head or assistant coach)
+│   ├── utils.ts                    # cn(), formatDate(), formatTelefone(), etc.
+│   └── zonas.ts                    # Training zones from Dabonneville 5' / cycling 2 km
 ├── types/
 │   └── database.ts                 # All TypeScript types: enums + row types
 ├── supabase/                       # SQL migrations — run manually in the Supabase SQL editor
@@ -310,7 +325,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `id`, `user_id` (FK → profiles, default `auth.uid()`), `nome` (1–80 chars, unique per user), `estado` (jsonb — the same JSON as the page's `?r=`), `created_at`, `updated_at`. RLS: each admin/coach sees and writes only their own rows.
 
 **`audit_logs`** — all admin/coach write actions
-- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro/config), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
+- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro/config/relatorio/transferencia), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
 
 **`categorias_financeiras`** — global, reusable expense categories (Treinadores, Camisetas, Viagens...)
 - `id`, `nome`, `ativo` (soft-disable — categories are never hard-deleted since budgets/notes reference them), `created_at`
@@ -337,6 +352,8 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `provas`/`prova_categorias` are shared event data (not tied to one turma) — any staff (admin or coach) can read/write them. `resultados_prova` is scoped like `avaliacoes_fisicas`: a coach can only read/write results for athletes in a turma they coach (`coach_has_turma()`), admin unrestricted.
 - `materias_imprensa` follows the same shared-staff pattern as `provas`.
 - The 4 `*_financeiros`/`projeto_arquivos` tables: **select** is open to any staff (admin+coach) on all of them — a coach needs to see every other coach's lançamentos too, otherwise the budget "consumido" total on `/financeiro` would only reflect their own notes. **Write** on `categorias_financeiras`/`projetos_financeiros`/`orcamentos_financeiros`/`projeto_arquivos` is admin-only. **Write** on `lancamentos_financeiros` is admin OR the row's own `coach_id = auth.uid()` — a coach can only create/edit/delete their own notes.
+- `relatorios_salvos`: each admin/coach reads and writes only their own rows. `processos_sgpe`: staff reads, admin writes. `transferencias`: readable by admins and the coaches of either turma. Writes happen only through server actions using the service role, which authorize turma by turma.
+- **Assistant coaches (`turma_coaches`) have the same permissions as the head coach** everywhere: `coach_has_turma()` and `getTurmaIdsForCoach()` count both.
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
 
 ### Helper DB Function
@@ -357,6 +374,16 @@ Staff reviews applicants and changes status (approve, reject, lottery draw, wait
 
 ### Class Management (`/turmas`)
 CRUD for turmas. Each class has a photo gallery (Supabase Storage bucket `fotos`). Staff can generate batch enrollment form links for all active athletes in a class.
+- The athlete list on `/turmas/[id]` has two tabs, **Cadastro | Desempenho** (`?aba=desempenho`, `DesempenhoTurma.tsx`). Desempenho shows, per athlete, the most recent result of each data point:
+  - date of the last evaluation (yellow after 6 months, red if none);
+  - maturação;
+  - Dabonneville 5' with pace;
+  - cycling 2 km with km/h;
+  - swimming 100 m with the "Apto" seal (or 12' when there's no 100 m);
+  - a PROESP "N em risco" summary.
+
+  Columns sort through `?ordem=&dir=`.
+- Each turma can point to an SGPE process (`processo_sgpe_id`, see `processos_sgpe`).
 
 ### Athlete Management (`/alunos`)
 Full CRUD for athletes.
@@ -387,6 +414,8 @@ Staff selects a class and date, then marks each athlete present/absent/excused. 
 
 ### Fitness Assessments (`/avaliacoes`)
 Grid view per class and date. See the `avaliacoes_fisicas` table above for the exact field list (body mass, height, waist/seated-height/wingspan measurements, IMC auto-computed, sit-and-reach flexibility, 6-min run, abdominal strength, medicine ball throw, agility, standing long jump, 20m run, 12-min swim). Soft-deleted via `deleted_at`. Individual assessments also accessible from athlete detail page.
+- **Activity link** (Garmin/Polar/Strava): the class grid has a "Link da atividade" column (saved on blur, `saveAtividadeUrl`), and the assessment detail page can add or edit it.
+- **`/avaliacoes/referencia`**: the full PROESP-Br tables, health cut-offs and performance bands by sex and age 6–17, generated from `lib/proesp.ts`, plus the Mirwald maturation section (`#maturacao`). The assessment detail page links to it with `?sexo=&idade=`, so the athlete's row comes highlighted.
 
 ### Reports (`/relatorios`)
 Admin and coach. One screen that answers "which athletes match these criteria". Filters over every athlete field combine with AND; a list filter's options combine with OR. Covered: cadastro, responsáveis, ficha, measures, PROESP tests and classification, field tests, maturação. Results update on screen as filters change. **No export by design.**
@@ -421,7 +450,8 @@ Budget tracking per project (edital/patrocínio) and category, plus coach-submit
 
 ### User / Coach Management
 - `/coaches` — Admin creates/edits/deletes coach accounts using `auth.admin` APIs. Every action in `coaches/actions.ts` starts with `requireAdmin()` and only acts on profiles with `role = 'coach'` — until 30/09/2026 they had **no** check (the page was admin-only, the actions weren't), so any logged-in user could reset any password, including an admin's. Rule: an action that uses `createAdminClient()` must authorize **inside the action**; guarding the page is not enough.
-- `/configuracoes` — Admin views all auth users, edits name/role, resets another user's password, deletes users.
+- `/configuracoes` — Admin views all auth users, edits name/role, resets another user's password, deletes users. It also holds the **Avaliações** settings (zone limits, bench height, 100 m cut-off) and the **Processos SGPE** list.
+- `/conta` (every user) — change your own password. Admins and coaches also get **Minha assinatura** (drawn signature used in report footers); admins can set a coach's signature in `/coaches/[id]/editar`.
 - Passwords must meet 5 requirements: 8+ chars, uppercase, lowercase, digit, special character (validated in `lib/password.ts`).
 
 ---

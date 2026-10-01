@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ADTRISC — Sistema de Gestão
 
-## Getting Started
+Sistema da **Associação Desportiva Triatlética de Santa Catarina (ADTRISC)** para a Escolinha de Triathlon São José e as equipes: turmas, atletas, presenças, avaliações físicas, inscrições e prestação de contas.
 
-First, run the development server:
+Produção: https://adtrisc.vercel.app
+
+> A documentação técnica completa (schema, regras de acesso, convenções, deploy, backup e restauração) está em **[AGENTS.md](./AGENTS.md)**. Leia antes de mexer no código.
+
+## Principais áreas
+
+- **Turmas**: cadastro, galeria de fotos, relatório mensal e aba **Desempenho** com os resultados de cada atleta.
+- **Atletas**: cadastro com responsáveis e dados da ficha de inscrição. A ficha preenchida pelos pais atualiza o cadastro sozinha. Há bloqueio de cadastro duplicado e **transferência entre turmas** (direta ou com confirmação do outro treinador).
+- **Presenças**: chamada por turma e data, e exportação da lista de presença.
+- **Avaliações físicas**: grade por turma, classificação PROESP-Br, maturação (Mirwald), testes de campo e zonas de treino. Página de referências em `/avaliacoes/referencia`.
+- **Relatórios** (`/relatorios`): filtros combinados sobre cadastro, ficha e avaliações (incluindo evolução), com relatórios salvos por usuário. Não exporta: os resultados aparecem na tela.
+- **Diário de aulas**: registro de cada aula, resumo do mês e relatório assinado.
+- **Assinaturas**: a assinatura desenhada do treinador entra nos rodapés dos relatórios. Ao lado fica o espaço para o selo do **gov.br** (assinador.iti.br). No envio do PDF, o sistema identifica quem assinou digitalmente.
+- **Configurações**: usuários, parâmetros das avaliações e **processos SGPE** por projeto e ano.
+- **Inscrições públicas** (`/inscricao`), fichas digitais (`/ficha/[token]`), candidatos e sorteio, provas, imprensa, financeiro e auditoria.
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · Supabase (Postgres, Auth, Storage) · Vercel.
+
+## Desenvolvimento
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local   # preencha as chaves do Supabase
+npm install
+npm run dev                  # http://localhost:3000
+npm run build                # confira antes de publicar
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Migrations ficam em `supabase/*.sql` e são aplicadas à mão no SQL editor do Supabase. A ordem está em AGENTS.md, em "Backup & Restore".
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Todo push na `main` publica em produção pela integração da Vercel com o GitHub. **Nunca use `vercel --prod` a partir da pasta local**: isso publica código sem commit, que some no push seguinte (ver AGENTS.md → Deployment).

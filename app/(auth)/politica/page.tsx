@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
-const UPDATED = '06 de maio de 2026 (rev. 3)'
+const UPDATED = '01 de outubro de 2026 (rev. 4)'
 
 export default function PoliticaPage() {
   return (
@@ -66,8 +66,18 @@ export default function PoliticaPage() {
                 <li>Turma e status de matrícula</li>
                 <li>Registros de presença nas aulas</li>
                 <li>Medidas corporais e resultados de avaliações físicas (massa corporal, estatura,
-                  IMC, RCE, testes de aptidão física e tempos em provas de natação) utilizados para
-                  acompanhamento do desenvolvimento esportivo</li>
+                  IMC, RCE, testes de aptidão física, testes de campo de corrida, ciclismo e natação),
+                  a estimativa de maturação biológica calculada a partir dessas medidas e da data de
+                  nascimento e, opcionalmente, o link da atividade registrada em relógio ou aplicativo
+                  esportivo (Garmin, Polar, Strava), utilizados para acompanhamento do desenvolvimento
+                  esportivo</li>
+                <li>
+                  Dados informados pelos responsáveis na ficha de inscrição — escola e série, CPF,
+                  tamanho de camiseta, posse de bicicleta e, como <strong>dados sensíveis</strong>,
+                  condição médica, tratamento e alergias — exibidos no cadastro do atleta somente a
+                  administradores(as) e aos treinadores(as) da turma, para a segurança na prática
+                  esportiva
+                </li>
                 <li>
                   <strong>Foto de perfil</strong> — imagem fornecida voluntariamente por staff
                   autorizado para identificação visual no Sistema; não é obrigatória e pode ser
@@ -125,6 +135,16 @@ export default function PoliticaPage() {
                 </li>
                 <li>Registros de ações realizadas no Sistema (log de auditoria), incluindo data/hora,
                   tipo de ação e identificação do registro afetado</li>
+                <li>
+                  <strong>Assinatura desenhada</strong> — imagem cadastrada voluntariamente pelo(a)
+                  próprio(a) treinador(a) ou por um administrador, usada apenas no rodapé de relatórios
+                  e documentos de prestação de contas; pode ser removida a qualquer momento
+                </li>
+                <li>
+                  Nome do(a) signatário(a) e data das assinaturas digitais (gov.br ou ICP-Brasil)
+                  presentes nos documentos assinados enviados ao Sistema, lidos do próprio arquivo para
+                  conferência — o CPF que consta no certificado digital não é armazenado
+                </li>
               </ul>
             </SubSection>
 
@@ -267,6 +287,11 @@ export default function PoliticaPage() {
                 às políticas de privacidade próprias, com infraestrutura em nuvem.
               </li>
               <li>
+                <strong>Google LLC (Google Drive)</strong> — guarda cópias de segurança do banco de
+                dados e dos arquivos, criptografadas (AES-256) antes do envio; o conteúdo não é
+                acessível à Google.
+              </li>
+              <li>
                 <strong>Autoridades públicas</strong> — quando exigido por lei ou decisão judicial.
               </li>
             </ul>
@@ -284,6 +309,12 @@ export default function PoliticaPage() {
             </p>
             <ul className="list-disc list-inside space-y-1.5">
               <li>Autenticação segura com controle de acesso por perfil (admin, treinador/a, atleta, responsável)</li>
+              <li>
+                Treinadores(as) acessam os dados completos apenas dos atletas das turmas em que
+                atuam (como titulares ou auxiliares). Para solicitar a transferência de um atleta
+                entre turmas, podem ver somente nome, turma e idade de atletas de outras turmas — sem
+                contatos, dados de saúde ou avaliações
+              </li>
               <li>Exigência de senha forte para contas de treinadores(as) e administradores(as) (mínimo 8 caracteres, com letras maiúsculas, minúsculas, números e caracteres especiais)</li>
               <li>Comunicação criptografada via HTTPS/TLS em todas as requisições</li>
               <li>Acesso ao banco de dados restrito por políticas de segurança em nível de linha (Row Level Security)</li>
@@ -297,7 +328,8 @@ export default function PoliticaPage() {
               </li>
               <li>Compressão e redimensionamento de imagens realizados no lado do cliente antes
                 do envio, limitando o tamanho e a resolução máximos armazenados</li>
-              <li>Backups automáticos gerenciados pela Supabase</li>
+              <li>Backups automáticos gerenciados pela Supabase e cópias de segurança diárias
+                criptografadas (AES-256), mantidas por 30 dias</li>
               <li>Acesso administrativo limitado ao pessoal autorizado</li>
             </ul>
           </Section>
