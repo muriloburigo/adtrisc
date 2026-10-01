@@ -257,7 +257,7 @@ export default async function DesempenhoTurma({
               <div><dt className="text-gray-400">Maturação</dt><dd><CelMaturacao l={l} /></dd></div>
               <div><dt className="text-gray-400">Dabonneville 5&apos;</dt><dd><CelCorrida l={l} limites={limites} /></dd></div>
               <div><dt className="text-gray-400">Ciclismo 2 km</dt><dd><CelCiclismo l={l} limites={limites} /></dd></div>
-              <div><dt className="text-gray-400">Natação 100 m</dt><dd><CelNatacao l={l} corte={corte} /></dd></div>
+              <div><dt className="text-gray-400">Natação</dt><dd><CelNatacao l={l} corte={corte} /></dd></div>
             </dl>
           </Link>
         ))}

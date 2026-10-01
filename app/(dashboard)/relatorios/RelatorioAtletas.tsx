@@ -120,33 +120,35 @@ function EditorFiltro({
 
   return (
     <div className={`rounded-xl border px-3 py-2 ${filtroAtivo(filtro) ? 'border-sky-200 bg-sky-50/50' : 'border-gray-200 bg-white'}`}>
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-start gap-2">
+      <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
         <span className="text-sm font-medium text-navy-500">{campo.label}</span>
         <select value={filtro.modo} onChange={(e) => mudarModo(e.target.value as Filtro['modo'])} className={inputCls}>
           {modosPorTipo[campo.tipo].map(([m, l]) => <option key={m} value={m}>{l}</option>)}
         </select>
         {filtro.modo === 'faixa' && (
-          <span className="flex items-center gap-1.5 text-sm text-gray-500">
+          <span className="flex items-center gap-1.5 text-sm text-gray-500 w-full sm:w-auto">
             <input
               type={campo.tipo === 'data' ? 'date' : 'text'} inputMode={campo.tipo === 'data' ? undefined : 'decimal'}
               value={filtro.min ?? ''} placeholder={`mín. ${placeholder}`.trim()}
-              onChange={(e) => onChange({ ...filtro, min: e.target.value })} className={`${inputCls} w-32`}
+              onChange={(e) => onChange({ ...filtro, min: e.target.value })} className={`${inputCls} flex-1 min-w-0 sm:flex-none sm:w-32`}
             />
             e
             <input
               type={campo.tipo === 'data' ? 'date' : 'text'} inputMode={campo.tipo === 'data' ? undefined : 'decimal'}
               value={filtro.max ?? ''} placeholder={`máx. ${placeholder}`.trim()}
-              onChange={(e) => onChange({ ...filtro, max: e.target.value })} className={`${inputCls} w-32`}
+              onChange={(e) => onChange({ ...filtro, max: e.target.value })} className={`${inputCls} flex-1 min-w-0 sm:flex-none sm:w-32`}
             />
           </span>
         )}
         {filtro.modo === 'contem' && (
           <input
             value={filtro.texto} autoFocus placeholder="texto…"
-            onChange={(e) => onChange({ ...filtro, texto: e.target.value })} className={`${inputCls} w-48`}
+            onChange={(e) => onChange({ ...filtro, texto: e.target.value })} className={`${inputCls} w-full sm:w-48`}
           />
         )}
-        <button onClick={onRemove} title="Remover filtro" className="ml-auto p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50">
+      </div>
+        <button onClick={onRemove} title="Remover filtro" className="shrink-0 p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50">
           <X size={14} />
         </button>
       </div>
@@ -253,7 +255,7 @@ function MeusRelatorios({
             placeholder="Nome do relatório (ex.: Alergias Turma 3)"
             onChange={(e) => setNome(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') salvar(); if (e.key === 'Escape') setNome(null) }}
-            className={`${inputCls} w-72`}
+            className={`${inputCls} w-full sm:w-72`}
           />
           <button
             onClick={salvar}
@@ -397,16 +399,16 @@ export default function RelatorioAtletas({
         {/* Qual avaliação conta */}
         <div className="flex flex-wrap items-center gap-2 text-sm mb-4 pb-4 border-b border-gray-100">
           <span className="text-gray-500">Critérios de avaliação usam:</span>
-          <select value={estado.base.tipo} onChange={(e) => mudarBase(e.target.value as Base['tipo'])} className={inputCls}>
+          <select value={estado.base.tipo} onChange={(e) => mudarBase(e.target.value as Base['tipo'])} className={`${inputCls} max-w-full`}>
             <option value="recente">o resultado mais recente de cada teste</option>
             <option value="periodo">alguma avaliação feita entre…</option>
           </select>
           {estado.base.tipo === 'periodo' && (
-            <span className="flex items-center gap-1.5 text-gray-500">
-              <input type="date" value={estado.base.de} className={inputCls}
+            <span className="flex items-center gap-1.5 text-gray-500 w-full sm:w-auto">
+              <input type="date" value={estado.base.de} className={`${inputCls} flex-1 min-w-0 sm:flex-none`}
                 onChange={(e) => set({ base: { ...(estado.base as Extract<Base, { tipo: 'periodo' }>), de: e.target.value } })} />
               e
-              <input type="date" value={estado.base.ate} className={inputCls}
+              <input type="date" value={estado.base.ate} className={`${inputCls} flex-1 min-w-0 sm:flex-none`}
                 onChange={(e) => set({ base: { ...(estado.base as Extract<Base, { tipo: 'periodo' }>), ate: e.target.value } })} />
             </span>
           )}
@@ -511,8 +513,8 @@ export default function RelatorioAtletas({
               <tbody className="divide-y divide-gray-100">
                 {resultado.map((l) => (
                   <tr key={l._avaliacaoId ?? l._alunoId} className="hover:bg-gray-50">
-                    <td className="sticky left-0 bg-white px-4 py-2 whitespace-nowrap z-10">
-                      <Link href={`/alunos/${l._alunoId}`} className="font-medium text-navy-500 hover:text-sky-500">
+                    <td className="sticky left-0 bg-white px-4 py-2 whitespace-nowrap z-10 max-w-[9.5rem] sm:max-w-none truncate">
+                      <Link href={`/alunos/${l._alunoId}`} title={String(l.nome)} className="font-medium text-navy-500 hover:text-sky-500">
                         {String(l.nome)}
                       </Link>
                     </td>

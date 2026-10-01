@@ -125,11 +125,12 @@ export default async function ReferenciaProespPage({
               {desempenho && (desempenho.sentido === 'menor' ? 'Tempo: quanto menor, melhor.' : 'Quanto maior, melhor.')}
               {saude && ` Zona de risco ${saude.sentido === 'acima' ? 'acima' : 'abaixo'} do ponto de corte.`}
             </p>
+            <p className="sm:hidden text-[11px] text-gray-400 mb-1">Deslize a tabela para o lado para ver todos os níveis →</p>
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <table className="w-full text-xs min-w-[560px]">
                 <thead>
                   <tr className="border-b border-gray-200 text-gray-500">
-                    <th className="text-left font-medium px-3 py-2">Idade</th>
+                    <th className="text-left font-medium px-3 py-2 sticky left-0 bg-white">Idade</th>
                     {saude && <th className="text-center font-medium px-3 py-2">Corte de saúde</th>}
                     {desempenho && NIVEIS.map((n) => (
                       <th key={n} className="text-center font-medium px-2 py-2">
@@ -144,7 +145,7 @@ export default async function ReferenciaProespPage({
                     const destaque = i === idade
                     return (
                       <tr key={i} className={destaque ? 'bg-sky-50 font-semibold text-navy-500' : 'text-gray-700'}>
-                        <td className="px-3 py-1.5 whitespace-nowrap">{i} anos</td>
+                        <td className={`px-3 py-1.5 whitespace-nowrap sticky left-0 ${destaque ? 'bg-sky-50' : 'bg-white'}`}>{i} anos</td>
                         {saude && (
                           <td className="text-center px-3 py-1.5 whitespace-nowrap">
                             {saude.sentido === 'acima' ? '≤ ' : '≥ '}{fmt(campo, saude.corte[sexo][idx], casas)}
