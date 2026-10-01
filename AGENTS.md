@@ -364,6 +364,19 @@ Full CRUD for athletes.
 - **No duplicate athletes.** `createAluno` checks every athlete (service role, so a coach also sees other turmas and desligados) with `mesmaPessoa()` from `lib/nomes.ts`. It ignores accents, case, extra spaces, particles (de/da/do...) and accepts abbreviations ("M." = "Maria") and a missing middle name. On a match, the form lists the existing records and creates a new one only after an explicit "É outra pessoa" confirmation. Siblings (same surname, different first name) are not flagged. On 30/09/2026, "Maitê"/"Maite de Moraes Matzenbacher" existed twice, split only by an accent, and were merged.
 - **Source of truth.** The ficha filled and signed by the parents always wins over any other source (Google Form, spreadsheets, manual entry), even when a value looks wrong. Raise the doubt with the family, never swap in another source's value.
 
+- **Transfers between turmas** (`transferencias.sql`, `alunos/transferencias-actions.ts`, `lib/transferencias.ts`). **Assistant coaches have the same permissions as the head coach.**
+  - Whoever has access to **both** turmas moves the athlete directly: head or assistant coach of both, or admin.
+  - Otherwise it becomes a request the other side answers. With `envio`, the origin coach sends and the destination accepts. With `solicitacao`, the destination coach asks and the origin accepts. Admin can answer any request.
+  - Every accepted move goes through the same path as editing the athlete: `turma_id`, `historico_atleta` (`mudanca_turma`) and audit.
+  - Requests expire after 15 days, and there is at most one open request per athlete (partial unique index).
+  - If the athlete changed turma or status before the answer, accepting cancels the request.
+  - **Aba Atletas:**
+    - "Minhas turmas" has checkboxes and a "Transferir de turma…" action in the row menu.
+    - "Outras turmas" is coach-only. It lists athletes from other coaches' turmas with **only name, turma and age**, no link to the athlete page, plus a "Solicitar" button.
+    - A "Transferências" card shows the requests to answer (accept / refuse with an optional reason) and the ones sent (cancel).
+    - The number of requests waiting for the user appears next to "Atletas" in the menu (computed in `(dashboard)/layout.tsx`).
+  - All writes use the service role but authorize turma by turma inside the action. RLS on `alunos` is unchanged: coaches still can't open other turmas' athletes.
+
 Each athlete has:
 - Parents/guardians (responsaveis) managed inline on the same form.
 - Timeline showing enrollment history, class changes, deactivations, and fitness assessments.
@@ -586,6 +599,7 @@ This is the unlikely worst case. Steps, roughly in order:
    27. `processos_sgpe.sql` — `processos_sgpe` table + `turmas.processo_sgpe_id` + seed of the 2026 process (needs `get_my_role()` from #1)
    28. `assinaturas.sql` — `profiles.assinatura` + `assinatura_atualizada_em`
    29. `documentos_assinaturas_digitais.sql` — `documentos_assinados.assinaturas_digitais`
+   30. `transferencias.sql` — athlete transfer requests between turmas (needs `coach_has_turma()`, #3)
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

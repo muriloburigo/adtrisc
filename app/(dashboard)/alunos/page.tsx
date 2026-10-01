@@ -3,14 +3,15 @@ import { createClient } from '@/lib/supabase/server'
 import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import Badge, { statusAlunoVariant } from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import FilterBar from '@/components/ui/FilterBar'
-import Avatar from '@/components/ui/Avatar'
-import AlunoActionsMenu from './AlunoActionsMenu'
 import { Plus, Users } from 'lucide-react'
-import { calcularIdade, formatTelefone } from '@/lib/utils'
+import { calcularIdade } from '@/lib/utils'
 import { getTurmaIdsForCoach } from '@/lib/turmas'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { pendenciasDoUsuario } from '@/lib/transferencias'
+import { ListaAtletas, OutrasTurmas, type AtletaLinha, type AtletaOutraTurma } from './ListaAtletas'
+import PendenciasTransferencias from './PendenciasTransferencias'
 import type { AlunoRow } from '@/types/database'
 
 type AlunoWithTurma = AlunoRow & {
@@ -37,6 +38,23 @@ export default async function AlunosPage({
   if (profile?.role === 'coach') {
     turmaIdsCoach = await getTurmaIdsForCoach(supabase, user?.id)
   }
+  const ehAdmin = profile?.role === 'admin'
+  // Aba "Outras turmas" (só treinador): nome, turma e idade de quem é de outros treinadores.
+  const aba = !ehAdmin && filters.aba === 'outras' ? 'outras' : 'minhas'
+
+  // Transferências: as turmas de destino (todas as ativas; "direto" = o usuário
+  // também é treinador dela), as pendências e quem já tem pedido em aberto.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createAdminClient() as any
+  const minhasSet = new Set(turmaIdsCoach ?? [])
+  const [{ data: todasTurmas }, pendencias, { data: pendRaw }] = await Promise.all([
+    admin.from('turmas').select('id, nome').eq('status', 'ativa').order('nome'),
+    pendenciasDoUsuario(admin, user?.id, ehAdmin),
+    admin.from('transferencias').select('aluno_id').eq('status', 'pendente').gt('expira_em', new Date().toISOString()),
+  ])
+  const destinos = ((todasTurmas ?? []) as { id: string; nome: string }[])
+    .map((t) => ({ ...t, direto: ehAdmin || minhasSet.has(t.id) }))
+  const comPendente = new Set(((pendRaw ?? []) as { aluno_id: string }[]).map((r) => r.aluno_id))
 
   let query = supabase
     .from('alunos')
@@ -81,7 +99,34 @@ export default async function AlunosPage({
     turmaOptions.unshift({ value: 'sem-turma', label: 'Sem turma' })
   }
 
-  const filterFields = [
+  let outras: AtletaOutraTurma[] = []
+  if (aba === 'outras') {
+    const { data: outrasRaw } = await admin
+      .from('alunos')
+      .select('id, nome, data_nascimento, turma_id, turmas:turma_id ( nome )')
+      .eq('status', 'ativo')
+      .not('turma_id', 'is', null)
+      .order('nome')
+    const lower = q.toLowerCase()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    outras = ((outrasRaw ?? []) as any[])
+      .filter((a) => !minhasSet.has(a.turma_id))
+      .filter((a) => !q || [a.nome, a.turmas?.nome].filter(Boolean).some((v: string) => v.toLowerCase().includes(lower)))
+      // Só o necessário para reconhecer a pessoa: nada de contato, saúde ou avaliações.
+      .map((a) => ({
+        id: a.id, nome: a.nome, turma_nome: a.turmas?.nome ?? '',
+        idade: a.data_nascimento ? calcularIdade(a.data_nascimento) : null,
+        pendente: comPendente.has(a.id),
+      }))
+  }
+
+  const linhas: AtletaLinha[] = alunos.map((a) => ({
+    id: a.id, nome: a.nome, status: a.status, foto_url: a.foto_url, telefone: a.telefone,
+    data_nascimento: a.data_nascimento, turma_id: a.turma_id, turma_nome: a.turmas?.nome ?? null,
+    pendente: comPendente.has(a.id),
+  }))
+
+  const filterFields = aba === 'outras' ? [{ type: 'search' as const, key: 'q', placeholder: 'Buscar atleta ou turma...' }] : [
     { type: 'search' as const, key: 'q', placeholder: 'Buscar atleta...' },
     {
       type: 'select' as const,
@@ -99,12 +144,16 @@ export default async function AlunosPage({
   ]
 
   const hasFilters = Boolean(q || status || turma)
+  const abaCls = (ativa: boolean) =>
+    `px-3 py-1.5 rounded-lg text-sm font-medium ${ativa ? 'bg-navy-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`
 
   return (
     <div className="p-4 sm:p-8">
       <PageHeader
         title="Atletas"
-        subtitle={`${alunos.length} atleta${alunos.length !== 1 ? 's' : ''} encontrado${alunos.length !== 1 ? 's' : ''}`}
+        subtitle={aba === 'outras'
+          ? `${outras.length} atleta${outras.length !== 1 ? 's' : ''} de outras turmas`
+          : `${alunos.length} atleta${alunos.length !== 1 ? 's' : ''} encontrado${alunos.length !== 1 ? 's' : ''}`}
         action={
           <Link href="/alunos/novo">
             <Button><Plus size={16} />Novo Atleta</Button>
@@ -112,9 +161,24 @@ export default async function AlunosPage({
         }
       />
 
-      <FilterBar fields={filterFields} initialValues={{ q, status, turma }} />
+      <PendenciasTransferencias paraResponder={pendencias.paraResponder} enviadas={pendencias.enviadas} />
 
-      {alunos.length === 0 ? (
+      {!ehAdmin && (
+        <div className="flex gap-1 mb-4">
+          <Link href="/alunos" className={abaCls(aba === 'minhas')}>Minhas turmas</Link>
+          <Link href="/alunos?aba=outras" className={abaCls(aba === 'outras')}>Outras turmas</Link>
+        </div>
+      )}
+
+      <FilterBar key={aba} fields={filterFields} initialValues={aba === 'outras' ? { q } : { q, status, turma }} fixedParams={aba === 'outras' ? { aba: 'outras' } : undefined} />
+
+      {aba === 'outras' ? (
+        outras.length === 0 ? (
+          <Card><EmptyState icon={Users} title="Nenhum atleta encontrado" description={q ? 'Tente outra busca' : 'Não há atletas em outras turmas'} /></Card>
+        ) : (
+          <OutrasTurmas atletas={outras} minhasTurmas={destinos.filter((t) => t.direto)} />
+        )
+      ) : alunos.length === 0 ? (
         <Card>
           <EmptyState
             icon={Users}
@@ -124,29 +188,7 @@ export default async function AlunosPage({
           />
         </Card>
       ) : (
-        <Card padding={false}>
-          <div className="divide-y divide-gray-100">
-            {alunos.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
-                <Link href={`/alunos/${a.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                  <Avatar name={a.nome} url={a.foto_url} size={42} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-navy-500 truncate">{a.nome}</p>
-                      <Badge variant={statusAlunoVariant(a.status)}>{a.status}</Badge>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {a.turmas?.nome ?? 'Sem turma'}
-                      {a.data_nascimento ? ` · ${calcularIdade(a.data_nascimento)} anos` : ''}
-                      {a.telefone ? ` · ${formatTelefone(a.telefone)}` : ''}
-                    </p>
-                  </div>
-                </Link>
-                <AlunoActionsMenu alunoId={a.id} alunoNome={a.nome} turmaId={a.turma_id} />
-              </div>
-            ))}
-          </div>
-        </Card>
+        <ListaAtletas atletas={linhas} turmas={destinos} />
       )}
     </div>
   )

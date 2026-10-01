@@ -55,7 +55,7 @@ const navGroups: { label: string | null; items: { href: string; label: string; i
   },
 ]
 
-export default function Sidebar({ user }: { user: Profile | null }) {
+export default function Sidebar({ user, pendencias = 0 }: { user: Profile | null; pendencias?: number }) {
   const pathname = usePathname()
   const router = useRouter()
   const role = (user?.role ?? 'aluno') as UserRole
@@ -114,6 +114,11 @@ export default function Sidebar({ user }: { user: Profile | null }) {
                 >
                   <Icon size={17} />
                   {label}
+                  {href === '/alunos' && pendencias > 0 && (
+                    <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-brand-red-500 text-white text-[11px] font-bold flex items-center justify-center" title="Transferências aguardando você">
+                      {pendencias}
+                    </span>
+                  )}
                 </Link>
               )
             })}

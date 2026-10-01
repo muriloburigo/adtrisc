@@ -12,9 +12,10 @@ export type FilterField =
 interface FilterBarProps {
   fields: FilterField[]
   initialValues: Record<string, string>
+  fixedParams?: Record<string, string> // ficam sempre na URL (ex.: a aba atual)
 }
 
-export default function FilterBar({ fields, initialValues }: FilterBarProps) {
+export default function FilterBar({ fields, initialValues, fixedParams }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [values, setValues] = useState(initialValues)
@@ -24,7 +25,7 @@ export default function FilterBar({ fields, initialValues }: FilterBarProps) {
   useEffect(() => { setValues(initialValues) }, [JSON.stringify(initialValues)]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function pushURL(next: Record<string, string>) {
-    const params = new URLSearchParams()
+    const params = new URLSearchParams(fixedParams)
     for (const [k, v] of Object.entries(next)) {
       if (v) params.set(k, v)
     }
@@ -49,7 +50,8 @@ export default function FilterBar({ fields, initialValues }: FilterBarProps) {
     const empty: Record<string, string> = {}
     for (const f of fields) empty[f.key] = ''
     setValues(empty)
-    router.push(pathname)
+    const fixos = new URLSearchParams(fixedParams).toString()
+    router.push(fixos ? `${pathname}?${fixos}` : pathname)
   }
 
   const hasAny = Object.values(values).some((v) => v !== '')

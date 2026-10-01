@@ -2,17 +2,19 @@
 
 import { useState, useRef, useEffect, useTransition } from 'react'
 import Link from 'next/link'
-import { MoreHorizontal, Pencil, UserMinus } from 'lucide-react'
+import { MoreHorizontal, Pencil, UserMinus, ArrowRightLeft } from 'lucide-react'
 import { removerAlunoTurma } from './actions'
 
 export default function AlunoActionsMenu({
   alunoId,
   alunoNome,
   turmaId,
+  onTransferir,
 }: {
   alunoId: string
   alunoNome: string
   turmaId: string | null
+  onTransferir?: () => void // aba Atletas: abre a transferência de turma
 }) {
   const [open, setOpen] = useState(false)
   const [confirmingRemove, setConfirmingRemove] = useState(false)
@@ -68,6 +70,16 @@ export default function AlunoActionsMenu({
             <Pencil size={14} className="text-gray-400" />
             Editar
           </Link>
+
+          {onTransferir && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false); onTransferir() }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-navy-500 hover:bg-gray-50 transition-colors"
+            >
+              <ArrowRightLeft size={14} className="text-gray-400" />
+              Transferir de turma…
+            </button>
+          )}
 
           {turmaId && (
             <>
