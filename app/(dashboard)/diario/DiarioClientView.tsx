@@ -8,6 +8,7 @@ import { criarMultiplosRegistros, salvarResumoDiario } from './actions'
 import { friendlyError } from '@/lib/errors'
 import { setFotoDoDia, removerFotoDoDia, type FotoDoDia } from './fotoActions'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
+import AssinarGovBrButton from '@/components/documentos/AssinarGovBrButton'
 import QuadroGovBr from '@/components/documentos/QuadroGovBr'
 import DocumentosAssinadosSection, { type DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
@@ -557,13 +558,16 @@ export default function DiarioClientView({
             <div>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Dados do Relatório</p>
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-2 bg-sky-400 hover:bg-sky-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors"
-                >
-                  <Printer size={14} />
-                  Imprimir / PDF
-                </button>
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <AssinarGovBrButton compacto />
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center gap-2 bg-sky-400 hover:bg-sky-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-colors"
+                  >
+                    <Printer size={14} />
+                    Imprimir / PDF
+                  </button>
+                </div>
               </div>
               <div className="mb-3 text-sm text-gray-600">
                 {assinatura ? (

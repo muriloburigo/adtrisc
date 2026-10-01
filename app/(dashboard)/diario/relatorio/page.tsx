@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import Card from '@/components/ui/Card'
 import RelatorioForm from './RelatorioForm'
 import PrintButton from './PrintButton'
+import AssinarGovBrButton from '@/components/documentos/AssinarGovBrButton'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
 import QuadroGovBr from '@/components/documentos/QuadroGovBr'
 import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
@@ -207,7 +208,7 @@ export default async function DiarioRelatorioPage({
                 <p className="text-sm text-gray-400 mt-0.5">{MESES_LABEL[mes]} {ano}</p>
               </div>
             </div>
-            {hasData && <PrintButton />}
+            {hasData && <div className="flex items-center gap-2 flex-wrap"><AssinarGovBrButton /><PrintButton /></div>}
           </div>
           <Card>
             <RelatorioForm
@@ -378,7 +379,7 @@ export default async function DiarioRelatorioPage({
         {/* Bottom print button — screen only */}
         {hasData && (
           <div className="print:hidden flex justify-center pt-2 pb-4">
-            <PrintButton />
+            <div className="flex items-center justify-center gap-2 flex-wrap"><AssinarGovBrButton /><PrintButton /></div>
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import Card from '@/components/ui/Card'
 import ExportForm from './ExportForm'
 import PrintButton from './PrintButton'
+import AssinarGovBrButton from '@/components/documentos/AssinarGovBrButton'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
 import QuadroGovBr from '@/components/documentos/QuadroGovBr'
 import IncluirAssinatura from '@/components/documentos/IncluirAssinatura'
@@ -256,7 +257,7 @@ export default async function ExportarPresencasPage({
                 {alunos.length} aluno{alunos.length !== 1 ? 's' : ''} ·{' '}
                 {datas.length} sessão{datas.length !== 1 ? 'ões' : ''}
               </p>
-              <PrintButton />
+              <div className="flex items-center gap-2 flex-wrap"><AssinarGovBrButton /><PrintButton /></div>
             </div>
 
             <div className="print:hidden mb-4">
