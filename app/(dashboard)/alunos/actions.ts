@@ -10,8 +10,12 @@ import { requireStaff } from '@/lib/assert'
 import { friendlyError } from '@/lib/errors'
 import type { AlunoStatus, Parentesco, SexoEnum } from '@/types/database'
 
+// Devolve uma mensagem de erro (ou null). Antes as falhas eram ignoradas em
+// silêncio — foi assim que vínculos de responsáveis se perderam quando a policy
+// de aluno_responsavel entrava em recursão (corrigido em
+// supabase/aluno_responsavel_coach_fix.sql).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function upsertResponsavel(db: any, alunoId: string, formData: FormData, parentesco: Parentesco) {
+async function upsertResponsavel(db: any, alunoId: string, formData: FormData, parentesco: Parentesco): Promise<string | null> {
   const prefix = parentesco === 'mae' ? 'mae_' : 'pai_'
   const nome = (formData.get(`${prefix}nome`) as string)?.trim()
 
@@ -33,23 +37,32 @@ async function upsertResponsavel(db: any, alunoId: string, formData: FormData, p
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingLink = (links ?? []).find((l: any) => l.responsaveis?.parentesco === parentesco)
 
+  const quem = parentesco === 'mae' ? 'a mãe' : 'o pai'
   if (existingLink) {
-    if (!nome) return // nothing to update
-    await db.from('responsaveis').update(payload).eq('id', existingLink.responsavel_id)
+    if (!nome) return null // nothing to update
+    const { error } = await db.from('responsaveis').update(payload).eq('id', existingLink.responsavel_id)
+    return error ? `não foi possível atualizar ${quem} (${friendlyError(error, 'erro ao salvar')})` : null
   } else {
-    if (!nome) return // nothing to insert
+    if (!nome) return null // nothing to insert
     const { data: resp, error } = await db
       .from('responsaveis')
       .insert(payload)
       .select('id')
       .single()
-    if (error || !resp) return
-    await db.from('aluno_responsavel').insert({
+    if (error || !resp) return `não foi possível salvar ${quem} (${friendlyError(error, 'erro ao salvar')})`
+    const { error: erroVinculo } = await db.from('aluno_responsavel').insert({
       aluno_id: alunoId,
       responsavel_id: resp.id,
       principal: parentesco === 'mae',
     })
+    if (erroVinculo) {
+      // Não deixa responsável solto, sem atleta (treinador não pode apagar pela RLS).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (createAdminClient() as any).from('responsaveis').delete().eq('id', resp.id)
+      return `não foi possível vincular ${quem} ao atleta (${friendlyError(erroVinculo, 'erro ao salvar')})`
+    }
   }
+  return null
 }
 
 export type PossivelDuplicado = { id: string; nome: string; turma: string | null; status: string; data_nascimento: string | null; motivo: Motivo }
@@ -102,8 +115,10 @@ export async function createAluno(formData: FormData): Promise<{ error?: string;
 
   if (error || !aluno) return { error: friendlyError(error, 'Erro ao criar aluno.') }
 
-  await upsertResponsavel(db, aluno.id, formData, 'mae')
-  await upsertResponsavel(db, aluno.id, formData, 'pai')
+  const errosResp = [
+    await upsertResponsavel(db, aluno.id, formData, 'mae'),
+    await upsertResponsavel(db, aluno.id, formData, 'pai'),
+  ].filter(Boolean)
 
   // Registrar matrícula no histórico
   let turmaNomeInicial: string | null = null
@@ -127,6 +142,10 @@ export async function createAluno(formData: FormData): Promise<{ error?: string;
   })
 
   revalidatePath('/alunos')
+  if (errosResp.length) {
+    // O atleta já foi criado: não reenviar (viraria duplicado) — editar o cadastro.
+    return { error: `O atleta foi cadastrado, mas ${errosResp.join('; ')}. Não envie de novo: abra o cadastro dele em Atletas e salve o responsável lá.` }
+  }
   redirect('/alunos')
 }
 
@@ -161,8 +180,10 @@ export async function updateAluno(id: string, formData: FormData): Promise<{ err
 
   if (error || !updated) return { error: friendlyError(error, 'Erro ao salvar alterações.') }
 
-  await upsertResponsavel(db, id, formData, 'mae')
-  await upsertResponsavel(db, id, formData, 'pai')
+  const errosResp = [
+    await upsertResponsavel(db, id, formData, 'mae'),
+    await upsertResponsavel(db, id, formData, 'pai'),
+  ].filter(Boolean)
 
   const hoje = new Date().toISOString().slice(0, 10)
 
@@ -203,6 +224,7 @@ export async function updateAluno(id: string, formData: FormData): Promise<{ err
 
   revalidatePath('/alunos')
   revalidatePath(`/alunos/${id}`)
+  if (errosResp.length) return { error: `Os dados do atleta foram salvos, mas ${errosResp.join('; ')}.` }
   redirect(`/alunos/${id}`)
 }
 
