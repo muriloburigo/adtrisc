@@ -67,15 +67,22 @@ export async function savePresencas(
       metadata: { total: entries.length, presentes, faltas, justificadas },
     })
 
-    // Auto-create diary entry for this day if one doesn't exist yet
-    const { data: turma } = await supabase
-      .from('turmas').select('coach_id').eq('id', turmaId).single()
+    // Auto-create diary entry for this day if one doesn't exist yet.
+    // O diário é de quem deu a aula: se um treinador (titular OU auxiliar —
+    // mesmas permissões) fez a chamada, vai para o diário dele; se foi um
+    // admin, para o do titular. (Antes ia sempre para o titular, e a RLS de
+    // registros_aula recusava quando quem salvava era o auxiliar.)
+    const [{ data: turma }, { data: perfilActor }] = await Promise.all([
+      supabase.from('turmas').select('coach_id').eq('id', turmaId).single(),
+      supabase.from('profiles').select('role').eq('id', actor.id).single(),
+    ])
+    const donoDiario: string | null = perfilActor?.role === 'coach' ? actor.id : turma?.coach_id ?? null
 
-    if (turma?.coach_id) {
+    if (donoDiario) {
       const { data: existingRegistro } = await supabase
         .from('registros_aula')
         .select('id')
-        .eq('coach_id', turma.coach_id)
+        .eq('coach_id', donoDiario)
         .eq('data', data)
         .maybeSingle()
 
@@ -84,7 +91,7 @@ export async function savePresencas(
       if (!registroId) {
         const { data: novo } = await supabase
           .from('registros_aula')
-          .insert({ coach_id: turma.coach_id, data, modalidade: 'corrida' })
+          .insert({ coach_id: donoDiario, data, modalidade: 'corrida' })
           .select('id')
           .single()
         registroId = novo?.id ?? null

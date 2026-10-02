@@ -353,7 +353,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `materias_imprensa` follows the same shared-staff pattern as `provas`.
 - The 4 `*_financeiros`/`projeto_arquivos` tables: **select** is open to any staff (admin+coach) on all of them — a coach needs to see every other coach's lançamentos too, otherwise the budget "consumido" total on `/financeiro` would only reflect their own notes. **Write** on `categorias_financeiras`/`projetos_financeiros`/`orcamentos_financeiros`/`projeto_arquivos` is admin-only. **Write** on `lancamentos_financeiros` is admin OR the row's own `coach_id = auth.uid()` — a coach can only create/edit/delete their own notes.
 - `relatorios_salvos`: each admin/coach reads and writes only their own rows. `processos_sgpe`: staff reads, admin writes. `transferencias`: readable by admins and the coaches of either turma. Writes happen only through server actions using the service role, which authorize turma by turma.
-- **Assistant coaches (`turma_coaches`) have the same permissions as the head coach** everywhere: `coach_has_turma()` and `getTurmaIdsForCoach()` count both.
+- **Assistant coaches (`turma_coaches`) have the same permissions as the head coach** everywhere: `coach_has_turma()` and `getTurmaIdsForCoach()` count both. To list a coach's turmas, use `getTurmasDoCoach()` (`lib/turmas.ts`), never `.eq('coach_id', …)` on `turmas`: until 02/10/2026 the diário did that and hid assistants' turmas. Saving attendance creates that day's diário entry for **the coach who took the chamada** (head or assistant); only when an admin saves does it go to the head coach.
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
 
 ### Helper DB Function

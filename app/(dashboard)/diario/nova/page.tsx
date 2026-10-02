@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { requireStaff } from '@/lib/assert'
 import { createClient } from '@/lib/supabase/server'
+import { getTurmasDoCoach } from '@/lib/turmas'
 import Card from '@/components/ui/Card'
 import DiarioBatchForm from '../DiarioBatchForm'
 import CoachSelector from './CoachSelector'
@@ -50,14 +51,8 @@ export default async function NovaDiarioPage({
     coachLabel = cp?.full_name ?? ''
   }
 
-  // Load all turmas for this coach
-  const { data: turmasRaw } = await supabase
-    .from('turmas')
-    .select('id, nome')
-    .eq('coach_id', targetCoachId)
-    .order('nome')
-
-  const allTurmas = (turmasRaw ?? []) as { id: string; nome: string }[]
+  // Turmas do treinador — titular ou auxiliar (mesmas permissões)
+  const allTurmas = await getTurmasDoCoach(supabase, targetCoachId)
   const turmaIds  = allTurmas.map((t) => t.id)
 
   // Find pending days: presencas in last 90 days without a diário entry

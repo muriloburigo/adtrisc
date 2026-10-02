@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getTurmasDoCoach } from '@/lib/turmas'
 import { processoDoTreinador } from '@/lib/processoSgpe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireStaff } from '@/lib/assert'
@@ -66,9 +67,8 @@ export default async function DiarioPage({
   type FotoBasic = { id: string; url: string; titulo: string; data: string; turma_id: string; storage_path: string }
   let fotos: FotoBasic[] = []
   if (targetCoachId) {
-    const { data: turmasRaw } = await supabase
-      .from('turmas').select('id').eq('coach_id', targetCoachId)
-    const turmaIds = (turmasRaw ?? []).map((t: { id: string }) => t.id)
+    // Titular ou auxiliar: mesmas permissões.
+    const turmaIds = (await getTurmasDoCoach(supabase, targetCoachId)).map((t) => t.id)
     if (turmaIds.length > 0) {
       const { data: fotosRaw } = await supabase
         .from('turma_fotos').select('id, url, titulo, data, turma_id, storage_path')
@@ -107,9 +107,7 @@ export default async function DiarioPage({
   let allTurmas: { id: string; nome: string }[] = []
 
   if (targetCoachId) {
-    const { data: turmasRaw } = await supabase
-      .from('turmas').select('id, nome').eq('coach_id', targetCoachId).order('nome')
-    allTurmas = turmasRaw ?? []
+    allTurmas = await getTurmasDoCoach(supabase, targetCoachId) // titular ou auxiliar
     const turmaIds = allTurmas.map((t: { id: string }) => t.id)
 
     if (turmaIds.length > 0) {

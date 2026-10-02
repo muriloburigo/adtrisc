@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { requireStaff } from '@/lib/assert'
 import { createClient } from '@/lib/supabase/server'
+import { getTurmasDoCoach } from '@/lib/turmas'
 import { processoDoTreinador } from '@/lib/processoSgpe'
 import { createAdminClient } from '@/lib/supabase/admin'
 import Card from '@/components/ui/Card'
@@ -117,9 +118,8 @@ export default async function DiarioRelatorioPage({
   // Fetch fotos for the coach's turmas in this date range
   let fotos: TurmaFotoRow[] = []
   if (targetCoachId) {
-    const { data: turmasRaw } = await supabase
-      .from('turmas').select('id').eq('coach_id', targetCoachId)
-    const turmaIds = (turmasRaw ?? []).map((t: { id: string }) => t.id)
+    // Titular ou auxiliar: mesmas permissões.
+    const turmaIds = (await getTurmasDoCoach(supabase, targetCoachId)).map((t) => t.id)
     if (turmaIds.length > 0) {
       const { data: fotosRaw } = await supabase
         .from('turma_fotos')

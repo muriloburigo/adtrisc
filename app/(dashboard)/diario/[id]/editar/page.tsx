@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { requireStaff } from '@/lib/assert'
 import { createClient } from '@/lib/supabase/server'
+import { getTurmasDoCoach } from '@/lib/turmas'
 import Card from '@/components/ui/Card'
 import DiarioAulaForm from '../../DiarioAulaForm'
 
@@ -21,15 +22,8 @@ export default async function EditarDiarioPage({ params }: { params: Promise<{ i
 
   if (!registro) notFound()
 
-  // Load coach turmas (the coach who owns this registro)
-  const { data: turmasRaw } = await supabase
-    .from('turmas')
-    .select('id, nome')
-    .eq('coach_id', registro.coach_id)
-    .eq('status', 'ativa')
-    .order('nome')
-
-  const turmas = (turmasRaw ?? []) as { id: string; nome: string }[]
+  // Turmas do dono do registro — titular ou auxiliar (mesmas permissões)
+  const turmas = await getTurmasDoCoach(supabase, registro.coach_id, { somenteAtivas: true })
 
   const defaultValues = {
     data:        registro.data,
