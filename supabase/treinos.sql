@@ -73,8 +73,8 @@ create table if not exists public.treino_planos (
   prova_alvo_data    date,
   prova_alvo_nome    text,
   sessoes_semana     smallint,
-  dias_disponiveis   smallint[],          -- 0=domingo … 6=sábado
-  dificuldade        text check (dificuldade in ('beginner','intermediate','advanced')),
+  dias_disponiveis   smallint[],          -- ISO: 1=segunda … 7=domingo
+  dificuldade        text check (dificuldade in ('beginner','intermediate','advanced','performance')),
   distancia_alvo_km  numeric(8,2),
   notas              text,
   payload_gerador    jsonb,

@@ -54,18 +54,19 @@ function alvo(p: Passo, modalidade: Modalidade, ctx: ContextoAtleta): { alvo: st
   const max = p.alvo_max ?? p.alvo_min!
   switch (p.alvo_unidade) {
     case 'zone': {
-      const zona = Math.round(min)
+      // Faixa de zonas (ex.: Z1–Z2): do piso da primeira ao teto da última.
+      const z1 = Math.round(Math.min(min, max)), z2 = Math.round(Math.max(min, max))
+      const rotulo = z1 === z2 ? `Z${z1}` : `Z${z1}-Z${z2}`
       const ref = ctx.referencia
+      const pMin = faixaZona(z1, ctx.limites).min, pMax = faixaZona(z2, ctx.limites).max
       if (ref && (modalidade === 'running' || modalidade === 'swimming')) {
-        const f = faixaZona(zona, ctx.limites)
-        return { alvo: pace(ref.velocidade_ms * f.min / 100, ref.velocidade_ms * f.max / 100, modalidade), dica: `Z${zona}` }
+        return { alvo: pace(ref.velocidade_ms * pMin / 100, ref.velocidade_ms * pMax / 100, modalidade), dica: rotulo }
       }
       if (ref && modalidade === 'cycling') {
-        const f = faixaZona(zona, ctx.limites)
         const kmh = (pct: number) => (ref.velocidade_ms * pct / 100 * 3.6).toFixed(0)
-        return { alvo: '', dica: `Z${zona} ${kmh(f.min)}-${kmh(f.max)}km/h` }
+        return { alvo: '', dica: `${rotulo} ${kmh(pMin)}-${kmh(pMax)}km/h` }
       }
-      return { alvo: '', dica: `Z${zona}` }
+      return { alvo: '', dica: rotulo }
     }
     case 'pace':
       return { alvo: `${mmss(Math.min(min, max))}${min !== max ? `-${mmss(Math.max(min, max))}` : ''}${modalidade === 'swimming' ? '/100m' : '/km'} Pace`, dica: '' }

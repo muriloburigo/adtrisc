@@ -124,7 +124,8 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
           </select>
           <button className="text-sm text-sky-500 hover:underline">abrir</button>
         </form>
-        <Link href="/treinos/biblioteca" className="ml-auto text-xs text-gray-400 hover:text-navy-500">gerenciar biblioteca</Link>
+        <Link href={`/treinos/planos?${aluno ? `aluno=${aluno.id}` : `turma=${turma.id}`}`} className="ml-auto text-xs font-medium text-sky-500 hover:underline">planos</Link>
+        <Link href="/treinos/biblioteca" className="text-xs text-gray-400 hover:text-navy-500">gerenciar biblioteca</Link>
         <Link href="/treinos" className="text-xs text-gray-400 hover:text-navy-500">trocar turma</Link>
       </div>
 

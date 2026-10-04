@@ -39,10 +39,19 @@ function AlvoInput({ alvo, modalidade, onChange }: { alvo: Alvo; modalidade: Mod
         ))}
       </select>
       {alvo.tipo === 'zone' && (
-        <select className={input} value={alvo.min ?? 2} style={{ color: CORES_ZONA[(alvo.min ?? 2) - 1] }}
-          onChange={(e) => onChange({ ...alvo, min: Number(e.target.value), max: Number(e.target.value) })}>
-          {NOMES_ZONA.map((n, i) => <option key={n} value={i + 1}>Z{i + 1} · {n}</option>)}
-        </select>
+        <>
+          <select className={input} value={alvo.min ?? 2} style={{ color: CORES_ZONA[(alvo.min ?? 2) - 1] }}
+            onChange={(e) => { const z = Number(e.target.value); onChange({ ...alvo, min: z, max: Math.max(z, alvo.max ?? z) }) }}>
+            {NOMES_ZONA.map((n, i) => <option key={n} value={i + 1}>Z{i + 1} · {n}</option>)}
+          </select>
+          {/* Faixa de zonas (ex.: Z1–Z2), como no Movelly */}
+          <select className={`${input} text-xs`} value={alvo.max ?? alvo.min ?? 2} title="Até a zona"
+            onChange={(e) => onChange({ ...alvo, max: Number(e.target.value) })}>
+            {NOMES_ZONA.map((_, i) => i + 1 >= (alvo.min ?? 2) && (
+              <option key={i} value={i + 1}>{i + 1 === (alvo.min ?? 2) ? 'só ela' : `até Z${i + 1}`}</option>
+            ))}
+          </select>
+        </>
       )}
       {alvo.tipo === 'pace' && alvo.unidade === 'kmh' && faixa(numero, (n) => n?.toString() ?? '', 'km/h', 'km/h')}
       {alvo.tipo === 'pace' && alvo.unidade !== 'kmh' && faixa(lerMmss, mostrarMmss, '4:30', modalidade === 'swimming' ? '/100m' : '/km')}

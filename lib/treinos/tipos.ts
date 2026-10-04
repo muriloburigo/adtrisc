@@ -74,7 +74,7 @@ export const OBJETIVOS = {
 } as const
 export type Objetivo = keyof typeof OBJETIVOS
 
-export const DIFICULDADES = { beginner: 'Iniciante', intermediate: 'Intermediário', advanced: 'Avançado' } as const
+export const DIFICULDADES = { beginner: 'Iniciante', intermediate: 'Intermediário', advanced: 'Avançado', performance: 'Performance' } as const
 export type Dificuldade = keyof typeof DIFICULDADES
 
 /** Passo do treino (igual a training_steps do Movelly). */

@@ -81,7 +81,10 @@ export function validarSessao(s: { titulo?: string; data?: string; passos: Passo
 export type Metricas = { duracao_s: number | null; distancia_km: number | null; pace_medio_s_km: number | null }
 
 function velocidadeDoPasso(p: Passo, ref: Referencia, padrao: number, limites?: number[]): number {
-  if (p.alvo_unidade === 'zone' && p.alvo_min !== null) return velocidadeDaZona(ref, p.alvo_min, limites)
+  if (p.alvo_unidade === 'zone' && p.alvo_min !== null) {
+    const max = p.alvo_max ?? p.alvo_min
+    return (velocidadeDaZona(ref, p.alvo_min, limites) + velocidadeDaZona(ref, max, limites)) / 2
+  }
   if (p.alvo_unidade === 'pace' && p.alvo_min !== null) {
     const pace = (p.alvo_min + (p.alvo_max ?? p.alvo_min)) / 2 // s por km (natação: por 100 m)
     return (ref.modalidade === 'swimming' ? 100 : 1000) / pace
