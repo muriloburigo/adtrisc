@@ -28,6 +28,7 @@ export type TurmaRow = {
   captacao_aberta: boolean
   observacoes: string | null
   processo_sgpe_id: string | null
+  usa_treinos: boolean
   created_at: string
   updated_at: string
 }

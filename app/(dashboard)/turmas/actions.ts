@@ -32,6 +32,7 @@ export async function createTurma(formData: FormData): Promise<{ error?: string 
     idade_max:       idadeMaxRaw ? Number(idadeMaxRaw) : null,
     observacoes:     (formData.get('observacoes') as string) || null,
     captacao_aberta: formData.get('captacao_aberta') === 'true',
+    usa_treinos:     formData.get('usa_treinos') === 'true',
     processo_sgpe_id: (formData.get('processo_sgpe_id') as string) || null,
     status:          'ativa' as TurmaStatus,
   }
@@ -88,6 +89,7 @@ export async function updateTurma(id: string, formData: FormData): Promise<{ err
     idade_max:       idadeMaxRaw ? Number(idadeMaxRaw) : null,
     observacoes:     (formData.get('observacoes') as string) || null,
     captacao_aberta: formData.get('captacao_aberta') === 'true',
+    usa_treinos:     formData.get('usa_treinos') === 'true',
     processo_sgpe_id: (formData.get('processo_sgpe_id') as string) || null,
   }
 

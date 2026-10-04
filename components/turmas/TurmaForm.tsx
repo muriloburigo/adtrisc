@@ -256,6 +256,22 @@ export default function TurmaForm({
         </label>
       </div>
 
+      <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl bg-gray-50">
+        <input
+          type="checkbox"
+          id="usa_treinos"
+          name="usa_treinos"
+          value="true"
+          defaultChecked={turma?.usa_treinos ?? false}
+          className="mt-0.5 w-4 h-4 accent-sky-400"
+        />
+        <label htmlFor="usa_treinos" className="text-sm text-gray-700">
+          <span className="font-medium">Esta turma usa o módulo de treinos</span>
+          <br />
+          <span className="text-xs text-gray-400">Libera o planejamento de treinos (calendário, biblioteca, planos), o portal do atleta e a integração com o Intervals.icu para os atletas desta turma.</span>
+        </label>
+      </div>
+
       {state?.error && (
         <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
           {state.error}
