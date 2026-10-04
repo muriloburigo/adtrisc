@@ -4,6 +4,8 @@ import { atletaLogado, treinosDoAtleta, type TreinoAtleta } from '@/lib/portalAt
 import { MODALIDADES, TIPOS_SESSAO } from '@/lib/treinos/tipos'
 import { diaMes, diasDaSemana, hojeISO, NOMES_DIA, somarDias } from '@/lib/treinos/datas'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
+import ExtrasDaSemana from '@/components/portal/ExtrasDaSemana'
+import type { ExecucaoView } from '@/components/treinos/ComparativoTreino'
 
 const SITUACAO: Record<TreinoAtleta['situacao'], { txt: string; cls: string } | null> = {
   planejado: null,
@@ -44,6 +46,12 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   const todos = await treinosDoAtleta(db, atleta.aluno, inicioBusca, fimBusca)
   const daSemana = todos.filter((t) => t.data >= dias[0] && t.data <= dias[6])
   const proximo = todos.find((t) => t.data >= hoje && t.situacao === 'planejado')
+  const { data: exs } = await db.from('treino_execucoes')
+    .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, zonas, entrega_id, treino_entregas(sessao_id)')
+    .eq('aluno_id', atleta.aluno.id).gte('executado_em', `${somarDias(dias[0], -3)}T00:00:00-03:00`).lt('executado_em', `${somarDias(dias[6], 1)}T00:00:00-03:00`)
+  type Ex = ExecucaoView & { entrega_id: string | null; treino_entregas: { sessao_id: string } | null }
+  const ocupados = new Set(((exs ?? []) as Ex[]).map((e) => e.treino_entregas?.sessao_id).filter(Boolean))
+  const extras = ((exs ?? []) as Ex[]).filter((e) => !e.entrega_id).map((e) => ({ ...e, sessao_id: null }))
   const tot = somarSessoes(daSemana)
   const feitos = daSemana.filter((t) => t.situacao === 'feito' || t.situacao === 'parcial').length
   const passados = daSemana.filter((t) => t.data < hoje).length
@@ -85,6 +93,7 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
           )
         })}
       </section>
+      <ExtrasDaSemana extras={extras} treinos={todos.map((t) => ({ id: t.id, data: t.data, titulo: t.titulo, ocupado: ocupados.has(t.id) }))} />
       <p className="text-[11px] text-gray-400 flex items-center gap-3"><span className="inline-flex items-center gap-1"><Check size={11} /> Marque cada treino como feito</span><span className="inline-flex items-center gap-1"><X size={11} /> ou não feito</span></p>
     </div>
   )

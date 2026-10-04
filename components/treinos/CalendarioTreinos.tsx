@@ -5,6 +5,8 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, type CollisionDetection, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare } from 'lucide-react'
 import MontadorTreino, { type AtletaRef, type EntregaRef, type SessaoView } from './MontadorTreino'
+import type { ExecucaoView } from './ComparativoTreino'
+import ExtraModal from './ExtraModal'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type TipoSessao } from '@/lib/treinos/tipos'
 import { NOMES_DIA, diaMes, hojeISO, mesAnterior, rotuloMes, somarDias } from '@/lib/treinos/datas'
@@ -101,8 +103,10 @@ function CardModelo({ m, selecionado, onSelecionar }: { m: ModeloResumo; selecio
 }
 
 export default function CalendarioTreinos({
-  escopo, vista, ancora, semanas, sessoes, atletas, ajustesPorSessao, limites, biblioteca, entregasPorSessao = {},
+  escopo, vista, ancora, semanas, sessoes, atletas, ajustesPorSessao, limites, biblioteca, entregasPorSessao = {}, execucoesPorSessao = {}, extras = [],
 }: {
+  execucoesPorSessao?: Record<string, ExecucaoView>
+  extras?: ExecucaoView[]
   entregasPorSessao?: Record<string, Record<string, EntregaRef>>
   escopo: { tipo: 'turma' | 'aluno'; id: string; nome: string }
   vista: 'semana' | 'mes'
@@ -124,6 +128,8 @@ export default function CalendarioTreinos({
   const [busca, setBusca] = useState('')
   const [modeloSel, setModeloSel] = useState<string | null>(null)
   const [arrastando, setArrastando] = useState<string | null>(null)
+  const [extraAberta, setExtraAberta] = useState<ExecucaoView | null>(null)
+  const diaLocal = (iso: string) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
   const hoje = hojeISO()
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -259,6 +265,13 @@ export default function CalendarioTreinos({
                       <CelulaDia key={d} d={d} vista={vista} destaque={d === hoje} foraMes={vista === 'mes' && d.slice(0, 7) !== ancora.slice(0, 7)}
                         onMais={() => maisNoDia(d)} selecionandoModelo={Boolean(modeloSel)}>
                         {porDia(d).map((s) => <CardSessao key={s.id} s={s} arrastavel={arrastavel(s)} onAbrir={() => setAberto({ sessaoId: s.id })} />)}
+                        {extras.filter((x) => diaLocal(x.executado_em) === d).map((x) => (
+                          <button key={x.id} type="button" onClick={() => setExtraAberta(x)} title="Atividade feita sem treino planejado"
+                            className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 hover:border-sky-300">
+                            <p className="text-[11px] font-semibold text-gray-600 truncate">{x.titulo ?? 'Atividade'}</p>
+                            <p className="text-[10px] text-gray-400">extra{x.distancia_m ? ` · ${(Number(x.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''}{x.duracao_s ? ` · ${Math.round(x.duracao_s / 60)} min` : ''}</p>
+                          </button>
+                        ))}
                       </CelulaDia>
                     ))}
                     <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 text-[11px] text-gray-500 space-y-0.5">
@@ -317,12 +330,18 @@ export default function CalendarioTreinos({
             atletas={atletas}
             ajustes={sessaoAberta ? ajustesPorSessao[sessaoAberta.id] ?? {} : {}}
             entregas={sessaoAberta ? entregasPorSessao[sessaoAberta.id] ?? {} : {}}
+            execucao={sessaoAberta ? execucoesPorSessao[sessaoAberta.id] ?? null : null}
             limites={limites}
             onFechar={() => setAberto(null)}
             onAbrirSessao={(id) => setAberto({ sessaoId: id })}
           />
         )}
       </div>
+      {extraAberta && (
+        <ExtraModal extra={extraAberta} onFechar={() => setExtraAberta(null)}
+          opcoes={naGrade.filter((s) => s.status === 'publicado' && !execucoesPorSessao[s.id] && Math.abs(new Date(`${s.data}T12:00:00Z`).getTime() - new Date(`${diaLocal(extraAberta.executado_em)}T12:00:00Z`).getTime()) <= 3 * 86_400_000)
+            .map((s) => ({ id: s.id, rotulo: `${s.data.slice(8)}/${s.data.slice(5, 7)} · ${s.titulo}` }))} />
+      )}
       <DragOverlay>
         {arrastado && <div className={`w-44 rounded-lg border px-2 py-1.5 shadow-lg ${COR_TIPO[arrastado.tipo] ?? 'bg-white'}`}><ConteudoCard s={arrastado} /></div>}
         {modeloArrastado && <div className="w-44 rounded-lg border bg-white px-2 py-1.5 shadow-lg text-xs font-semibold text-navy-500">{modeloArrastado.titulo}</div>}

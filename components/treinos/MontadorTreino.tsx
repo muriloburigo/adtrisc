@@ -10,6 +10,7 @@ import { calcularCarga, formatarDuracao, formatarPace, metricasPlanejadas, refer
 import { linhasIntervals } from '@/lib/treinos/textoIntervals'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type Passo, type TipoSessao } from '@/lib/treinos/tipos'
 import { salvarSessao, apagarSessao, criarAjuste, reenviarIntervals } from '@/app/(dashboard)/treinos/actions'
+import ComparativoTreino, { type ExecucaoView } from './ComparativoTreino'
 import { salvarModelo, apagarModelo, salvarSessaoComoModelo } from '@/app/(dashboard)/treinos/biblioteca-actions'
 
 export type SessaoView = {
@@ -52,8 +53,9 @@ const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:
 const rotulo = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1'
 
 export default function MontadorTreino({
-  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao, modo = 'sessao', modelo = null, pastas = [], entregas = {},
+  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao, modo = 'sessao', modelo = null, pastas = [], entregas = {}, execucao = null,
 }: {
+  execucao?: ExecucaoView | null          // visão do atleta: atividade ligada a este treino
   entregas?: Record<string, EntregaRef>   // aluno_id → envio ao Intervals / situação
   modo?: 'sessao' | 'modelo'           // 'modelo' = editar um modelo da biblioteca
   modelo?: ModeloView | null
@@ -88,7 +90,9 @@ export default function MontadorTreino({
     origem?.passos.length ? passosParaBlocos(origem.passos) : [blocoNovo('warmup'), blocoNovo('work'), blocoNovo('cooldown')])
   const ehTurma = Boolean(sessao?.turma_id ?? novo?.turma_id)
   const ehAjuste = Boolean(sessao?.sessao_origem_id)
-  const [verAtleta, setVerAtleta] = useState<string>(ehTurma ? '' : atletas[0]?.id ?? '')
+  // Atleta dono deste treino: o do ajuste/individual, ou o único da lista (visão do atleta).
+  const atletaDoTreino = sessao?.aluno_id ? atletas.find((a) => a.id === sessao.aluno_id) : atletas.length === 1 ? atletas[0] : undefined
+  const [verAtleta, setVerAtleta] = useState<string>(atletaDoTreino?.id ?? (ehTurma ? '' : atletas[0]?.id ?? ''))
 
   const passos = useMemo(() => blocosParaPassos(blocos), [blocos])
   const atletaVisto = atletas.find((a) => a.id === verAtleta)
@@ -221,14 +225,14 @@ export default function MontadorTreino({
             {abaBtn('blocos', 'Blocos')}
             {abaBtn('geral', 'Visão geral')}
             {abaBtn('atletas', `Atletas (${atletas.length})`, !ehModelo && ehTurma && Boolean(sessao))}
-            {abaBtn('comparativo', 'Comparativo', !ehModelo && Boolean(sessao) && !ehTurma)}
+            {abaBtn('comparativo', 'Comparativo', !ehModelo && Boolean(sessao) && Boolean(atletaDoTreino))}
           </div>
         </div>
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {sessao && !ehTurma && atletas[0] && sessao.status === 'publicado' && (
-            <p className="text-xs text-gray-500 flex items-center gap-2">Intervals.icu: {seloIntervals(atletas[0]) ?? <span>—</span>}</p>
+          {sessao && atletaDoTreino && atletas.length === 1 && sessao.status === 'publicado' && (
+            <p className="text-xs text-gray-500 flex items-center gap-2">Intervals.icu: {seloIntervals(atletaDoTreino) ?? <span>—</span>}</p>
           )}
           {sessao?.situacao && sessao.situacao !== 'planejado' && (
             <p className={`text-sm rounded-lg px-3 py-2 ${sessao.situacao === 'feito' ? 'bg-green-50 text-green-800' : sessao.situacao === 'parcial' ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700'}`}>
@@ -317,10 +321,9 @@ export default function MontadorTreino({
             </div>
           )}
 
-          {aba === 'comparativo' && (
-            <p className="text-sm text-gray-400 bg-white rounded-xl border border-gray-200 p-4">
-              O comparativo planejado × realizado aparece quando houver uma atividade ligada a este treino (Intervals.icu, arquivo FIT ou lançamento manual).
-            </p>
+          {aba === 'comparativo' && sessao && atletaDoTreino && (
+            <ComparativoTreino sessaoId={sessao.id} alunoId={atletaDoTreino.id} modalidade={f.modalidade} execucao={execucao}
+              planejado={{ duracao_s: metricas.duracao_s, distancia_km: metricas.distancia_km, velocidade_ms: metricas.duracao_s && metricas.distancia_km ? (metricas.distancia_km * 1000) / metricas.duracao_s : null }} />
           )}
 
         </div>

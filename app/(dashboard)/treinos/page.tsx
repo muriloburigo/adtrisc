@@ -6,6 +6,8 @@ import PageHeader from '@/components/layout/PageHeader'
 import Card from '@/components/ui/Card'
 import EmptyState from '@/components/ui/EmptyState'
 import CalendarioTreinos, { type SessaoCalendario } from '@/components/treinos/CalendarioTreinos'
+import type { ExecucaoView } from '@/components/treinos/ComparativoTreino'
+import { somarDias } from '@/lib/treinos/datas'
 import PainelLimiares from '@/components/treinos/PainelLimiares'
 import { getTurmasDoCoach } from '@/lib/turmas'
 import { getConfigAvaliacao } from '@/lib/config-avaliacao'
@@ -108,6 +110,20 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
   for (const e of (entsTodas ?? []) as { sessao_id: string; aluno_id: string; situacao: string; intervals_event_id: string | null; erro_envio: string | null }[]) {
     (entregasPorSessao[e.sessao_id] ??= {})[e.aluno_id] = { situacao: e.situacao, enviado: Boolean(e.intervals_event_id), erro: e.erro_envio }
   }
+  // Visão do atleta: atividades feitas no período (ligadas a treinos ou extras).
+  const execucoesPorSessao: Record<string, ExecucaoView> = {}
+  const extras: ExecucaoView[] = []
+  if (aluno) {
+    const { data: exs } = await db.from('treino_execucoes')
+      .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, zonas, treino_entregas(sessao_id)')
+      .eq('aluno_id', aluno.id).gte('executado_em', `${de}T00:00:00-03:00`).lt('executado_em', `${somarDias(ate, 1)}T00:00:00-03:00`)
+    for (const e of (exs ?? []) as (Omit<ExecucaoView, 'sessao_id'> & { treino_entregas: { sessao_id: string } | null })[]) {
+      const { treino_entregas, ...resto } = e
+      const v = { ...resto, sessao_id: treino_entregas?.sessao_id ?? null }
+      if (v.sessao_id) execucoesPorSessao[v.sessao_id] = v
+      else extras.push(v)
+    }
+  }
   const conectados = new Set(((conectadosRaw ?? []) as { aluno_id: string }[]).map((c) => c.aluno_id))
 
   // Visão do atleta: o que ele marcou no portal (feito / não feito + comentário).
@@ -161,6 +177,8 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
         limites={config.zona_limites}
         biblioteca={{ pastas: pastasRaw ?? [], modelos: modelosRaw ?? [] }}
         entregasPorSessao={entregasPorSessao}
+        execucoesPorSessao={execucoesPorSessao}
+        extras={extras}
       />
 
       {aluno && (() => {

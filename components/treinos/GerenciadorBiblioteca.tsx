@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Folder, FolderPlus, Pencil, Plus, Search, Trash2, Check, X } from 'lucide-react'
+import { ArrowLeft, Folder, FolderPlus, Pencil, Plus, Search, Trash2, Check, X, Upload } from 'lucide-react'
 import MontadorTreino, { type ModeloView } from './MontadorTreino'
 import { MODALIDADES, TIPOS_SESSAO } from '@/lib/treinos/tipos'
 import { criarPasta, renomearPasta, apagarPasta, moverModelo } from '@/app/(dashboard)/treinos/biblioteca-actions'
@@ -23,6 +23,21 @@ export default function GerenciadorBiblioteca({ pastas, modelos, limites }: {
   const [aberto, setAberto] = useState<Modelo | 'novo' | null>(null)
   const [novaPasta, setNovaPasta] = useState<string | null>(null)
   const [renomeando, setRenomeando] = useState<{ id: string; nome: string } | null>(null)
+  const [importando, setImportando] = useState(false)
+  const [ok, setOk] = useState<string | null>(null)
+  const arquivo = useRef<HTMLInputElement>(null)
+
+  async function importarFit(f: File) {
+    setErro(null); setOk(null); setImportando(true)
+    const fd = new FormData(); fd.set('arquivo', f)
+    if (pasta !== 'todas' && pasta !== 'sem') fd.set('pasta', pasta)
+    const r = await fetch('/api/treinos/importar-fit', { method: 'POST', body: fd })
+    const j = await r.json().catch(() => ({}))
+    setImportando(false)
+    if (!r.ok) { setErro(j.error ?? 'Não foi possível importar.'); return }
+    setOk(`Modelo “${j.titulo}” importado.`)
+    router.refresh()
+  }
 
   const executar = (fn: () => Promise<{ error?: string }>, depois?: () => void) => startTransition(async () => {
     setErro(null)
@@ -49,6 +64,7 @@ export default function GerenciadorBiblioteca({ pastas, modelos, limites }: {
     <div className="space-y-3">
       <Link href="/treinos" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-navy-500"><ArrowLeft size={14} /> Calendário</Link>
       {erro && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{erro}</p>}
+      {ok && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{ok}</p>}
       <div className="grid gap-4 md:grid-cols-[220px_1fr]">
         {/* Pastas */}
         <aside className="bg-white rounded-xl border border-gray-200 p-2 h-fit space-y-0.5">
@@ -88,6 +104,11 @@ export default function GerenciadorBiblioteca({ pastas, modelos, limites }: {
               <Search size={14} className="text-gray-400" />
               <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar modelo" className="text-sm w-full focus:outline-none" />
             </label>
+            <input ref={arquivo} type="file" accept=".fit" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) importarFit(f); e.target.value = '' }} />
+            <button disabled={importando} onClick={() => arquivo.current?.click()} title="Importar um treino em .fit (Garmin Connect, TrainingPeaks…)"
+              className="inline-flex items-center gap-1.5 text-sm border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 rounded-xl px-3 py-1.5 disabled:opacity-50">
+              <Upload size={14} /> {importando ? 'Importando…' : 'Importar FIT'}
+            </button>
             <button onClick={() => setAberto('novo')} className="inline-flex items-center gap-1.5 text-sm font-semibold bg-sky-400 hover:bg-sky-500 text-white rounded-xl px-3 py-1.5">
               <Plus size={14} /> Novo modelo
             </button>
