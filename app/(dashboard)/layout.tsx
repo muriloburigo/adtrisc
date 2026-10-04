@@ -19,6 +19,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // Transferências de atletas aguardando resposta deste usuário (número no menu "Atletas").
   const role = (profile as { role?: string } | null)?.role
+  // Atleta usa o portal; o painel é da equipe.
+  if (role === 'aluno') redirect('/portal')
   const pendencias = role === 'admin' || role === 'coach'
     ? (await pendenciasDoUsuario(createAdminClient(), user.id, role === 'admin')).paraResponder.length
     : 0

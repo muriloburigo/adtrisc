@@ -10,14 +10,16 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import AlunoTimeline from './AlunoTimeline'
 import FichaSection from './FichaSection'
+import PortalAtletaCard from './PortalAtletaCard'
 import FichaDadosCard, { CAMPOS_FICHA_DADOS, type FichaDados } from './FichaDadosCard'
 import AvaliacoesSection from './AvaliacoesSection'
 import TestesCampoSection from './TestesCampoSection'
 import { Pencil, User, MapPin, Phone, Users2 } from 'lucide-react'
 import { formatDate, calcularIdade, formatTelefone } from '@/lib/utils'
 import type { AlunoRow, ResponsavelRow } from '@/types/database'
+import { loginDeExibicao } from '@/lib/portal'
 
-type AlunoWithTurma = AlunoRow & { turmas: { id: string; nome: string } | null }
+type AlunoWithTurma = AlunoRow & { turmas: { id: string; nome: string; usa_treinos: boolean } | null }
 
 export default async function AlunoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -27,7 +29,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
   const adminDb = createAdminClient() as any
 
   const [{ data: alunoRaw }, { data: respsRaw }, { data: fichasRaw }, { data: fichaDadosRaw }] = await Promise.all([
-    supabase.from('alunos').select('*, turmas:turma_id ( id, nome )').eq('id', id).single(),
+    supabase.from('alunos').select('*, turmas:turma_id ( id, nome, usa_treinos )').eq('id', id).single(),
     adminDb
       .from('responsaveis')
       .select('*, aluno_responsavel!inner(aluno_id)')
@@ -50,6 +52,23 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
   if (!alunoRaw) notFound()
 
   const a = alunoRaw as AlunoWithTurma
+
+  // Portal do atleta (só nas turmas com o módulo de treinos).
+  let portal: { login: string | null; ultimoAcesso: string | null; convite: { url: string; tipo: 'criar' | 'senha'; expira: string } | null } | null = null
+  if (a.turmas?.usa_treinos) {
+    const [conta, { data: conv }] = await Promise.all([
+      a.profile_id ? adminDb.auth.admin.getUserById(a.profile_id) : Promise.resolve({ data: { user: null } }),
+      adminDb.from('portal_convites').select('token, tipo, expires_at').eq('aluno_id', id).is('usado_em', null)
+        .gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ])
+    const u = conta?.data?.user as { email?: string; last_sign_in_at?: string } | null
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://adtrisc.vercel.app'
+    portal = {
+      login: u ? loginDeExibicao(u.email) : null,
+      ultimoAcesso: u?.last_sign_in_at ?? null,
+      convite: conv ? { url: `${base}/convite/${conv.token}`, tipo: conv.tipo, expira: conv.expires_at } : null,
+    }
+  }
 
   // Deduplicate by parentesco — keep one entry per type (mae/pai/outro)
   const seenParentesco = new Set<string>()
@@ -194,6 +213,17 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
               responsaveis={resps.map(r => ({ nome: r.nome ?? '', telefone: r.telefone ?? null, email: r.email ?? null }))}
             />
           </Card>
+
+          {portal && (
+            <Card>
+              <PortalAtletaCard alunoId={id} nomeAtleta={a.nome} login={portal.login} ultimoAcesso={portal.ultimoAcesso} conviteAberto={portal.convite}
+                contatos={[
+                  // Responsáveis primeiro (atleta menor); o mesmo número aparece uma vez só.
+                  ...resps.filter((r) => r.telefone).map((r) => ({ nome: (r.nome ?? 'Responsável').split(' ')[0], telefone: r.telefone! })),
+                  ...(a.telefone ? [{ nome: a.nome.split(' ')[0], telefone: a.telefone }] : []),
+                ].filter((c, i, l) => l.findIndex((x) => x.telefone.replace(/\D/g, '') === c.telefone.replace(/\D/g, '')) === i)} />
+            </Card>
+          )}
 
           <Card>
             <AlunoTimeline alunoId={id} turmaId={a.turma_id ?? null} />

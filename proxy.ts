@@ -54,7 +54,8 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/politica') ||
     request.nextUrl.pathname.startsWith('/inscricao') ||
     request.nextUrl.pathname.startsWith('/regras-sorteio') ||
-    request.nextUrl.pathname.startsWith('/ficha')
+    request.nextUrl.pathname.startsWith('/ficha') ||
+    request.nextUrl.pathname.startsWith('/convite')
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()

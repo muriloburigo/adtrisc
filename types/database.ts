@@ -42,6 +42,7 @@ export type TurmaCoachRow = {
 export type AlunoRow = {
   id: string
   turma_id: string | null
+  profile_id: string | null
   nome: string
   telefone: string | null
   sexo: SexoEnum | null

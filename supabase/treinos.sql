@@ -14,12 +14,12 @@ where nome in ('Pré equipe', 'Equipe Triathlon') or nome ilike 'Equipe Nata%';
 -- id do atleta ligado ao usuário logado (portal do atleta), ou null.
 create or replace function public.meu_aluno_id()
 returns uuid language sql security definer stable set search_path = public as $$
-  select id from public.alunos where profile_id = auth.uid() limit 1
+  select id from public.alunos where profile_id = auth.uid() and status = 'ativo' limit 1
 $$;
 
 create or replace function public.minha_turma_id()
 returns uuid language sql security definer stable set search_path = public as $$
-  select turma_id from public.alunos where profile_id = auth.uid() limit 1
+  select turma_id from public.alunos where profile_id = auth.uid() and status = 'ativo' limit 1
 $$;
 
 -- Staff que pode mexer no treino de uma turma ou de um atleta (titular = auxiliar).
@@ -159,6 +159,7 @@ create table if not exists public.treino_entregas (
   situacao            text not null default 'planejado' check (situacao in ('planejado','feito','nao_feito','parcial')),
   marcado_por         text check (marcado_por in ('atleta','treinador','auto')),
   marcado_em          timestamptz,
+  observacao_atleta   text check (observacao_atleta is null or char_length(observacao_atleta) <= 500),
   intervals_event_id  text,
   enviado_em          timestamptz,
   erro_envio          text,

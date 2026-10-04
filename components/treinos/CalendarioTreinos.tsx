@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, type CollisionDetection, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
-import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare } from 'lucide-react'
 import MontadorTreino, { type AtletaRef, type SessaoView } from './MontadorTreino'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type TipoSessao } from '@/lib/treinos/tipos'
@@ -11,7 +11,12 @@ import { NOMES_DIA, diaMes, hojeISO, mesAnterior, rotuloMes, somarDias } from '@
 import { publicarPeriodo } from '@/app/(dashboard)/treinos/actions'
 import { moverSessao, reordenarDia, usarModelo, duplicarSemana } from '@/app/(dashboard)/treinos/biblioteca-actions'
 
-export type SessaoCalendario = SessaoView & { origem: 'turma' | 'ajuste' | 'individual'; nAjustes: number }
+export type SessaoCalendario = SessaoView & {
+  origem: 'turma' | 'ajuste' | 'individual'
+  nAjustes: number
+  situacao?: 'planejado' | 'feito' | 'nao_feito' | 'parcial'   // só na visão do atleta
+  obsAtleta?: string | null
+}
 export type ModeloResumo = { id: string; titulo: string; modalidade: Modalidade; tipo: TipoSessao; duracao_min: number | null; distancia_km: number | null; pasta_id: string | null }
 export type Biblioteca = { pastas: { id: string; nome: string }[]; modelos: ModeloResumo[] }
 
@@ -46,6 +51,10 @@ function ConteudoCard({ s }: { s: SessaoCalendario }) {
         {s.origem === 'ajuste' && <span className="text-[9px] font-semibold text-amber-700 bg-amber-100 rounded px-1 inline-flex items-center gap-0.5"><UserCog size={9} />ajustado</span>}
         {s.origem === 'individual' && <span className="text-[9px] font-semibold text-sky-700 bg-sky-100 rounded px-1 inline-flex items-center gap-0.5"><User size={9} />individual</span>}
         {s.nAjustes > 0 && <span className="text-[9px] text-amber-700">{s.nAjustes} ajuste{s.nAjustes > 1 ? 's' : ''}</span>}
+        {s.situacao === 'feito' && <span className="text-[9px] font-semibold text-green-700 bg-green-100 rounded px-1">✓ feito</span>}
+        {s.situacao === 'parcial' && <span className="text-[9px] font-semibold text-amber-700 bg-amber-100 rounded px-1">parcial</span>}
+        {s.situacao === 'nao_feito' && <span className="text-[9px] font-semibold text-red-600 bg-red-100 rounded px-1">✗ não feito</span>}
+        {s.obsAtleta && <span title={s.obsAtleta} className="text-[9px] text-sky-700 inline-flex items-center gap-0.5"><MessageSquare size={9} />comentou</span>}
       </div>
     </>
   )

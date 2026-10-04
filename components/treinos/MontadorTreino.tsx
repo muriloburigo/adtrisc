@@ -30,6 +30,8 @@ export type SessaoView = {
   distancia_km: number | null
   carga: number | null
   passos: Passo[]
+  situacao?: 'planejado' | 'feito' | 'nao_feito' | 'parcial'   // visão do atleta: o que ele marcou
+  obsAtleta?: string | null
 }
 
 export type ModeloView = {
@@ -204,6 +206,12 @@ export default function MontadorTreino({
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {sessao?.situacao && sessao.situacao !== 'planejado' && (
+            <p className={`text-sm rounded-lg px-3 py-2 ${sessao.situacao === 'feito' ? 'bg-green-50 text-green-800' : sessao.situacao === 'parcial' ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700'}`}>
+              <strong>O atleta marcou: {sessao.situacao === 'feito' ? 'feito' : sessao.situacao === 'parcial' ? 'parcial' : 'não fez'}</strong>
+              {sessao.obsAtleta && <> · “{sessao.obsAtleta}”</>}
+            </p>
+          )}
           {aba === 'blocos' && (
             <>
               {blocos.map((b, i) => (

@@ -1,2 +1,3 @@
 treinos.sql
 profiles_role_protecao.sql
+portal_atleta.sql

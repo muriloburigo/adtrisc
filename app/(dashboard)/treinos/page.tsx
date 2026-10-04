@@ -99,6 +99,16 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
     ]
   sessoes.sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : a.ordem - b.ordem))
 
+  // Visão do atleta: o que ele marcou no portal (feito / não feito + comentário).
+  if (aluno && sessoes.length) {
+    const { data: ents } = await db.from('treino_entregas').select('sessao_id, situacao, observacao_atleta').eq('aluno_id', aluno.id).in('sessao_id', sessoes.map((s) => s.id))
+    const porSessao = new Map(((ents ?? []) as { sessao_id: string; situacao: string; observacao_atleta: string | null }[]).map((e) => [e.sessao_id, e]))
+    for (const s of sessoes) {
+      const e = porSessao.get(s.id)
+      if (e) { s.situacao = e.situacao as SessaoCalendario['situacao']; s.obsAtleta = e.observacao_atleta }
+    }
+  }
+
   const atletas = (aluno ? [aluno] : atletasTurma).map((a) => {
     const r = refs.get(a.id)!
     return { id: a.id, nome: a.nome, referencias: { running: r.running, cycling: r.cycling, swimming: r.swimming }, fcMax: r.fcMax }

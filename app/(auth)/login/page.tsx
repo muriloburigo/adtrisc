@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { loginParaEmail } from '@/lib/portal'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,10 +19,10 @@ export default function LoginPage() {
     setError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email: loginParaEmail(email), password })
 
     if (error) {
-      setError('Email ou senha inválidos.')
+      setError('Login ou senha inválidos.')
       setLoading(false)
       return
     }
@@ -121,14 +122,17 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: '#0C143D' }}>
-                Email
+                Email ou usuário
               </label>
               <input
-                type="email"
+                type="text"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="username"
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm transition-all outline-none"
                 style={{ color: '#0C143D' }}
                 onFocus={(e) => { e.target.style.borderColor = '#2AABE1'; e.target.style.boxShadow = '0 0 0 3px rgba(42,171,225,0.12)' }}
