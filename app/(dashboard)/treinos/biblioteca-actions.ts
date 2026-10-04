@@ -9,6 +9,7 @@ import { metricasPlanejadas, normalizarPassos, referenciaPadrao, validarSessao }
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type Passo, type TipoSessao } from '@/lib/treinos/tipos'
 import { somarDias, inicioSemana } from '@/lib/treinos/datas'
 import { salvarSessao } from './actions'
+import { sincronizarDepois } from '@/lib/intervals/gatilhos'
 
 // Biblioteca de modelos, pastas e operações do calendário (mover, reordenar,
 // duplicar semana) — porte de TrainingLibraryApiController,
@@ -177,6 +178,7 @@ export async function moverSessao(id: string, data: string): Promise<{ error?: s
     userId: actor.id, userName: actor.name, action: 'editar', resource: 'treino',
     resourceId: id, resourceLabel: `${s.titulo}: ${s.data} → ${data}`, before: { data: s.data }, after: { data },
   })
+  sincronizarDepois([id])
   revalidar()
   return {}
 }

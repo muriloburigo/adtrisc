@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, type CollisionDetection, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare } from 'lucide-react'
-import MontadorTreino, { type AtletaRef, type SessaoView } from './MontadorTreino'
+import MontadorTreino, { type AtletaRef, type EntregaRef, type SessaoView } from './MontadorTreino'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type TipoSessao } from '@/lib/treinos/tipos'
 import { NOMES_DIA, diaMes, hojeISO, mesAnterior, rotuloMes, somarDias } from '@/lib/treinos/datas'
@@ -101,8 +101,9 @@ function CardModelo({ m, selecionado, onSelecionar }: { m: ModeloResumo; selecio
 }
 
 export default function CalendarioTreinos({
-  escopo, vista, ancora, semanas, sessoes, atletas, ajustesPorSessao, limites, biblioteca,
+  escopo, vista, ancora, semanas, sessoes, atletas, ajustesPorSessao, limites, biblioteca, entregasPorSessao = {},
 }: {
+  entregasPorSessao?: Record<string, Record<string, EntregaRef>>
   escopo: { tipo: 'turma' | 'aluno'; id: string; nome: string }
   vista: 'semana' | 'mes'
   ancora: string
@@ -315,6 +316,7 @@ export default function CalendarioTreinos({
             novo={aberto.novoData ? { data: aberto.novoData, ...escopoAcao } : null}
             atletas={atletas}
             ajustes={sessaoAberta ? ajustesPorSessao[sessaoAberta.id] ?? {} : {}}
+            entregas={sessaoAberta ? entregasPorSessao[sessaoAberta.id] ?? {} : {}}
             limites={limites}
             onFechar={() => setAberto(null)}
             onAbrirSessao={(id) => setAberto({ sessaoId: id })}

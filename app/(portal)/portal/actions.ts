@@ -36,3 +36,14 @@ export async function marcarSituacao(sessaoId: string, situacao: (typeof SITUACO
   revalidatePath('/treinos', 'layout')
   return {}
 }
+
+/** O atleta desconecta o Intervals.icu (revoga lá e apaga o token daqui). */
+export async function desconectarIntervals(): Promise<{ error?: string }> {
+  const { atleta } = await atletaLogado()
+  if (!atleta) return { error: 'Acesso desativado.' }
+  const { apagarConexao } = await import('@/lib/intervals/sync')
+  await apagarConexao(atleta.aluno.id)
+  await logAudit({ userId: atleta.userId, userName: atleta.aluno.nome, action: 'excluir', resource: 'portal', resourceId: atleta.aluno.id, resourceLabel: 'Desconectou o Intervals.icu' })
+  revalidatePath('/portal', 'layout')
+  return {}
+}

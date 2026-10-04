@@ -9,7 +9,7 @@ import { blocoNovo, blocosParaPassos, passosParaBlocos, novaChave, type Bloco } 
 import { calcularCarga, formatarDuracao, formatarPace, metricasPlanejadas, referenciaPadrao, type Referencia } from '@/lib/treinos/calculos'
 import { linhasIntervals } from '@/lib/treinos/textoIntervals'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type Passo, type TipoSessao } from '@/lib/treinos/tipos'
-import { salvarSessao, apagarSessao, criarAjuste } from '@/app/(dashboard)/treinos/actions'
+import { salvarSessao, apagarSessao, criarAjuste, reenviarIntervals } from '@/app/(dashboard)/treinos/actions'
 import { salvarModelo, apagarModelo, salvarSessaoComoModelo } from '@/app/(dashboard)/treinos/biblioteca-actions'
 
 export type SessaoView = {
@@ -45,14 +45,16 @@ export type ModeloView = {
   passos: Passo[]
 }
 
-export type AtletaRef = { id: string; nome: string; referencias: Record<string, Referencia>; fcMax: number | null }
+export type AtletaRef = { id: string; nome: string; referencias: Record<string, Referencia>; fcMax: number | null; intervals?: boolean }
+export type EntregaRef = { situacao: string; enviado: boolean; erro: string | null }
 
 const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white'
 const rotulo = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1'
 
 export default function MontadorTreino({
-  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao, modo = 'sessao', modelo = null, pastas = [],
+  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao, modo = 'sessao', modelo = null, pastas = [], entregas = {},
 }: {
+  entregas?: Record<string, EntregaRef>   // aluno_id → envio ao Intervals / situação
   modo?: 'sessao' | 'modelo'           // 'modelo' = editar um modelo da biblioteca
   modelo?: ModeloView | null
   pastas?: { id: string; nome: string }[]
@@ -144,6 +146,25 @@ export default function MontadorTreino({
     })
   }
 
+  function reenviar(alunoId?: string) {
+    if (!sessao) return
+    setErro(null); setAviso(null)
+    startTransition(async () => {
+      const r = await reenviarIntervals(sessao.id, alunoId)
+      if (r.error) setErro(r.error); else setAviso('Enviado ao Intervals.icu.')
+      router.refresh()
+    })
+  }
+
+  /** Selo do Intervals de um atleta nesta sessão. */
+  const seloIntervals = (a: AtletaRef) => {
+    if (!sessao || sessao.status !== 'publicado' || !a.intervals) return a.intervals ? null : <span className="text-[10px] text-gray-300" title="Atleta não conectou o Intervals.icu">sem Intervals</span>
+    const e = entregas[a.id]
+    if (e?.erro) return <button type="button" onClick={() => reenviar(a.id)} title={e.erro} className="text-[10px] font-semibold text-red-600 bg-red-50 rounded px-1.5 py-0.5">falhou · reenviar</button>
+    if (e?.enviado) return <span className="text-[10px] font-semibold text-green-700 bg-green-50 rounded px-1.5 py-0.5">no Intervals ✓</span>
+    return <button type="button" onClick={() => reenviar(a.id)} className="text-[10px] font-semibold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">enviar</button>
+  }
+
   function ajustar(alunoId: string) {
     if (!sessao) return
     startTransition(async () => {
@@ -206,6 +227,9 @@ export default function MontadorTreino({
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {sessao && !ehTurma && atletas[0] && sessao.status === 'publicado' && (
+            <p className="text-xs text-gray-500 flex items-center gap-2">Intervals.icu: {seloIntervals(atletas[0]) ?? <span>—</span>}</p>
+          )}
           {sessao?.situacao && sessao.situacao !== 'planejado' && (
             <p className={`text-sm rounded-lg px-3 py-2 ${sessao.situacao === 'feito' ? 'bg-green-50 text-green-800' : sessao.situacao === 'parcial' ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700'}`}>
               <strong>O atleta marcou: {sessao.situacao === 'feito' ? 'feito' : sessao.situacao === 'parcial' ? 'parcial' : 'não fez'}</strong>
@@ -276,6 +300,9 @@ export default function MontadorTreino({
               {atletas.map((a) => (
                 <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
                   <span className="text-sm text-navy-500 flex-1 min-w-0 truncate">{a.nome}</span>
+                  {!ajustes[a.id] && seloIntervals(a)}
+                  {entregas[a.id]?.situacao === 'feito' && <span className="text-[10px] font-semibold text-green-700">✓ feito</span>}
+                  {entregas[a.id]?.situacao === 'nao_feito' && <span className="text-[10px] font-semibold text-red-600">✗ não fez</span>}
                   {ajustes[a.id] ? (
                     <button type="button" onClick={() => onAbrirSessao(ajustes[a.id])} className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1">
                       <UserCog size={12} /> Ajustado · abrir

@@ -99,6 +99,17 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
     ]
   sessoes.sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : a.ordem - b.ordem))
 
+  // Entregas (situação + envio ao Intervals) por sessão e atleta, e quem está conectado.
+  const entregasPorSessao: Record<string, Record<string, { situacao: string; enviado: boolean; erro: string | null }>> = {}
+  const [{ data: entsTodas }, { data: conectadosRaw }] = await Promise.all([
+    sessoes.length ? db.from('treino_entregas').select('sessao_id, aluno_id, situacao, intervals_event_id, erro_envio').in('sessao_id', sessoes.map((s) => s.id)) : Promise.resolve({ data: [] }),
+    db.from('intervals_conexoes').select('aluno_id').in('aluno_id', doEscopo.length ? doEscopo : ['00000000-0000-0000-0000-000000000000']),
+  ])
+  for (const e of (entsTodas ?? []) as { sessao_id: string; aluno_id: string; situacao: string; intervals_event_id: string | null; erro_envio: string | null }[]) {
+    (entregasPorSessao[e.sessao_id] ??= {})[e.aluno_id] = { situacao: e.situacao, enviado: Boolean(e.intervals_event_id), erro: e.erro_envio }
+  }
+  const conectados = new Set(((conectadosRaw ?? []) as { aluno_id: string }[]).map((c) => c.aluno_id))
+
   // Visão do atleta: o que ele marcou no portal (feito / não feito + comentário).
   if (aluno && sessoes.length) {
     const { data: ents } = await db.from('treino_entregas').select('sessao_id, situacao, observacao_atleta').eq('aluno_id', aluno.id).in('sessao_id', sessoes.map((s) => s.id))
@@ -111,7 +122,7 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
 
   const atletas = (aluno ? [aluno] : atletasTurma).map((a) => {
     const r = refs.get(a.id)!
-    return { id: a.id, nome: a.nome, referencias: { running: r.running, cycling: r.cycling, swimming: r.swimming }, fcMax: r.fcMax }
+    return { id: a.id, nome: a.nome, referencias: { running: r.running, cycling: r.cycling, swimming: r.swimming }, fcMax: r.fcMax, intervals: conectados.has(a.id) }
   })
 
   return (
@@ -149,6 +160,7 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
         ajustesPorSessao={ajustesPorSessao}
         limites={config.zona_limites}
         biblioteca={{ pastas: pastasRaw ?? [], modelos: modelosRaw ?? [] }}
+        entregasPorSessao={entregasPorSessao}
       />
 
       {aluno && (() => {

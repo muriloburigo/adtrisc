@@ -7,6 +7,7 @@ import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
 import { friendlyError } from '@/lib/errors'
 import { gerarPlano, type EntradaGerador } from '@/lib/treinos/gerador'
+import { removerAntesDeApagar, sincronizarDepois } from '@/lib/intervals/gatilhos'
 import { somarDias } from '@/lib/treinos/datas'
 import { DIFICULDADES, MODALIDADES, OBJETIVOS, type Passo } from '@/lib/treinos/tipos'
 
@@ -143,6 +144,7 @@ export async function publicarPlano(id: string): Promise<{ error?: string; publi
   const ids = ((sessoes ?? []) as { id: string }[]).map((s) => s.id)
   if (ids.length) await db.from('treino_sessoes').update({ status: 'publicado', publicado_em: agora }).in('sessao_origem_id', ids).eq('status', 'rascunho')
   await db.from('treino_planos').update({ status: 'publicado', publicado_em: agora, publicado_por: actor.id }).eq('id', id)
+  sincronizarDepois(ids)
   await logAudit({ userId: actor.id, userName: actor.name, action: 'status', resource: 'treino', resourceId: id, resourceLabel: `Publicou o plano ${plano.titulo} (${ids.length} treinos)` })
   revalidar()
   return { publicados: ids.length }
@@ -191,6 +193,8 @@ export async function duplicarPlano(id: string, novoInicio: string): Promise<{ e
 export async function apagarPlano(id: string): Promise<{ error?: string }> {
   const actor = await requireStaff()
   const db = (await createClient()) as Db
+  const { data: doPlano } = await db.from('treino_sessoes').select('id').eq('plano_id', id)
+  await removerAntesDeApagar(((doPlano ?? []) as { id: string }[]).map((x) => x.id))
   const { data, error } = await db.from('treino_planos').delete().eq('id', id).select('titulo').maybeSingle()
   if (error) return { error: friendlyError(error, 'Erro ao apagar o plano.') }
   if (!data) return { error: 'Plano não encontrado.' }

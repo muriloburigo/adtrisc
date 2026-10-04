@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireStaff } from '@/lib/assert'
 import { logAudit } from '@/lib/audit'
+import { removerAntesDeApagar, sincronizarDepois } from '@/lib/intervals/gatilhos'
 import { friendlyError } from '@/lib/errors'
 import { calcularCarga, metricasPlanejadas, normalizarPassos, referenciaPadrao, validarSessao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type Passo, type TipoSessao } from '@/lib/treinos/tipos'
@@ -117,6 +118,7 @@ export async function salvarSessao(f: SessaoForm): Promise<{ error?: string; id?
     resourceId: id!, resourceLabel: `${dados.titulo} — ${f.data}`,
     after: { ...dados, passos: passos.length },
   })
+  sincronizarDepois([id])   // só age se a sessão estiver publicada (ou deixou de estar)
   revalidar()
   return { id }
 }
@@ -124,6 +126,9 @@ export async function salvarSessao(f: SessaoForm): Promise<{ error?: string; id?
 export async function apagarSessao(id: string): Promise<{ error?: string }> {
   const actor = await requireStaff()
   const db = (await createClient()) as Db
+  const { data: antes } = await db.from('treino_sessoes').select('sessao_origem_id').eq('id', id).maybeSingle()
+  if (!antes) return { error: 'Treino não encontrado.' }
+  await removerAntesDeApagar([id])
   const { data, error } = await db.from('treino_sessoes').delete().eq('id', id).select('titulo, data').maybeSingle()
   if (error) return { error: friendlyError(error, 'Erro ao apagar o treino.') }
   if (!data) return { error: 'Treino não encontrado.' }
@@ -131,6 +136,7 @@ export async function apagarSessao(id: string): Promise<{ error?: string }> {
     userId: actor.id, userName: actor.name, action: 'excluir', resource: 'treino',
     resourceId: id, resourceLabel: `${data.titulo} — ${data.data}`,
   })
+  sincronizarDepois([antes.sessao_origem_id])   // apagar um ajuste devolve o treino da turma ao atleta
   revalidar()
   return {}
 }
@@ -144,7 +150,13 @@ export async function publicarPeriodo(escopo: { turma_id?: string; aluno_id?: st
   q = escopo.turma_id ? q.eq('turma_id', escopo.turma_id) : q.eq('aluno_id', escopo.aluno_id)
   const { data, error } = await q.select('id')
   if (error) return { error: friendlyError(error, 'Erro ao publicar.') }
-  const n = (data ?? []).length
+  const ids = ((data ?? []) as { id: string }[]).map((x) => x.id)
+  // Na turma, publica junto os ajustes individuais desses treinos.
+  if (escopo.turma_id && ids.length) {
+    await db.from('treino_sessoes').update({ status: 'publicado', publicado_em: new Date().toISOString() }).in('sessao_origem_id', ids).eq('status', 'rascunho')
+  }
+  const n = ids.length
+  sincronizarDepois(ids)
   if (n) {
     await logAudit({
       userId: actor.id, userName: actor.name, action: 'status', resource: 'treino',
@@ -210,4 +222,19 @@ export async function salvarLimiar(f: LimiarForm): Promise<{ error?: string }> {
   })
   revalidar()
   return {}
+}
+
+/** "Reenviar ao Intervals": refaz o envio da sessão (para um atleta ou todos) e espera o resultado. */
+export async function reenviarIntervals(sessaoId: string, alunoId?: string): Promise<{ error?: string }> {
+  await requireStaff()
+  const db = (await createClient()) as Db
+  // RLS: só reenvia o que o usuário enxerga (titular, auxiliar ou admin).
+  const { data: s } = await db.from('treino_sessoes').select('id, status').eq('id', sessaoId).maybeSingle()
+  if (!s) return { error: 'Treino não encontrado.' }
+  if (s.status !== 'publicado') return { error: 'Publique o treino antes de enviar.' }
+  const { sincronizarSessao } = await import('@/lib/intervals/sync')
+  await sincronizarSessao(sessaoId, alunoId)
+  const { data: falhas } = await db.from('treino_entregas').select('erro_envio').eq('sessao_id', sessaoId).not('erro_envio', 'is', null)
+  revalidar()
+  return falhas?.length ? { error: `Não foi possível enviar para ${falhas.length} atleta(s): ${falhas[0].erro_envio}` } : {}
 }
