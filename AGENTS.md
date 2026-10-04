@@ -40,6 +40,17 @@ npm run start    # Start production server
 npm run lint     # ESLint
 ```
 
+**Local database for big features (Supabase in Docker).** Large modules are built on a separate branch against a local Supabase restored from the latest encrypted backup — never against production:
+
+```bash
+bash scripts/dev/restaurar-local.sh   # wipes the LOCAL db, restores the latest backup, applies
+                                      # scripts/dev/migrations-pendentes.txt, writes .env.development.local
+npm run dev                           # .env.development.local (local) wins over .env.local (production)
+node scripts/dev/intervals-mock.mjs   # optional: fake Intervals.icu on :4010 (see .env.intervals.dev)
+```
+
+Local users keep their production ids, password `adtrisc-dev` (printed by the script). `scripts/dev/migrations-pendentes.txt` lists the SQL files of the branch that are **not yet in production**, in run order; when the branch is merged and those files are run in production, move them to the restore list below and empty the file.
+
 ---
 
 ## Environment Variables
@@ -53,10 +64,22 @@ SUPABASE_SERVICE_ROLE_KEY=<service role key>    # server-side admin operations o
 SUPABASE_DB_PASSWORD=<db password>
 ```
 
-Optional (used by `fichas/actions.ts` to build share links):
+Optional (used by `fichas/actions.ts`, portal invites and the Intervals OAuth redirect to build links):
 
 ```
 NEXT_PUBLIC_APP_URL=https://adtrisc.vercel.app
+```
+
+Training module / Intervals.icu (server-only; without them the Intervals connection button says "not available"):
+
+```
+INTERVALS_CLIENT_ID=<app OAuth "ADTRISC" — intervals.icu/settings → Manage App>
+INTERVALS_CLIENT_SECRET=<idem; never paste it in chats/tickets>
+INTERVALS_TOKEN_KEY=<openssl rand -base64 32 — encrypts athletes' tokens; losing it = everyone reconnects>
+INTERVALS_WEBHOOK_SECRET=<the Authorization header value registered in the app's webhook>
+INTERVALS_WEBHOOK_PAYLOAD_SECRET=<optional: the `secret` field Intervals puts in the webhook body>
+CRON_SECRET=<openssl rand -hex 32 — Vercel sends it as Bearer to /api/cron/intervals>
+# dev only: INTERVALS_BASE_URL=http://localhost:4010 (mock) · INTERVALS_DEV_API_KEY + INTERVALS_DEV_ATHLETE_ID (personal key, no OAuth)
 ```
 
 ---
@@ -150,6 +173,19 @@ adtrisc/
 │   ├── soft_delete.sql             # Adds deleted_at to presencas & avaliacoes_fisicas
 │   └── ...                         # one file per feature added since — see Backup & Restore
 │                                   #   for the full run order on a from-scratch restore
+├── app/(dashboard)/treinos/        # Training module (staff): calendar, builder, library, plans — see "Treinos"
+├── app/(portal)/portal/            # Athlete portal (role `aluno`): my workouts, workout detail, zones, account
+├── app/convite/[token]/            # Public — athlete creates the portal account from the WhatsApp invite
+├── app/api/intervals/callback/     # Intervals.icu OAuth callback
+├── app/api/webhooks/intervals/     # Intervals.icu webhook (secret-authenticated)
+├── app/api/cron/intervals/         # Daily safety net (vercel.json crons, CRON_SECRET)
+├── app/api/treinos/                # .fit download/upload/import
+├── components/treinos/ · components/portal/
+├── lib/treinos/                    # tipos, calculos, blocos, gerador, textoIntervals, fit, descricao, referencia,
+│                                   #   execucoes, cumprimento, acesso, datas
+├── lib/intervals/                  # client, estado (OAuth state), atividade (mapper + matching), sync, gatilhos
+├── lib/portal.ts · lib/portalAtleta.ts · lib/portalConvite.ts · lib/crypto.ts
+├── scripts/dev/                    # Local Supabase restore, pending-migrations list, Intervals mock
 ├── scripts/backup/                 # Local backup/restore tooling — see "Backup & Restore" below
 │   ├── backup.sh                   # Full backup: pg_dump + auth_users.csv + storage buckets
 │   ├── backup-storage.mjs          # Downloads every Storage bucket (listed from the project), called by backup.sh
@@ -180,6 +216,10 @@ Supabase Auth with cookie sessions via `@supabase/ssr`.
 - `/inscricao`
 - `/regras-sorteio`
 - `/ficha/*`
+- `/convite/*` (portal invite)
+- `/api/webhooks/*`, `/api/cron/*` (server-to-server, authenticated by a secret inside the route)
+
+The login field accepts an e-mail **or an athlete username**: without `@`, `loginParaEmail()` appends `@atleta.adtrisc.invalid` (athletes without e-mail; `.invalid` is reserved and never receives mail).
 
 **Server-side auth helpers** in `lib/assert.ts`:
 
@@ -202,7 +242,7 @@ These are called at the top of Server Actions to enforce authorization. `lib/aud
 |------|--------|
 | `admin` | Full access to all dashboard sections |
 | `coach` | Dashboard, turmas, alunos, presencas, avaliacoes, candidatos |
-| `aluno` | Dashboard only (limited, mostly unused) |
+| `aluno` | **Athlete portal only** (`/portal`): the dashboard layout redirects them there. Created by invite, linked by `alunos.profile_id` |
 | `pai` | Dashboard only; can see their child's data via RLS |
 
 Sidebar nav items are filtered by role in `components/layout/Sidebar.tsx`.
@@ -325,7 +365,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `id`, `user_id` (FK → profiles, default `auth.uid()`), `nome` (1–80 chars, unique per user), `estado` (jsonb — the same JSON as the page's `?r=`), `created_at`, `updated_at`. RLS: each admin/coach sees and writes only their own rows.
 
 **`audit_logs`** — all admin/coach write actions
-- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro/config/relatorio/transferencia), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
+- `id`, `user_id`, `user_name`, `action` (criar/editar/excluir/senha/status/sorteio), `resource` (turma/atleta/treinador/candidato/usuario/presenca/prova/materia/documento/ficha/diario/foto/financeiro/config/relatorio/transferencia/treino/portal), `resource_id`, `resource_label`, `before_data` (JSONB), `after_data` (JSONB), `metadata` (JSONB), `created_at`. No check constraint on `action`/`resource` (plain `text`) — confirmed by inspecting the live table, so new values never need a migration, only extending the TS unions in `lib/audit.ts`.
 
 **`categorias_financeiras`** — global, reusable expense categories (Treinadores, Camisetas, Viagens...)
 - `id`, `nome`, `ativo` (soft-disable — categories are never hard-deleted since budgets/notes reference them), `created_at`
@@ -344,6 +384,19 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - `id`, `projeto_id` (FK, restrict — a projeto with notes can't be deleted), `categoria_id` (FK, restrict), `coach_id` (FK → profiles — who it's logged under; admin can log on behalf of any coach), `valor`, `descricao`, `numero_nota`, `data`, `nome_arquivo`, `storage_path`, `created_at`, `updated_at`
 - No approval flow — a saved lançamento counts against the budget's "consumido" immediately; admin edits/deletes to correct mistakes.
 
+**Training module tables** (`treinos.sql`, `portal_atleta.sql`, `intervals.sql`, `treinos_fit.sql`; ported from Movelly Core's `training_*`):
+- `turmas.usa_treinos` — checkbox in the turma form; only those turmas appear in `/treinos` and in the portal.
+- `treino_pastas`, `treino_modelos` — library (folders, templates); `treino_passos` belongs to a session **or** a template.
+- `treino_planos` — plan of a turma **or** an athlete (objective, period, target race, generator payload); deleting it deletes its sessions.
+- `treino_sessoes` — one day's workout: `turma_id` (turma workout), or `aluno_id` + `sessao_origem_id` (**individual adjustment** replacing the turma workout for that athlete), or just `aluno_id` (individual extra). `status` rascunho/publicado — athletes only see published.
+- `treino_passos` — steps (warmup/work/recovery/cooldown/drill/strength/note; time or distance; target zone/pace/kmh/bpm/w/rpe with min–max; a work step with `repeticoes > 1` followed by a `recovery` step = intervals).
+- `treino_entregas` — session × athlete: `situacao` (planejado/feito/parcial/nao_feito), `marcado_por` (atleta/treinador/auto), `observacao_atleta`, Intervals `intervals_event_id`/`erro_envio`.
+- `treino_execucoes` — what was done (Intervals/FIT upload/manual), metrics, `zonas` (seconds per zone), `entrega_id` null = **extra activity**.
+- `atleta_limiares` — per-modality reference set by the coach; without it the reference comes from the field tests (`lib/treinos/referencia.ts`). **ADTRISC zones Z1–Z5 (% of the test speed, `config_avaliacao.zona_limites`) are used everywhere** — not Movelly's zones.
+- `portal_convites` — single-use invite/new-password tokens (7 days).
+- `intervals_conexoes` — one per athlete; `token_cifrado` is AES-256-GCM and **no logged-in role can SELECT that column** (column grants).
+- Storage bucket `treinos-fit` (private) — uploaded activity .fit files.
+
 ### RLS Summary
 
 - `admin` and `coach` can read most tables.
@@ -356,6 +409,9 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - **RLS recursion trap:** a policy on table X must not query another table whose own policies query X back; the planner aborts with "infinite recursion detected in policy". `alunos_select_pai` reads `aluno_responsavel`, so policies on `aluno_responsavel`/`responsaveis` must check athlete access through a SECURITY DEFINER helper (`coach_has_aluno()`), never with `EXISTS (select … from alunos)`.
 - **Assistant coaches (`turma_coaches`) have the same permissions as the head coach** everywhere: `coach_has_turma()` and `getTurmaIdsForCoach()` count both. To list a coach's turmas, use `getTurmasDoCoach()` (`lib/turmas.ts`), never `.eq('coach_id', …)` on `turmas`: until 02/10/2026 the diário did that and hid assistants' turmas. Saving attendance creates that day's diário entry for **the coach who took the chamada** (head or assistant); only when an admin saves does it go to the head coach.
 - Public routes use `createAdminClient()` (service role) to bypass RLS for inscricao and ficha submissions.
+- **`profiles.role` is protected by a trigger** (`profiles_role_protecao.sql`): `profiles_update_own` lets users update their own row, and until 04/10/2026 that included `role` — any logged-in user could make themselves admin from the browser. Only an admin (JWT) or server connections (service role, which Configurações uses) can change it now.
+- **`profiles` select**: staff sees everyone; any other role (athlete) sees only their own row (`portal_atleta.sql`; it was `using (true)`).
+- **Training module**: staff through `treino_staff_pode(turma, aluno)` (admin, head or assistant coach). Athletes (`meu_aluno_id()` / `minha_turma_id()`, which require an **active** athlete) read only published sessions of their turma or their own, their deliveries/executions/thresholds and their own `alunos`/`turmas` row. Athletes **never write** training tables directly: marking done, uploading .fit and linking extras go through server code that checks access (`lib/treinos/acesso.ts`) and writes with the service role.
 
 ### Helper DB Function
 
@@ -366,6 +422,21 @@ public.get_my_role()  -- returns role of the current authenticated user (used in
 ---
 
 ## Key Features
+
+### Treinos (`/treinos`) — training module
+Port of Movelly Core's training module (spec = that code; `lib/` files say what was ported and what was changed on purpose). Staff only; turmas with `usa_treinos`.
+- **Calendar** week/month per turma or per athlete, weekly totals (time, distance, load). Drag & drop (`@dnd-kit`): move a workout (its adjustments follow), reorder within a day, drop a library template on a day; "Duplicar semana"; "Publicar N rascunhos".
+- **Builder** (`MontadorTreino`): blocks continuous/interval/note with targets zone (range Z1–Z2 allowed), pace, speed, HR, power, effort 1–5; "Visão geral" shows each athlete's paces and the Intervals text; "Atletas" tab creates an **individual adjustment** and shows each athlete's Intervals status ("reenviar"); "Comparativo" (athlete view) = planned × done, difference, time-in-zone chart; download the workout as .fit.
+- **Library** (`/treinos/biblioteca`): folders, templates edited in the builder, "Salvar na biblioteca" with duplicate warning, import a workout .fit.
+- **Plans** (`/treinos/planos`): manual or **generated** (`lib/treinos/gerador.ts`, Movelly's rule v1-progressive-simple adapted: ADTRISC zones, effort 1–5, intervals split across reps), live preview, publish (sessions + adjustments), duplicate to another date, delete with its sessions.
+- **Intervals.icu** (`lib/intervals/`): the athlete connects in the portal (OAuth app "ADTRISC", HMAC state). Publishing/editing/moving/deleting sends, updates or removes **one event per connected athlete with that athlete's paces** (runs in `after()`, never blocks the screen). Webhook imports activities and matches them to the day's workout (same day+modality, closest distance) → "feito" automatically; otherwise an extra activity. Daily cron re-imports 2 days and retries failed sends. Develop against `scripts/dev/intervals-mock.mjs`.
+- **Extras** (activities without a workout): shown on the athlete calendar/portal; link to a workout within ±3 days, move to another day, delete.
+- **Follow-up**: athlete page "Treinos" card, turma Desempenho column "Treinos 30d", `/relatorios` group "Treinos" (`lib/treinos/cumprimento.ts`: published sessions already past, adjustment replaces turma workout).
+
+### Athlete portal (`/portal`) and invites
+- Coach → athlete page → "Portal do atleta": generate an invite (or a new-password link) and send it by WhatsApp (guardians first; repeated numbers once). One valid link at a time, 7 days, single use; reserved before the account is created (no double accounts). "Remover acesso" deletes only the login.
+- `/convite/[token]`: e-mail **or** username + password + privacy agreement (guardian if minor); signs in and lands on `/portal`.
+- Portal (mobile first): next workout, the week day by day, workout detail in plain language with **their** paces, mark done/partial/not done + comment to the coach, upload the activity .fit, download the workout .fit, link extras, my zones, account (password, Intervals connect/disconnect). Forgotten password → ask the coach for a new-password link (no e-mail flow).
 
 ### Public Enrollment (`/inscricao`)
 Parents fill a form to pre-enroll their child. Requires selecting a turma with `captacao_aberta = true`. Creates a `candidatos` record with status `pendente`. Uses `createAdminClient()` to bypass RLS.
@@ -478,6 +549,7 @@ Only use the admin client in Server Actions or server-side code, never in client
 | `documentos` | No (service-role/signed URL only) | Signed PDFs — relatório de turma, presença exportada, diário de aula (path: `{turma\|coach}/{id}/{tipo}/{timestamp}-{filename}`) |
 | `notas-fiscais` | No (service-role/signed URL only) | Nota fiscal attachments on a `lancamentos_financeiros` row (path: `{projetoId}/{categoriaId}/{timestamp}-{filename}`) |
 | `financeiro-arquivos` | No (service-role/signed URL only) | General projeto attachments — plano de trabalho, convênio, edital (path: `{projetoId}/{timestamp}-{filename}`) |
+| `treinos-fit` | No (service-role only) | Activity .fit files uploaded to a workout (path: `{alunoId}/{timestamp}.fit`) |
 
 ---
 
@@ -511,7 +583,7 @@ git push origin main   # the only way to deploy to production
 
 **Never run `vercel` / `vercel --prod` / `vercel deploy` from the local folder.** A CLI deploy uploads the working tree, including uncommitted code. That code then disappears from production on the next push to `main`. This happened in Sep/2026: the `/financeiro` area went live via `vercel --prod` without being committed, and a later push took it offline for 9 days. The project's `.claude/settings.json` denies these commands.
 
-`vercel.json` sets framework to `nextjs` with standard build/install commands. No custom headers, rewrites, or edge functions configured.
+`vercel.json` sets framework to `nextjs` with standard build/install commands and one cron (`/api/cron/intervals`, daily 09:00 UTC; needs `CRON_SECRET`). No custom headers, rewrites, or edge functions configured.
 
 **`site/`** (static institutional site + Portal da Transparência, a single `index.html`) is a **separate Vercel project, `adtrisc-site`** (`site/.vercel/project.json`), served at `adtrisc-site.vercel.app`. Unlike the app it is **not connected to Git** — it has only ever been published with the CLI from `site/`. As of 30/09/2026 the live page is byte-identical to `site/index.html` on `main`. Since CLI deploys are denied for agents in this repo, publishing a change to the site needs either the maintainer running `vercel --prod` inside `site/` **after committing**, or connecting `adtrisc-site` to the GitHub repo with Root Directory `site`.
 
@@ -632,6 +704,13 @@ This is the unlikely worst case. Steps, roughly in order:
    29. `documentos_assinaturas_digitais.sql` — `documentos_assinados.assinaturas_digitais`
    30. `transferencias.sql` — athlete transfer requests between turmas (needs `coach_has_turma()`, #3)
    31. `aluno_responsavel_coach_fix.sql` — `coach_has_aluno()` + the coach insert policy on `aluno_responsavel`. It fixes the infinite recursion `aluno_responsavel` → `alunos` → `alunos_select_pai` → `aluno_responsavel`, which silently dropped guardian links saved by coaches until 02/10/2026. Must run after #15–17.
+   32. `profiles_role_protecao.sql` — trigger that stops users from changing their own `profiles.role` (independent of the training module; can run any time).
+   33. `treinos.sql` — training module: `turmas.usa_treinos`, library, plans, sessions, steps, deliveries, executions, thresholds, helpers `meu_aluno_id()`/`minha_turma_id()`/`treino_staff_pode()` (needs #3 and #31).
+   34. `portal_atleta.sql` — `portal_convites`, athlete read policies, `profiles_select` restricted (needs #33).
+   35. `intervals.sql` — `intervals_conexoes` with column grants hiding the token (needs #33).
+   36. `treinos_fit.sql` — private bucket `treinos-fit`.
+
+   ⚠️ #32–36 exist only on branch `feat/modulo-treinos` until it is merged (see `scripts/dev/migrations-pendentes.txt`).
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

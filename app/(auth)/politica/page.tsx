@@ -2,7 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
-const UPDATED = '01 de outubro de 2026 (rev. 4)'
+// rev. 5 (módulo de treinos, portal do atleta e Intervals.icu): REVISAR COM A DIRETORIA antes de publicar.
+const UPDATED = '04 de outubro de 2026 (rev. 5)'
 
 export default function PoliticaPage() {
   return (
@@ -148,6 +149,34 @@ export default function PoliticaPage() {
               </ul>
             </SubSection>
 
+            <SubSection title="Treinos e portal do atleta (turmas de rendimento)">
+              <p className="text-sm text-gray-700">
+                Nas turmas que usam o módulo de treinos (hoje, Pré equipe e equipes), o Sistema guarda:
+              </p>
+              <ul className="list-disc list-inside space-y-1 mt-2">
+                <li>Os treinos planejados pelos treinadores(as) para a turma e os ajustes individuais</li>
+                <li>Referências de ritmo e zonas de treino, calculadas a partir dos testes de campo ou informadas pelo treinador (pace, velocidade, frequência cardíaca, potência)</li>
+                <li>Se cada treino foi feito, feito em parte ou não feito, e o comentário opcional do atleta ao treinador</li>
+                <li>
+                  Os dados das atividades realizadas (data, duração, distância, ritmo, frequência
+                  cardíaca, potência, calorias, tempo por zona), recebidos do Intervals.icu ou de
+                  arquivos .fit enviados pelo atleta ou pelo treinador
+                </li>
+                <li>
+                  A conta de acesso do atleta ao portal: e-mail ou nome de usuário e a senha (guardada
+                  pelo serviço de autenticação, nunca em texto). A conta é criada pelo próprio atleta a
+                  partir de um link de convite de uso único enviado pelo treinador — para menores de
+                  idade, ao responsável legal, que concorda com esta política
+                </li>
+              </ul>
+              <p className="text-sm text-gray-700 mt-2">
+                O atleta vê apenas os próprios treinos, zonas e atividades. A conexão com o
+                Intervals.icu é <strong>opcional</strong> e feita pelo próprio atleta, que pode
+                desconectá-la a qualquer momento no portal; a autorização de acesso (token) fica
+                guardada criptografada.
+              </p>
+            </SubSection>
+
             <SubSection title="Galeria de fotos das turmas">
               <p className="text-sm text-gray-700">
                 O Sistema permite que treinadores(as) e administradores(as) publiquem fotos das
@@ -290,6 +319,13 @@ export default function PoliticaPage() {
                 <strong>Google LLC (Google Drive)</strong> — guarda cópias de segurança do banco de
                 dados e dos arquivos, criptografadas (AES-256) antes do envio; o conteúdo não é
                 acessível à Google.
+              </li>
+              <li>
+                <strong>Intervals.icu</strong> — somente para o atleta que conectar a própria conta,
+                por iniciativa dele: o Sistema envia os treinos planejados ao calendário do atleta no
+                Intervals.icu (de onde podem seguir para o relógio, como Garmin) e lê as atividades
+                realizadas para comparar com o planejado. Desconectar no portal interrompe o envio e
+                a leitura. O uso do Intervals.icu segue a política de privacidade do próprio serviço.
               </li>
               <li>
                 <strong>Autoridades públicas</strong> — quando exigido por lei ou decisão judicial.
