@@ -41,7 +41,8 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
   if (!turma) {
     return (
       <div className="p-4 sm:p-8">
-        <PageHeader title="Treinos" subtitle="Escolha a turma para planejar os treinos" />
+        <PageHeader title="Treinos" subtitle="Escolha a turma para planejar os treinos"
+          action={<Link href="/treinos/biblioteca" className="text-sm text-sky-500 hover:underline">Biblioteca de treinos</Link>} />
         {turmas.length === 0 ? (
           <Card><EmptyState icon={CalendarRange} title="Nenhuma turma com o módulo de treinos"
             description="Ligue “Esta turma usa o módulo de treinos” no cadastro da turma." /></Card>
@@ -68,11 +69,13 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
   // Sessões da turma no período + ajustes/individuais (dos atletas da turma, ou do atleta).
   const doEscopo = aluno ? [aluno.id] : atletasTurma.map((a) => a.id)
   const sel = '*, treino_passos(*)'
-  const [{ data: daTurma }, { data: dosAtletas }, config, refs] = await Promise.all([
+  const [{ data: daTurma }, { data: dosAtletas }, config, refs, { data: pastasRaw }, { data: modelosRaw }] = await Promise.all([
     db.from('treino_sessoes').select(sel).eq('turma_id', turma.id).gte('data', de).lte('data', ate),
     db.from('treino_sessoes').select(sel).in('aluno_id', doEscopo.length ? doEscopo : ['00000000-0000-0000-0000-000000000000']).gte('data', de).lte('data', ate),
     getConfigAvaliacao(db),
     referenciasDosAtletas(db, aluno ? [aluno.id] : atletasTurma.map((a) => a.id)),
+    db.from('treino_pastas').select('id, nome').order('ordem'),
+    db.from('treino_modelos').select('id, titulo, modalidade, tipo, duracao_min, distancia_km, pasta_id').order('titulo'),
   ])
   type Row = Omit<SessaoCalendario, 'passos' | 'origem' | 'nAjustes'> & { treino_passos: Passo[] }
   const individuais = (dosAtletas ?? []) as Row[]
@@ -121,7 +124,8 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
           </select>
           <button className="text-sm text-sky-500 hover:underline">abrir</button>
         </form>
-        <Link href="/treinos" className="ml-auto text-xs text-gray-400 hover:text-navy-500">trocar turma</Link>
+        <Link href="/treinos/biblioteca" className="ml-auto text-xs text-gray-400 hover:text-navy-500">gerenciar biblioteca</Link>
+        <Link href="/treinos" className="text-xs text-gray-400 hover:text-navy-500">trocar turma</Link>
       </div>
 
       <CalendarioTreinos
@@ -133,6 +137,7 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
         atletas={atletas}
         ajustesPorSessao={ajustesPorSessao}
         limites={config.zona_limites}
+        biblioteca={{ pastas: pastasRaw ?? [], modelos: modelosRaw ?? [] }}
       />
 
       {aluno && (() => {

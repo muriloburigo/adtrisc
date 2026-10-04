@@ -29,6 +29,7 @@ export type SessaoForm = {
   intensidade_alvo?: string | null
   passos: Partial<Passo>[]
   publicar?: boolean
+  ordem?: number      // só na criação; sem ela, o treino vai para o fim do dia
 }
 
 const limpa = (s?: string | null) => (s ?? '').replace(/\s+/g, ' ').trim() || null
@@ -94,7 +95,14 @@ export async function salvarSessao(f: SessaoForm): Promise<{ error?: string; id?
     const { error: e2 } = await db.from('treino_passos').delete().eq('sessao_id', id)
     if (e2) return { error: friendlyError(e2, 'Erro ao salvar os blocos.') }
   } else {
-    const { data, error } = await db.from('treino_sessoes').insert({ ...dados, criado_por: actor.id }).select('id').single()
+    let ordem = f.ordem
+    if (ordem == null) {
+      let q = db.from('treino_sessoes').select('ordem').eq('data', f.data).is('sessao_origem_id', null).order('ordem', { ascending: false }).limit(1)
+      q = dados.turma_id ? q.eq('turma_id', dados.turma_id) : q.eq('aluno_id', dados.aluno_id)
+      const { data: ult } = await q
+      ordem = (ult?.[0]?.ordem ?? 0) + 1
+    }
+    const { data, error } = await db.from('treino_sessoes').insert({ ...dados, ordem, criado_por: actor.id }).select('id').single()
     if (error || !data) return { error: friendlyError(error, 'Erro ao criar o treino.') }
     id = data.id
   }

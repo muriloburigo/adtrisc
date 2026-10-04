@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Star, Send, UserCog } from 'lucide-react'
+import { Plus, X, Star, Send, UserCog, BookmarkPlus } from 'lucide-react'
 import ConfirmDeleteButton from '@/components/ui/ConfirmDeleteButton'
 import EditorBloco from './EditorBloco'
 import { blocoNovo, blocosParaPassos, passosParaBlocos, novaChave, type Bloco } from '@/lib/treinos/blocos'
@@ -10,6 +10,7 @@ import { calcularCarga, formatarDuracao, formatarPace, metricasPlanejadas, refer
 import { linhasIntervals } from '@/lib/treinos/textoIntervals'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type Passo, type TipoSessao } from '@/lib/treinos/tipos'
 import { salvarSessao, apagarSessao, criarAjuste } from '@/app/(dashboard)/treinos/actions'
+import { salvarModelo, apagarModelo, salvarSessaoComoModelo } from '@/app/(dashboard)/treinos/biblioteca-actions'
 
 export type SessaoView = {
   id: string
@@ -31,14 +32,28 @@ export type SessaoView = {
   passos: Passo[]
 }
 
+export type ModeloView = {
+  id: string
+  pasta_id: string | null
+  titulo: string
+  tipo: TipoSessao
+  modalidade: Modalidade
+  local: string | null
+  notas: string | null
+  passos: Passo[]
+}
+
 export type AtletaRef = { id: string; nome: string; referencias: Record<string, Referencia>; fcMax: number | null }
 
 const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white'
 const rotulo = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1'
 
 export default function MontadorTreino({
-  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao,
+  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao, modo = 'sessao', modelo = null, pastas = [],
 }: {
+  modo?: 'sessao' | 'modelo'           // 'modelo' = editar um modelo da biblioteca
+  modelo?: ModeloView | null
+  pastas?: { id: string; nome: string }[]
   sessao: SessaoView | null
   novo: { data: string; turma_id?: string | null; aluno_id?: string | null } | null
   atletas: AtletaRef[]                 // turma: todos; atleta: só ele
@@ -51,17 +66,22 @@ export default function MontadorTreino({
   const [pending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
   const [aba, setAba] = useState<'blocos' | 'geral' | 'atletas' | 'comparativo'>('blocos')
+  const ehModelo = modo === 'modelo'
+  const origem = ehModelo ? modelo : sessao
   const [f, setF] = useState(() => ({
     data: sessao?.data ?? novo?.data ?? '',
-    titulo: sessao?.titulo ?? '',
-    tipo: (sessao?.tipo ?? 'base') as TipoSessao,
-    modalidade: (sessao?.modalidade ?? 'running') as Modalidade,
-    local: sessao?.local ?? '',
+    titulo: origem?.titulo ?? '',
+    tipo: (origem?.tipo ?? 'base') as TipoSessao,
+    modalidade: (origem?.modalidade ?? 'running') as Modalidade,
+    local: origem?.local ?? '',
     chave: sessao?.chave ?? false,
-    notas: sessao?.notas ?? '',
+    notas: origem?.notas ?? '',
   }))
+  const [pastaId, setPastaId] = useState<string>(modelo?.pasta_id ?? '')
+  const [duplicado, setDuplicado] = useState<null | 'modelo' | 'biblioteca'>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
   const [blocos, setBlocos] = useState<Bloco[]>(() =>
-    sessao?.passos.length ? passosParaBlocos(sessao.passos) : [blocoNovo('warmup'), blocoNovo('work'), blocoNovo('cooldown')])
+    origem?.passos.length ? passosParaBlocos(origem.passos) : [blocoNovo('warmup'), blocoNovo('work'), blocoNovo('cooldown')])
   const ehTurma = Boolean(sessao?.turma_id ?? novo?.turma_id)
   const ehAjuste = Boolean(sessao?.sessao_origem_id)
   const [verAtleta, setVerAtleta] = useState<string>(ehTurma ? '' : atletas[0]?.id ?? '')
@@ -99,6 +119,29 @@ export default function MontadorTreino({
     })
   }
 
+  function salvarComoModelo(forcar = false) {
+    setErro(null); setDuplicado(null)
+    startTransition(async () => {
+      const r = await salvarModelo({ id: modelo?.id || undefined, pasta_id: pastaId || null, ...f, passos, forcar })
+      if (r.duplicado) { setDuplicado('modelo'); return }
+      if (r.error) { setErro(r.error); return }
+      router.refresh()
+      onFechar()
+    })
+  }
+
+  function paraBiblioteca(forcar = false) {
+    if (!sessao) return
+    setErro(null); setDuplicado(null); setAviso(null)
+    startTransition(async () => {
+      const r = await salvarSessaoComoModelo(sessao.id, forcar)
+      if (r.duplicado) { setDuplicado('biblioteca'); return }
+      if (r.error) { setErro(r.error); return }
+      setAviso('Salvo na biblioteca.')
+      router.refresh()
+    })
+  }
+
   function ajustar(alunoId: string) {
     if (!sessao) return
     startTransition(async () => {
@@ -122,7 +165,7 @@ export default function MontadorTreino({
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-gray-400">
-                {sessao ? (ehAjuste ? 'Ajuste individual' : ehTurma ? 'Treino da turma' : 'Treino individual') : 'Novo treino'}
+                {ehModelo ? (modelo?.id ? 'Modelo da biblioteca' : 'Novo modelo da biblioteca') : sessao ? (ehAjuste ? 'Ajuste individual' : ehTurma ? 'Treino da turma' : 'Treino individual') : 'Novo treino'}
                 {sessao?.status === 'rascunho' && ' · rascunho (o atleta ainda não vê)'}
                 {sessao?.status === 'publicado' && ' · publicado'}
               </p>
@@ -132,7 +175,15 @@ export default function MontadorTreino({
             <button onClick={onFechar} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 pb-3">
-            <div><label className={rotulo}>Data</label><input type="date" className={input} value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></div>
+            {ehModelo ? (
+              <div><label className={rotulo}>Pasta</label>
+                <select className={input} value={pastaId} onChange={(e) => setPastaId(e.target.value)}>
+                  <option value="">Sem pasta</option>
+                  {pastas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select></div>
+            ) : (
+              <div><label className={rotulo}>Data</label><input type="date" className={input} value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></div>
+            )}
             <div><label className={rotulo}>Modalidade</label>
               <select className={input} value={f.modalidade} onChange={(e) => setF({ ...f, modalidade: e.target.value as Modalidade })}>
                 {Object.entries(MODALIDADES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -146,8 +197,8 @@ export default function MontadorTreino({
           <div className="flex gap-1 overflow-x-auto">
             {abaBtn('blocos', 'Blocos')}
             {abaBtn('geral', 'Visão geral')}
-            {abaBtn('atletas', `Atletas (${atletas.length})`, ehTurma && Boolean(sessao))}
-            {abaBtn('comparativo', 'Comparativo', Boolean(sessao) && !ehTurma)}
+            {abaBtn('atletas', `Atletas (${atletas.length})`, !ehModelo && ehTurma && Boolean(sessao))}
+            {abaBtn('comparativo', 'Comparativo', !ehModelo && Boolean(sessao) && !ehTurma)}
           </div>
         </div>
 
@@ -176,10 +227,10 @@ export default function MontadorTreino({
                 <textarea className={`${input} resize-none`} rows={2} value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })}
                   placeholder="Ex.: levar garrafinha; se chover, fazer na esteira" />
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
+              {!ehModelo && <label className="flex items-center gap-2 text-sm text-gray-600">
                 <input type="checkbox" checked={f.chave} onChange={(e) => setF({ ...f, chave: e.target.checked })} />
                 <Star size={14} className="text-amber-500" /> Sessão-chave da semana
-              </label>
+              </label>}
             </>
           )}
 
@@ -237,27 +288,59 @@ export default function MontadorTreino({
             </p>
           )}
 
-          {erro && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{erro}</p>}
         </div>
 
+        {(erro || aviso || duplicado) && (
+          <div className="bg-white px-4 pt-3 space-y-2 border-t border-gray-200">
+            {erro && <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{erro}</p>}
+            {aviso && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{aviso}</p>}
+            {duplicado && (
+              <p className="text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
+                Já existe um modelo com esse nome e modalidade na biblioteca.
+                <button type="button" className="font-semibold underline" onClick={() => (duplicado === 'modelo' ? salvarComoModelo(true) : paraBiblioteca(true))}>Salvar mesmo assim</button>
+              </p>
+            )}
+          </div>
+        )}
         {/* Rodapé */}
         <div className="bg-white sm:rounded-b-2xl border-t border-gray-200 px-4 py-3 flex items-center gap-2 flex-wrap">
-          {sessao && (
-            <ConfirmDeleteButton variant="full" label={ehAjuste ? 'Remover ajuste' : 'Apagar'} confirmLabel="Apagar?" size={14}
-              action={async () => { const r = await apagarSessao(sessao.id); if (!r.error) { router.refresh(); onFechar() } return r }} />
-          )}
-          <div className="ml-auto flex gap-2">
-            {sessao?.status !== 'publicado' && (
-              <button type="button" disabled={pending} onClick={() => salvar(false)}
-                className="text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl px-4 py-2 disabled:opacity-50">
-                Salvar rascunho
+          {ehModelo ? (
+            <>
+              {modelo?.id && (
+                <ConfirmDeleteButton variant="full" label="Apagar modelo" confirmLabel="Apagar?" size={14}
+                  action={async () => { const r = await apagarModelo(modelo.id); if (!r.error) { router.refresh(); onFechar() } return r }} />
+              )}
+              <button type="button" disabled={pending} onClick={() => salvarComoModelo(false)}
+                className="ml-auto text-sm font-semibold bg-sky-400 hover:bg-sky-500 text-white rounded-xl px-4 py-2 disabled:opacity-50">
+                {pending ? 'Salvando…' : 'Salvar modelo'}
               </button>
-            )}
-            <button type="button" disabled={pending} onClick={() => salvar(true)}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold bg-sky-400 hover:bg-sky-500 text-white rounded-xl px-4 py-2 disabled:opacity-50">
-              {sessao?.status === 'publicado' ? 'Salvar' : <><Send size={14} /> Salvar e publicar</>}
-            </button>
-          </div>
+            </>
+          ) : (
+            <>
+              {sessao && (
+                <ConfirmDeleteButton variant="full" label={ehAjuste ? 'Remover ajuste' : 'Apagar'} confirmLabel="Apagar?" size={14}
+                  action={async () => { const r = await apagarSessao(sessao.id); if (!r.error) { router.refresh(); onFechar() } return r }} />
+              )}
+              {sessao && (
+                <button type="button" disabled={pending} onClick={() => paraBiblioteca(false)} title="Salvar este treino como modelo na biblioteca"
+                  className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-sky-500 disabled:opacity-50">
+                  <BookmarkPlus size={14} /> Salvar na biblioteca
+                </button>
+              )}
+              <div className="ml-auto flex gap-2">
+                {sessao?.status !== 'publicado' && (
+                  <button type="button" disabled={pending} onClick={() => salvar(false)}
+                    className="text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl px-4 py-2 disabled:opacity-50">
+                    Salvar rascunho
+                  </button>
+                )}
+                <button type="button" disabled={pending} onClick={() => salvar(true)}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold bg-sky-400 hover:bg-sky-500 text-white rounded-xl px-4 py-2 disabled:opacity-50">
+                  {sessao?.status === 'publicado' ? 'Salvar' : <><Send size={14} /> Salvar e publicar</>}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
