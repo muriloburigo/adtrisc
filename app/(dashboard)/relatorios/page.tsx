@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import PageHeader from '@/components/layout/PageHeader'
 import { getConfigAvaliacao } from '@/lib/config-avaliacao'
-import { montarLinhas, camposVisiveis, type AlunoFonte, type RespFonte, type FichaFonte } from '@/lib/relatorio'
+import { montarLinhas, camposVisiveis, type AlunoFonte, type RespFonte, type FichaFonte, type Valor } from '@/lib/relatorio'
+import { cumprimentoDosAtletas } from '@/lib/treinos/cumprimento'
 import type { AvaliacaoFisicaRow } from '@/types/database'
 import RelatorioAtletas from './RelatorioAtletas'
 import type { RelatorioSalvo } from './actions'
@@ -23,7 +24,7 @@ export default async function RelatoriosPage() {
   // Atletas pelo client normal: a RLS limita o treinador às turmas dele.
   const [{ data: alunosRaw }, config] = await Promise.all([
     supabase.from('alunos')
-      .select('id, nome, sexo, data_nascimento, status, telefone, rua, numero, bairro, cidade, cep, observacoes, created_at, turmas:turma_id ( nome )')
+      .select('id, nome, sexo, data_nascimento, status, telefone, rua, numero, bairro, cidade, cep, observacoes, created_at, turma_id, profile_id, turmas:turma_id ( nome, usa_treinos )')
       .order('nome'),
     getConfigAvaliacao(supabase),
   ])
@@ -64,7 +65,14 @@ export default async function RelatoriosPage() {
     avaliacoes.set(av.aluno_id, [...(avaliacoes.get(av.aluno_id) ?? []), av])
   }
 
-  const linhas = montarLinhas({ alunos, responsaveis, fichas, avaliacoes, corte100: config.natacao_100m_corte_s, admin })
+  // Treinos: só atletas de turmas com o módulo ligado.
+  const comModulo = ((alunosRaw ?? []) as { id: string; turma_id: string | null; profile_id: string | null; turmas: { usa_treinos?: boolean } | null }[]).filter((a) => a.turmas?.usa_treinos)
+  const cumpr = await cumprimentoDosAtletas(supabase, comModulo)
+  const treinos = new Map<string, Record<string, Valor>>([...cumpr].map(([id, c]) => [id, {
+    treino_cumprimento_30d: c.percentual, treino_feitos_30d: c.feitos, treino_planejados_30d: c.planejados,
+    treino_ultimo: c.ultimo, portal_ativo: c.portal, intervals_conectado: c.intervals,
+  }]))
+  const linhas = montarLinhas({ alunos, responsaveis, fichas, avaliacoes, corte100: config.natacao_100m_corte_s, admin, treinos })
 
   return (
     <div className="p-4 sm:p-8">

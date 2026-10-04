@@ -19,7 +19,7 @@ import type { TurmaRow, DiaSemana } from '@/types/database'
 type TurmaWithCoach = TurmaRow & { coaches: { full_name: string | null } | null }
 type AlunoBasic = { id: string; nome: string; sexo: string | null; data_nascimento: string | null; status: string; foto_url: string | null; telefone: string | null }
 
-const ORDENS: OrdemDesempenho[] = ['nome', 'avaliacao', 'maturacao', 'corrida', 'ciclismo', 'natacao', 'proesp']
+const ORDENS: OrdemDesempenho[] = ['nome', 'avaliacao', 'maturacao', 'corrida', 'ciclismo', 'natacao', 'proesp', 'treinos']
 
 export default async function TurmaDetailPage({
   params,
@@ -200,7 +200,7 @@ export default async function TurmaDetailPage({
         {alunos.length === 0 ? (
           <EmptyState icon={Users} title="Nenhum(a) atleta nesta turma" />
         ) : aba === 'desempenho' ? (
-          <DesempenhoTurma turmaId={id} alunos={alunos} ordem={ordem} dir={dir} />
+          <DesempenhoTurma turmaId={id} alunos={alunos} ordem={ordem} dir={dir} usaTreinos={Boolean((turma as { usa_treinos?: boolean }).usa_treinos)} />
         ) : (
           <>
             {/* Mobile */}

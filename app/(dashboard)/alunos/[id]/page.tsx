@@ -11,6 +11,7 @@ import Avatar from '@/components/ui/Avatar'
 import AlunoTimeline from './AlunoTimeline'
 import FichaSection from './FichaSection'
 import PortalAtletaCard from './PortalAtletaCard'
+import TreinosAtletaCard from './TreinosAtletaCard'
 import FichaDadosCard, { CAMPOS_FICHA_DADOS, type FichaDados } from './FichaDadosCard'
 import AvaliacoesSection from './AvaliacoesSection'
 import TestesCampoSection from './TestesCampoSection'
@@ -213,6 +214,12 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
               responsaveis={resps.map(r => ({ nome: r.nome ?? '', telefone: r.telefone ?? null, email: r.email ?? null }))}
             />
           </Card>
+
+          {portal && (
+            <Card>
+              <TreinosAtletaCard aluno={{ id: a.id, turma_id: a.turma_id, profile_id: a.profile_id }} />
+            </Card>
+          )}
 
           {portal && (
             <Card>

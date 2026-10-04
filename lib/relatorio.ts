@@ -33,7 +33,7 @@ export type Campo = {
 
 export const GRUPOS = [
   'Cadastro', 'Responsáveis', 'Ficha: saúde', 'Ficha: escola e outros',
-  'Avaliação', 'Medidas', 'Testes PROESP', 'Classificação PROESP', 'Testes de campo', 'Maturação', 'Evolução',
+  'Avaliação', 'Medidas', 'Testes PROESP', 'Classificação PROESP', 'Testes de campo', 'Maturação', 'Evolução', 'Treinos',
 ]
 
 // Testes com classificação PROESP (mesmos rótulos da página da avaliação).
@@ -162,6 +162,13 @@ export const CAMPOS: Campo[] = [
   ...MEDIDAS.map(([k, l, u, f]): Campo => (
     { key: `var_${k}`, label: `${l}: variação`, grupo: 'Evolução', tipo: 'numero', visao: 'atleta', sinal: true, unidade: u, formato: f })),
   { key: 'intervalo_avaliacoes', label: 'Dias entre as duas últimas avaliações', grupo: 'Evolução', tipo: 'numero', visao: 'atleta', formato: 'int' },
+  // Treinos (módulo de treinos: só turmas com o módulo ligado têm valores)
+  { key: 'treino_cumprimento_30d', label: 'Cumprimento dos treinos (30 dias)', grupo: 'Treinos', tipo: 'numero', visao: 'atleta', unidade: '%', formato: 'int' },
+  { key: 'treino_feitos_30d', label: 'Treinos feitos (30 dias)', grupo: 'Treinos', tipo: 'numero', visao: 'atleta', formato: 'int' },
+  { key: 'treino_planejados_30d', label: 'Treinos planejados (30 dias)', grupo: 'Treinos', tipo: 'numero', visao: 'atleta', formato: 'int' },
+  { key: 'treino_ultimo', label: 'Último treino feito', grupo: 'Treinos', tipo: 'data', visao: 'atleta' },
+  { key: 'portal_ativo', label: 'Tem acesso ao portal', grupo: 'Treinos', tipo: 'simnao', visao: 'atleta' },
+  { key: 'intervals_conectado', label: 'Intervals.icu conectado', grupo: 'Treinos', tipo: 'simnao', visao: 'atleta' },
 ]
 
 export const COLUNAS_PADRAO: Record<Visao, string[]> = {
@@ -311,6 +318,7 @@ export function montarLinhas(params: {
   avaliacoes: Map<string, AvaliacaoFisicaRow[]> // cada lista em ordem de data decrescente
   corte100: number | null
   admin: boolean
+  treinos?: Map<string, Record<string, Valor>>   // campos do grupo 'Treinos' por atleta
 }): Record<Visao, Linha[]> {
   const semSigilo = (l: Record<string, Valor>) => {
     if (!params.admin) for (const c of CAMPOS) if (c.admin) delete l[c.key]
@@ -321,7 +329,7 @@ export function montarLinhas(params: {
   for (const a of params.alunos) {
     const cad = dadosCadastro(a, params.responsaveis.get(a.id) ?? {}, params.fichas.get(a.id) ?? [])
     const avs = params.avaliacoes.get(a.id) ?? []
-    atleta.push({ ...semSigilo({ ...cad, ...dadosAtleta(a, avs, params.corte100) }), _alunoId: a.id })
+    atleta.push({ ...semSigilo({ ...cad, ...dadosAtleta(a, avs, params.corte100), ...(params.treinos?.get(a.id) ?? {}) }), _alunoId: a.id })
     for (const av of avs) {
       avaliacao.push({ ...semSigilo({ ...cad, ...dadosAvaliacao(a, av, params.corte100) }), _alunoId: a.id, _avaliacaoId: av.id })
     }

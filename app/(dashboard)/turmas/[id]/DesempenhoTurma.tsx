@@ -9,10 +9,11 @@ import { calcularMaturacao, type ResultadoMaturacao } from '@/lib/maturacao'
 import { zonasCorrida, zonasCiclismo, minSeg } from '@/lib/zonas'
 import { getConfigAvaliacao } from '@/lib/config-avaliacao'
 import type { AvaliacaoFisicaRow, SexoEnum } from '@/types/database'
+import { cumprimentoDosAtletas, type Cumprimento } from '@/lib/treinos/cumprimento'
 
 type Aluno = { id: string; nome: string; sexo: string | null; data_nascimento: string | null; foto_url: string | null }
 
-export type OrdemDesempenho = 'nome' | 'avaliacao' | 'maturacao' | 'corrida' | 'ciclismo' | 'natacao' | 'proesp'
+export type OrdemDesempenho = 'nome' | 'avaliacao' | 'maturacao' | 'corrida' | 'ciclismo' | 'natacao' | 'proesp' | 'treinos'
 export type Direcao = 'asc' | 'desc'
 
 // Acima disso a data da última avaliação aparece em destaque.
@@ -36,6 +37,7 @@ type Linha = {
   natacao100: Resultado<number>  // s
   natacao12: Resultado<number>   // m em 12 min (quando não há 100 m)
   proesp: { data: string; riscos: string[]; fora: boolean } | null
+  treinos?: Cumprimento | null   // só em turmas com o módulo de treinos
 }
 
 // Cada coluna usa o teste mais recente daquele dado — a avaliação é por data e
@@ -93,12 +95,13 @@ function chave(l: Linha, ordem: OrdemDesempenho): number | string | null {
     case 'ciclismo':  return l.ciclismo?.valor ?? null
     case 'natacao':   return l.natacao100?.valor ?? null
     case 'proesp':    return l.proesp && !l.proesp.fora ? l.proesp.riscos.length : null
+    case 'treinos':   return l.treinos?.percentual ?? null
   }
 }
 
 // Direção padrão de cada coluna ao clicar: o "melhor" (ou mais urgente) primeiro.
 export const DIRECAO_PADRAO: Record<OrdemDesempenho, Direcao> = {
-  nome: 'asc', avaliacao: 'asc', maturacao: 'asc', corrida: 'desc', ciclismo: 'asc', natacao: 'asc', proesp: 'desc',
+  nome: 'asc', avaliacao: 'asc', maturacao: 'asc', corrida: 'desc', ciclismo: 'asc', natacao: 'asc', proesp: 'desc', treinos: 'asc',
 }
 
 function ordenar(linhas: Linha[], ordem: OrdemDesempenho, dir: Direcao) {
@@ -208,16 +211,29 @@ function Cabecalho({
   )
 }
 
+function CelTreinos({ l }: { l: Linha }) {
+  const t = l.treinos
+  if (!t || t.percentual == null) return <span className="text-gray-300">—</span>
+  const variante = t.percentual >= 80 ? 'green' : t.percentual >= 50 ? 'yellow' : 'red'
+  return (
+    <span title={`${t.feitos} de ${t.planejados} treinos nos últimos 30 dias${t.intervals ? ' · Intervals conectado' : ''}`}>
+      <Badge variant={variante}>{t.percentual}%</Badge>
+    </span>
+  )
+}
+
 export default async function DesempenhoTurma({
   turmaId,
   alunos,
   ordem,
   dir,
+  usaTreinos = false,
 }: {
   turmaId: string
   alunos: Aluno[]
   ordem: OrdemDesempenho
   dir: Direcao
+  usaTreinos?: boolean
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await createClient()) as any
@@ -236,7 +252,8 @@ export default async function DesempenhoTurma({
     if (!porAluno.has(av.aluno_id)) porAluno.set(av.aluno_id, [])
     porAluno.get(av.aluno_id)!.push(av)
   }
-  const linhas = ordenar(alunos.map((a) => montarLinha(a, porAluno.get(a.id) ?? [])), ordem, dir)
+  const cumpr = usaTreinos ? await cumprimentoDosAtletas(supabase, alunos.map((a) => ({ id: a.id, turma_id: turmaId }))) : null
+  const linhas = ordenar(alunos.map((a) => ({ ...montarLinha(a, porAluno.get(a.id) ?? []), treinos: cumpr?.get(a.id) ?? null })), ordem, dir)
   const limites = config.zona_limites
   const corte = config.natacao_100m_corte_s
   const cab = { turmaId, ordem, dir }
@@ -258,6 +275,7 @@ export default async function DesempenhoTurma({
               <div><dt className="text-gray-400">Dabonneville 5&apos;</dt><dd><CelCorrida l={l} limites={limites} /></dd></div>
               <div><dt className="text-gray-400">Ciclismo 2 km</dt><dd><CelCiclismo l={l} limites={limites} /></dd></div>
               <div><dt className="text-gray-400">Natação</dt><dd><CelNatacao l={l} corte={corte} /></dd></div>
+              {usaTreinos && <div><dt className="text-gray-400">Treinos 30d</dt><dd><CelTreinos l={l} /></dd></div>}
             </dl>
           </Link>
         ))}
@@ -276,6 +294,7 @@ export default async function DesempenhoTurma({
               <Cabecalho {...cab} col="ciclismo">Ciclismo 2 km</Cabecalho>
               <Cabecalho {...cab} col="natacao">Natação 100 m</Cabecalho>
               <Cabecalho {...cab} col="proesp">PROESP</Cabecalho>
+              {usaTreinos && <Cabecalho {...cab} col="treinos">Treinos 30d</Cabecalho>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -293,6 +312,7 @@ export default async function DesempenhoTurma({
                 <td className="px-4 py-3.5"><CelCiclismo l={l} limites={limites} /></td>
                 <td className="px-4 py-3.5"><CelNatacao l={l} corte={corte} /></td>
                 <td className="px-4 py-3.5"><CelProesp l={l} /></td>
+                {usaTreinos && <td className="px-4 py-3.5"><CelTreinos l={l} /></td>}
               </tr>
             ))}
           </tbody>
