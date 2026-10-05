@@ -76,8 +76,10 @@ export default async function PlanoPage({ params }: { params: Promise<{ id: stri
             <p><span className="text-gray-400">Situação:</span> <strong className={p.status === 'publicado' ? 'text-green-700' : 'text-gray-600'}>{p.status}</strong>{rascunhos > 0 && p.status === 'publicado' ? ` (${rascunhos} rascunho${rascunhos > 1 ? 's' : ''} novo${rascunhos > 1 ? 's' : ''})` : ''}</p>
             <p><span className="text-gray-400">Geração:</span> {p.modo_geracao === 'automatic' ? 'automática' : 'manual'}</p>
             {p.dificuldade && <p><span className="text-gray-400">Nível:</span> {DIFICULDADES[p.dificuldade as Dificuldade]}</p>}
-            {p.payload_gerador?.entrada?.modalidade && <p><span className="text-gray-400">Modalidade:</span> {MODALIDADES[p.payload_gerador.entrada.modalidade as Modalidade]}</p>}
-            {p.sessoes_semana && <p><span className="text-gray-400">Treinos/semana:</span> {p.sessoes_semana}</p>}
+            {p.payload_gerador?.entrada?.multi ? (
+              <p><span className="text-gray-400">Modalidade:</span> Multiesporte ({(p.payload_gerador.entrada.multi.modalidades as { modalidade: Modalidade; sessoes: number }[]).filter((m) => m.sessoes > 0).map((m) => `${MODALIDADES[m.modalidade].toLowerCase()} ${m.sessoes}×`).join(', ')})</p>
+            ) : p.payload_gerador?.entrada?.modalidade && <p><span className="text-gray-400">Modalidade:</span> {MODALIDADES[p.payload_gerador.entrada.modalidade as Modalidade]}</p>}
+            {p.sessoes_semana > 0 && <p><span className="text-gray-400">Treinos/semana:</span> {p.sessoes_semana}</p>}
             {p.distancia_alvo_km && <p><span className="text-gray-400">Distância alvo:</span> {Number(p.distancia_alvo_km).toLocaleString('pt-BR')} km</p>}
           </div>
           <AcoesPlano plano={{ id: p.id, titulo: p.titulo, notas: p.notas, prova_alvo_nome: p.prova_alvo_nome, prova_alvo_data: p.prova_alvo_data, inicio: p.inicio }}

@@ -7,6 +7,9 @@
 //   4 repetições (4× a duração); aqui o bloco é dividido entre as repetições;
 // - distância estimada por modalidade (o Movelly só tinha corrida: duração/6,5).
 // Dias da semana no padrão ISO: 1 = segunda … 7 = domingo.
+// Multiesporte (só ADTRISC, o Movelly não tem): várias modalidades no mesmo plano,
+// com frequência e dia de longo por modalidade, limite de treinos por dia e
+// treino de transição (bike + corrida no mesmo dia).
 
 import { calcularCarga, metricasPlanejadas, normalizarPassos, referenciaPadrao, somarSessoes } from './calculos'
 import { inicioSemana, somarDias } from './datas'
@@ -25,6 +28,25 @@ export type EntradaGerador = {
   distancia_alvo_km?: number | null
   prova_alvo_data?: string | null
   duracao_base_min?: number | null
+  multi?: EntradaMulti | null         // presente = plano multiesporte (ignora modalidade/sessoes_semana/dia_longo/distancia_alvo_km)
+}
+
+export type ModalidadeMulti = 'swimming' | 'cycling' | 'running'
+export type EntradaMulti = {
+  modalidades: { modalidade: ModalidadeMulti; sessoes: number; dia_longo: number; distancia_alvo_km?: number | null }[]
+  max_por_dia: number                 // treinos por dia (1–3)
+  transicao: boolean                  // treino de transição bike + corrida 1×/semana
+}
+
+/** Padrão do multiesporte: natação 2, bike 2 (longo sáb), corrida 3 (longo dom), até 2 treinos/dia. */
+export const MULTI_PADRAO: EntradaMulti = {
+  modalidades: [
+    { modalidade: 'swimming', sessoes: 2, dia_longo: 5, distancia_alvo_km: null },
+    { modalidade: 'cycling', sessoes: 2, dia_longo: 6, distancia_alvo_km: null },
+    { modalidade: 'running', sessoes: 3, dia_longo: 7, distancia_alvo_km: null },
+  ],
+  max_por_dia: 2,
+  transicao: false,
 }
 
 export type SessaoGerada = {
@@ -116,6 +138,7 @@ const NOTAS: Partial<Record<TipoSessao, string>> = {
   recovery: 'Treino leve, sem buscar ritmo.',
   strength: 'Ajuste as cargas mantendo a técnica perfeita.',
   race_simulation: 'Use este treino para testar ritmo, estratégia e alimentação.',
+  brick: 'Treino de transição: saia da bike direto para a corrida, como na prova.',
 }
 
 function passo(tipo: TipoPasso, titulo: string, duracao_s: number | null, distancia_m: number | null, alvo: Alvo | null, rep?: { grupo: number; n: number }): Partial<Passo> {
@@ -197,6 +220,143 @@ function tiposDaSemana(objetivo: Objetivo, datas: string[], forca: boolean, diaL
   return tipos
 }
 
+const NOME_MOD: Record<string, string> = { swimming: 'Natação', cycling: 'Bike', running: 'Corrida', strength: 'Força' }
+// Duração relativa por modalidade no multiesporte (a bike costuma ser o treino mais longo).
+const FATOR_MOD: Record<string, number> = { swimming: 0.8, cycling: 1.25, running: 0.9, strength: 1 }
+
+/** Nos 2 dias antes da prova o treino vira ativação leve (nada de longo/intervalado na véspera). */
+function vesperaDaProva(data: string, e: EntradaGerador) {
+  if (!e.prova_alvo_data) return false
+  const ate = diasEntre(data, e.prova_alvo_data)
+  return ate >= 1 && ate <= 2
+}
+
+function montarSessao(p: {
+  data: string; tipo: TipoSessao; modalidade: Modalidade; base: number; prog: number; e: EntradaGerador
+  alvoKm?: number | null; iSem: number; total: number; prefixo?: string; titulo?: string; ordem?: number
+}): SessaoGerada {
+  const { data, modalidade, e } = p
+  const vespera = vesperaDaProva(data, e) && p.tipo !== 'strength'
+  const tipo: TipoSessao = vespera ? 'recovery' : p.tipo
+  const duracao = duracaoDoTipo(tipo, p.base, p.prog, e.dificuldade)
+  const distancia = distanciaDoTipo(tipo, duracao, modalidade, p.alvoKm, p.iSem, p.total)
+  const alvo = tipo === 'brick' ? zona(3) : intensidadeDoTipo(tipo, e.objetivo)
+  const passos = normalizarPassos(passosDoTipo(tipo, duracao, distancia, alvo, Boolean(p.alvoKm)))
+  // Duração/distância finais pelos próprios passos (como ao salvar no montador).
+  const m = metricasPlanejadas(passos, referenciaPadrao(modalidade))
+  const duracao_min = m.duracao_s ? Math.ceil(m.duracao_s / 60) : duracao
+  const distancia_km = modalidade === 'strength' ? null : (m.distancia_km ?? distancia)
+  const titulo = vespera ? 'Ativação pré-prova' : p.titulo ?? (tipo === 'interval' ? (e.objetivo === 'speed' ? 'Intervalado de velocidade' : 'Intervalado controlado') : TITULOS[tipo] ?? 'Treino base aeróbico')
+  return {
+    data, ordem: p.ordem ?? 1, tipo, modalidade, duracao_min, distancia_km,
+    titulo: p.prefixo ? `${p.prefixo}: ${titulo}` : titulo,
+    intensidade_tipo: alvo.tipo, intensidade_alvo: rotuloAlvo(alvo),
+    chave: ['long', 'interval', 'race_simulation', 'brick'].includes(tipo),
+    notas: vespera ? 'Leve, só para soltar o corpo antes da prova.' : NOTAS[tipo] ?? null,
+    carga: calcularCarga({ duracao_min, distancia_km, tipo, intensidade_tipo: alvo.tipo, intensidade_alvo: rotuloAlvo(alvo) }),
+    passos,
+  }
+}
+
+/**
+ * Distribui os treinos de cada modalidade nos dias da semana: primeiro o longo
+ * de cada uma no dia pedido (ou o mais próximo com vaga), depois em rodízio,
+ * preferindo dias mais vazios e sem colar dois treinos da mesma modalidade.
+ * Nunca repete modalidade no mesmo dia nem passa do limite por dia.
+ */
+function alocarSemana(datas: string[], mods: EntradaMulti['modalidades'], maxDia: number) {
+  const carga = new Map<string, number>(datas.map((d) => [d, 0]))
+  const escolhidos = new Map<string, string[]>(mods.map((m) => [m.modalidade, []]))
+  const cabe = (mod: string, d: string) => (carga.get(d) ?? 0) < maxDia && !escolhidos.get(mod)!.includes(d)
+  const por = (mod: string, d: string) => { escolhidos.get(mod)!.push(d); carga.set(d, (carga.get(d) ?? 0) + 1) }
+  // 1) longos
+  for (const m of mods) {
+    if (m.sessoes < 1) continue
+    const c = datas.filter((d) => cabe(m.modalidade, d)).sort((a, b) => Math.abs(diaIso(a) - m.dia_longo) - Math.abs(diaIso(b) - m.dia_longo))[0]
+    if (c) por(m.modalidade, c)
+  }
+  // 2) demais, em rodízio
+  let mudou = true
+  while (mudou) {
+    mudou = false
+    for (const m of mods) {
+      const ja = escolhidos.get(m.modalidade)!
+      if (ja.length >= m.sessoes) continue
+      const melhor = datas.filter((d) => cabe(m.modalidade, d)).map((d) => {
+        const vizinho = ja.some((x) => Math.abs(diasEntre(x, d)) === 1)
+        return { d, nota: (carga.get(d) ?? 0) * 10 + (vizinho ? 3 : 0) }
+      }).sort((a, b) => a.nota - b.nota || a.d.localeCompare(b.d))[0]
+      if (melhor) { por(m.modalidade, melhor.d); mudou = true }
+    }
+  }
+  for (const v of escolhidos.values()) v.sort()
+  return { escolhidos, carga }
+}
+
+const ORDEM_DIA: Record<string, number> = { swimming: 1, strength: 2, cycling: 3, running: 4 }
+
+function gerarMulti(e: EntradaGerador, multi: EntradaMulti, semanas: string[], avisos: string[]): SessaoGerada[] {
+  const mods = multi.modalidades.filter((m) => m.sessoes > 0).map((m) => ({ ...m, sessoes: Math.min(7, Math.round(m.sessoes)) }))
+  const maxDia = Math.max(1, Math.min(3, Math.round(multi.max_por_dia || 2)))
+  const dias = (e.dias_disponiveis.length ? [...new Set(e.dias_disponiveis)].filter((d) => d >= 1 && d <= 7) : [1, 2, 3, 4, 5, 6, 7]).sort((a, b) => a - b)
+  const base = e.duracao_base_min || duracaoBase(e.dificuldade)
+  const comTransicao = multi.transicao && e.objetivo !== 'recovery' && mods.some((m) => m.modalidade === 'cycling') && mods.some((m) => m.modalidade === 'running')
+  const out: SessaoGerada[] = []
+
+  semanas.forEach((seg, iSem) => {
+    // O dia da prova fica livre: o treino do dia é a prova.
+    const datas = dias.map((d) => somarDias(seg, d - 1)).filter((d) => d >= e.inicio && d <= e.fim && d !== e.prova_alvo_data)
+    const { escolhidos, carga } = alocarSemana(datas, mods, maxDia)
+    for (const m of mods) {
+      if ((escolhidos.get(m.modalidade)?.length ?? 0) < m.sessoes) avisos.push(`Algumas semanas não comportam todos os treinos de ${NOME_MOD[m.modalidade].toLowerCase()} (dias disponíveis × limite por dia).`)
+    }
+    const prog = progressaoDaSemana(iSem, semanas.length, seg, e.prova_alvo_data)
+    const semanaDaProva = e.prova_alvo_data ? (() => { const ate = diasEntre(seg, e.prova_alvo_data!); return ate >= 0 && ate <= 7 })() : false
+    const daSemana: SessaoGerada[] = []
+
+    for (const m of mods) {
+      const datasM = escolhidos.get(m.modalidade) ?? []
+      const tipos = tiposDaSemana(e.objetivo, datasM, false, m.dia_longo)
+      const baseM = base * FATOR_MOD[m.modalidade]
+      datasM.forEach((data, i) => daSemana.push(montarSessao({
+        data, tipo: tipos[i] ?? 'base', modalidade: m.modalidade, base: baseM, prog, e, alvoKm: m.distancia_alvo_km, iSem, total: semanas.length, prefixo: NOME_MOD[m.modalidade],
+      })))
+    }
+
+    // Transição: uma bike que não é o longo vira "bike + corrida logo depois" (fora da semana da prova).
+    if (comTransicao && !semanaDaProva) {
+      const bike = daSemana.find((s) => s.modalidade === 'cycling' && s.tipo !== 'long')
+      if (bike) {
+        const i = daSemana.indexOf(bike)
+        daSemana[i] = montarSessao({ data: bike.data, tipo: 'brick', modalidade: 'cycling', base: base * FATOR_MOD.cycling * 0.85, prog, e, iSem, total: semanas.length, titulo: 'Transição — bike' })
+        daSemana.push(montarSessao({ data: bike.data, tipo: 'brick', modalidade: 'running', base: 20 / 0.88, prog: Math.min(prog, 1.2), e, iSem, total: semanas.length, titulo: 'Transição — corrida logo após a bike' }))
+      } else avisos.push('Sem bike fora do longo em alguma semana: o treino de transição ficou de fora.')
+    }
+
+    if (e.incluir_forca) {
+      const d = [...datas].sort((a, b) => (carga.get(a) ?? 0) - (carga.get(b) ?? 0) || a.localeCompare(b))[0]
+      if (d && (carga.get(d) ?? 0) < maxDia) daSemana.push(montarSessao({ data: d, tipo: 'strength', modalidade: 'strength', base, prog, e, iSem, total: semanas.length }))
+      else avisos.push('Sem vaga para o treino de força em alguma semana.')
+    }
+
+    // No máximo 2 sessões-chave por semana (com três modalidades, estrela em tudo perde o sentido).
+    const prioridade = (x: SessaoGerada) =>
+      x.tipo === 'brick' && x.modalidade === 'cycling' ? 0 : x.tipo === 'race_simulation' ? 1
+        : x.tipo === 'long' && x.modalidade === 'cycling' ? 2 : x.tipo === 'long' && x.modalidade === 'running' ? 3 : x.tipo === 'interval' ? 4 : 9
+    const chaves = new Set(daSemana.filter((x) => x.chave).sort((a, b) => prioridade(a) - prioridade(b)).slice(0, 2))
+    for (const x of daSemana) x.chave = chaves.has(x) || (x.tipo === 'brick' && x.modalidade === 'running' && [...chaves].some((c) => c.tipo === 'brick'))
+
+    // Ordem no dia: natação, força, bike, corrida (a corrida da transição logo depois da bike).
+    const porDia = new Map<string, SessaoGerada[]>()
+    for (const s of daSemana) porDia.set(s.data, [...(porDia.get(s.data) ?? []), s])
+    for (const lista of porDia.values()) {
+      lista.sort((a, b) => ORDEM_DIA[a.modalidade] - ORDEM_DIA[b.modalidade]).forEach((s, i) => { s.ordem = i + 1 })
+    }
+    out.push(...daSemana.sort((a, b) => a.data.localeCompare(b.data) || a.ordem - b.ordem))
+  })
+  return out
+}
+
 export function gerarPlano(e: EntradaGerador): ResultadoGerador {
   const avisos: string[] = []
   const vazio = (msg: string): ResultadoGerador => ({ sessoes: [], resumo: { semanas: 0, sessoes: 0, duracao_min: 0, distancia_km: 0, carga: 0, regra: 'v1-progressive-simple' }, avisos: [msg] })
@@ -209,33 +369,30 @@ export function gerarPlano(e: EntradaGerador): ResultadoGerador {
   const semanas: string[] = []
   for (let s = inicioSemana(e.inicio); s <= inicioSemana(e.fim); s = somarDias(s, 7)) semanas.push(s)
 
+  if (e.prova_alvo_data && e.fim > e.prova_alvo_data) avisos.push('O plano continua depois da prova: confira se os treinos dessa fase fazem sentido (recuperação).')
+  if (e.multi) {
+    if (!e.multi.modalidades.some((m) => m.sessoes > 0)) return vazio('Escolha ao menos uma modalidade com treinos na semana.')
+    const sessoes = gerarMulti(e, e.multi, semanas, avisos)
+    if (!sessoes.length) avisos.push('Nenhum treino foi gerado para o período informado.')
+    const t = somarSessoes(sessoes)
+    return {
+      sessoes,
+      resumo: { semanas: semanas.length, sessoes: sessoes.length, duracao_min: t.duracao_min, distancia_km: t.distancia_km, carga: t.carga, regra: 'v1-progressive-simple+multi' },
+      avisos: [...new Set(avisos)],
+    }
+  }
+
   const sessoes: SessaoGerada[] = []
   semanas.forEach((seg, iSem) => {
-    const disponiveis = dias.map((d) => somarDias(seg, d - 1)).filter((d) => d >= e.inicio && d <= e.fim)
+    // O dia da prova fica livre: o treino do dia é a prova.
+    const disponiveis = dias.map((d) => somarDias(seg, d - 1)).filter((d) => d >= e.inicio && d <= e.fim && d !== e.prova_alvo_data)
     if (disponiveis.length < porSemana) avisos.push('Algumas semanas têm menos dias disponíveis do que a frequência semanal pedida.')
     const datas = disponiveis.slice(0, porSemana)
     const tipos = tiposDaSemana(e.objetivo, datas, Boolean(e.incluir_forca), e.dia_longo ?? 6)
     const prog = progressaoDaSemana(iSem, semanas.length, seg, e.prova_alvo_data)
     datas.forEach((data, i) => {
       const tipo = tipos[i] ?? 'base'
-      const modalidade: Modalidade = tipo === 'strength' ? 'strength' : e.modalidade
-      const duracao = duracaoDoTipo(tipo, base, prog, e.dificuldade)
-      const distancia = distanciaDoTipo(tipo, duracao, e.modalidade, e.distancia_alvo_km, iSem, semanas.length)
-      const alvo = intensidadeDoTipo(tipo, e.objetivo)
-      const passos = normalizarPassos(passosDoTipo(tipo, duracao, distancia, alvo, Boolean(e.distancia_alvo_km)))
-      // Duração/distância finais pelos próprios passos (como ao salvar no montador).
-      const m = metricasPlanejadas(passos, referenciaPadrao(modalidade))
-      const duracao_min = m.duracao_s ? Math.ceil(m.duracao_s / 60) : duracao
-      const distancia_km = modalidade === 'strength' ? null : (m.distancia_km ?? distancia)
-      sessoes.push({
-        data, ordem: 1, tipo, modalidade, duracao_min, distancia_km,
-        titulo: tipo === 'interval' ? (e.objetivo === 'speed' ? 'Intervalado de velocidade' : 'Intervalado controlado') : TITULOS[tipo] ?? 'Treino base aeróbico',
-        intensidade_tipo: alvo.tipo, intensidade_alvo: rotuloAlvo(alvo),
-        chave: ['long', 'interval', 'race_simulation'].includes(tipo),
-        notas: NOTAS[tipo] ?? null,
-        carga: calcularCarga({ duracao_min, distancia_km, tipo, intensidade_tipo: alvo.tipo, intensidade_alvo: rotuloAlvo(alvo) }),
-        passos,
-      })
+      sessoes.push(montarSessao({ data, tipo, modalidade: tipo === 'strength' ? 'strength' : e.modalidade, base, prog, e, alvoKm: e.distancia_alvo_km, iSem, total: semanas.length }))
     })
   })
   if (!sessoes.length) avisos.push('Nenhum treino foi gerado para o período informado.')

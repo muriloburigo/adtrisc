@@ -69,6 +69,14 @@ export async function criarPlano(f: PlanoForm): Promise<{ error?: string; id?: s
   if (!ISO.test(e.inicio) || !ISO.test(e.fim) || e.fim < e.inicio) return { error: 'Período inválido.' }
   if (!(e.objetivo in OBJETIVOS) || !(e.dificuldade in DIFICULDADES) || !(e.modalidade in MODALIDADES)) return { error: 'Dados do plano inválidos.' }
   if (e.prova_alvo_data && !ISO.test(e.prova_alvo_data)) return { error: 'Data da prova inválida.' }
+  if (e.multi) {
+    const ok = Array.isArray(e.multi.modalidades) && e.multi.modalidades.length <= 3
+      && e.multi.modalidades.every((m) => ['swimming', 'cycling', 'running'].includes(m.modalidade) && Number.isInteger(m.sessoes) && m.sessoes >= 0 && m.sessoes <= 7
+        && Number.isInteger(m.dia_longo) && m.dia_longo >= 1 && m.dia_longo <= 7 && (m.distancia_alvo_km == null || (m.distancia_alvo_km > 0 && m.distancia_alvo_km < 500)))
+      && new Set(e.multi.modalidades.map((m) => m.modalidade)).size === e.multi.modalidades.length
+      && [1, 2, 3].includes(e.multi.max_por_dia) && typeof e.multi.transicao === 'boolean'
+    if (!ok) return { error: 'Configuração do plano multiesporte inválida.' }
+  }
   if (!(await moduloLigado(db, f.turma_id, f.aluno_id))) return { error: 'O módulo de treinos não está ligado para esta turma.' }
 
   // Regera no servidor: a prévia do navegador é só para mostrar.
@@ -80,7 +88,7 @@ export async function criarPlano(f: PlanoForm): Promise<{ error?: string; id?: s
     id, turma_id: f.turma_id ?? null, aluno_id: f.aluno_id ?? null,
     titulo: limpa(f.titulo)!.slice(0, 120), objetivo: e.objetivo, modo_geracao: gerado ? 'automatic' : 'manual',
     inicio: e.inicio, fim: e.fim, prova_alvo_data: e.prova_alvo_data || null, prova_alvo_nome: limpa(f.prova_alvo_nome),
-    sessoes_semana: e.sessoes_semana, dias_disponiveis: e.dias_disponiveis, dificuldade: e.dificuldade,
+    sessoes_semana: e.multi ? e.multi.modalidades.reduce((t, m) => t + m.sessoes, 0) : e.sessoes_semana, dias_disponiveis: e.dias_disponiveis, dificuldade: e.dificuldade,
     distancia_alvo_km: e.distancia_alvo_km || null, notas: limpa(f.notas),
     payload_gerador: gerado ? { entrada: e, resumo: gerado.resumo, avisos: gerado.avisos } : null,
     criado_por: actor.id,
