@@ -9,6 +9,8 @@ import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 import Avatar from '@/components/ui/Avatar'
 import FichasTurmaButton from './FichasTurmaButton'
+import ConvitesPortalButton from './ConvitesPortalButton'
+import { convitesDaTurma } from '@/lib/portalConvite'
 import AdicionarAtletaButton from './AdicionarAtletaButton'
 import DesempenhoTurma, { DIRECAO_PADRAO, type OrdemDesempenho, type Direcao } from './DesempenhoTurma'
 import AlunoActionsMenu from '@/app/(dashboard)/alunos/AlunoActionsMenu'
@@ -46,6 +48,7 @@ export default async function TurmaDetailPage({
   if (!turmaRaw) notFound()
 
   const turma = turmaRaw as TurmaWithCoach & { dias_semana: DiaSemana[] }
+  const usaTreinos = Boolean((turma as { usa_treinos?: boolean }).usa_treinos)
   const alunos = (alunosRaw ?? []) as AlunoBasic[]
   const auxiliaryCoachNames = ((auxRaw ?? []) as { coach: { full_name: string | null } | null }[])
     .map((r) => r.coach?.full_name)
@@ -192,6 +195,7 @@ export default async function TurmaDetailPage({
         </div>
         <div className="flex items-center gap-2">
           <FichasTurmaButton turmaId={id} initialResults={initialFichas} />
+          {usaTreinos && <ConvitesPortalButton turmaId={id} inicial={await convitesDaTurma(id, false)} />}
           <AdicionarAtletaButton turmaId={id} semTurma={semTurma} />
         </div>
       </div>
@@ -200,7 +204,7 @@ export default async function TurmaDetailPage({
         {alunos.length === 0 ? (
           <EmptyState icon={Users} title="Nenhum(a) atleta nesta turma" />
         ) : aba === 'desempenho' ? (
-          <DesempenhoTurma turmaId={id} alunos={alunos} ordem={ordem} dir={dir} usaTreinos={Boolean((turma as { usa_treinos?: boolean }).usa_treinos)} />
+          <DesempenhoTurma turmaId={id} alunos={alunos} ordem={ordem} dir={dir} usaTreinos={usaTreinos} />
         ) : (
           <>
             {/* Mobile */}

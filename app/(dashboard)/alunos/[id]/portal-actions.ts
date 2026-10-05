@@ -60,3 +60,21 @@ export async function removerAcessoPortal(alunoId: string): Promise<{ error?: st
   revalidatePath(`/alunos/${alunoId}`)
   return {}
 }
+
+/** Convites do portal para todos os atletas da turma que ainda não têm acesso. */
+export async function gerarConvitesTurma(turmaId: string): Promise<{ error?: string; itens?: import('@/lib/portalConvite').ConviteTurmaItem[]; comAcesso?: number }> {
+  const actor = await requireStaff()
+  const db = (await createClient()) as Db
+  // RLS: só a equipe da turma (titular, auxiliar) ou admin enxerga a turma.
+  const { data: t } = await db.from('turmas').select('id, nome, usa_treinos').eq('id', turmaId).maybeSingle()
+  if (!t) return { error: 'Turma não encontrada.' }
+  if (!t.usa_treinos) return { error: 'Esta turma não usa o módulo de treinos.' }
+  const { convitesDaTurma } = await import('@/lib/portalConvite')
+  const r = await convitesDaTurma(turmaId, true, actor.id)
+  const novos = r.itens.filter((i) => i.novo).length
+  if (novos) {
+    await logAudit({ userId: actor.id, userName: actor.name, action: 'criar', resource: 'portal', resourceId: turmaId, resourceLabel: `Convites do portal em lote: ${t.nome} (${novos} novo${novos > 1 ? 's' : ''})` })
+  }
+  revalidatePath(`/turmas/${turmaId}`)
+  return r
+}
