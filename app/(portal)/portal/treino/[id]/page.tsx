@@ -51,7 +51,12 @@ export default async function TreinoAtletaPage({ params }: { params: Promise<{ i
         <p className="text-xs text-gray-400">{formatDate(treino.data)} · {MODALIDADES[treino.modalidade]} · {TIPOS_SESSAO[treino.tipo]}</p>
         <h1 className="text-xl font-bold text-navy-500 flex items-center gap-2">{treino.titulo}{treino.chave && <Star size={16} className="text-amber-400 fill-amber-400" />}</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          {treino.duracao_min ? `${treino.duracao_min} min` : ''}{treino.distancia_km ? ` · ~${Number(treino.distancia_km).toLocaleString('pt-BR')} km` : ''}
+          {/* Estimativa no pace DO atleta (igual ao comparativo); sem referência, a gravada no treino. */}
+          {(() => {
+            const min = plano?.duracao_s ? Math.round(plano.duracao_s / 60) : treino.duracao_min
+            const km = plano?.distancia_km ?? treino.distancia_km
+            return `${min ? `${min} min` : ''}${km && treino.modalidade !== 'strength' ? ` · ~${Number(km).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''}`
+          })()}
           {treino.local && <span className="inline-flex items-center gap-1 ml-2"><MapPin size={12} />{treino.local}</span>}
         </p>
         {treino.ajustado && <p className="text-xs text-amber-700 mt-1 inline-flex items-center gap-1"><UserCog size={12} /> O treinador ajustou este treino para você.</p>}
