@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual de Treinos ADTRISC</title>
+<style>
+  :root {
+    --navy: #0C143D; --sky: #2AABE1; --red: #EB2127;
+    --bg: #f6f8fb; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --soft-sky: #e8f6fc; --soft-amber: #fff7e6; --soft-green: #eaf8ef; --soft-red: #fdecec;
+    --z1: #42a5f5; --z2: #66bb6a; --z3: #ffa726; --z4: #ef6c00; --z5: #e53935;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1020; --card: #121a33; --text: #e5e7eb; --muted: #9ca3af; --line: #26304f;
+      --soft-sky: #0f2a3a; --soft-amber: #33270f; --soft-green: #10301d; --soft-red: #3a1515;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  header.capa { background: var(--navy); color: #fff; padding: 48px 16px 40px; }
+  header.capa .in { max-width: 1100px; margin: 0 auto; }
+  header.capa .tag { display: inline-block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--sky); font-weight: 700; }
+  header.capa h1 { margin: 8px 0 8px; font-size: clamp(28px, 5vw, 42px); line-height: 1.15; }
+  header.capa p { margin: 0; color: #c9d3ea; max-width: 720px; }
+  header.capa .faixa { height: 4px; width: 120px; background: linear-gradient(90deg, var(--sky) 0 60%, var(--red) 60%); margin-top: 20px; border-radius: 2px; }
+  .layout { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 32px; padding: 32px 16px 80px; }
+  nav.indice { position: sticky; top: 16px; align-self: start; max-height: calc(100vh - 32px); overflow: auto; font-size: 14px; }
+  nav.indice p { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; margin: 16px 0 6px; }
+  nav.indice a { display: block; color: var(--text); text-decoration: none; padding: 4px 10px; border-left: 2px solid transparent; border-radius: 0 6px 6px 0; }
+  nav.indice a:hover { background: var(--soft-sky); }
+  nav.indice a.ativo { border-left-color: var(--sky); color: var(--sky); font-weight: 600; }
+  main section { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; margin-bottom: 24px; scroll-margin-top: 16px; }
+  main h2 { margin: 0 0 4px; font-size: 24px; color: var(--navy); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) main h2 { color: #fff; } }
+  main h2 .num { color: var(--sky); margin-right: 8px; }
+  main .sub { color: var(--muted); margin: 0 0 18px; }
+  main h3 { font-size: 17px; margin: 22px 0 6px; }
+  ol.passos { counter-reset: p; list-style: none; padding: 0; margin: 12px 0; }
+  ol.passos > li { counter-increment: p; position: relative; padding: 2px 0 12px 44px; }
+  ol.passos > li::before { content: counter(p); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+  .caixa { border-radius: 12px; padding: 12px 16px; margin: 14px 0; font-size: 15px; }
+  .dica { background: var(--soft-sky); border-left: 4px solid var(--sky); }
+  .atencao { background: var(--soft-amber); border-left: 4px solid #f59e0b; }
+  .ok { background: var(--soft-green); border-left: 4px solid #22c55e; }
+  .caixa strong:first-child { display: block; margin-bottom: 2px; }
+  kbd, .btn { display: inline-block; font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); white-space: nowrap; }
+  .btn.azul { background: var(--sky); border-color: var(--sky); color: #fff; }
+  .btn.verde { background: #22c55e; border-color: #22c55e; color: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .tabela { overflow-x: auto; }
+  .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 14px 0; }
+  .cartao { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--bg); }
+  .cartao b { display: block; margin-bottom: 4px; }
+  .cartao p { margin: 0; font-size: 14px; color: var(--muted); }
+  .fluxo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0; font-size: 14px; }
+  .fluxo span { background: var(--soft-sky); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; font-weight: 600; }
+  .fluxo i { color: var(--muted); font-style: normal; }
+  .zonas { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+  .zonas span { color: #fff; font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 6px; }
+  /* mini maquetes */
+  .maq { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin: 14px 0; font-size: 12px; background: var(--card); }
+  .maq .barra { background: var(--bg); padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .maq .sem { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 8px; }
+  .maq .dia { border: 1px solid var(--line); border-radius: 8px; min-height: 86px; padding: 4px; }
+  .maq .dia small { color: var(--muted); display: block; margin-bottom: 3px; }
+  .maq .t { border-radius: 6px; padding: 3px 5px; margin-bottom: 3px; border: 1px solid; line-height: 1.3; }
+  .t.base { background: #e8f6fc; border-color: #b9e3f5; color: #0C143D; }
+  .t.int { background: #fff1e5; border-color: #ffd2a8; color: #0C143D; }
+  .t.longo { background: #eef0ff; border-color: #c9ceff; color: #0C143D; }
+  .t.rasc { border-style: dashed; opacity: .8; }
+  .t.extra { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
+  .selo { display: inline-block; font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 4px; margin-top: 2px; }
+  .selo.aj { background: #fde9c8; color: #9a5b00; } .selo.ok { background: #d8f5e2; color: #157a3a; } .selo.r { background: #fff; color: #6b7280; }
+  .bloco { border: 1px solid var(--line); border-left: 4px solid; border-radius: 8px; padding: 8px 10px; margin: 6px 0; background: var(--card); font-size: 13px; }
+  .celular { max-width: 300px; margin: 14px auto; border: 8px solid var(--navy); border-radius: 28px; overflow: hidden; background: var(--bg); font-size: 12px; }
+  .celular .topo { background: var(--navy); color: #fff; padding: 10px 12px; font-weight: 600; }
+  .celular .corpo { padding: 10px; }
+  .celular .item { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
+  .celular .destaque { background: var(--navy); color: #fff; border-color: var(--navy); }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 0 16px 40px; }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    nav.indice { position: static; max-height: none; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 8px 12px 14px; }
+    main section { padding: 20px 16px; }
+    .maq .sem { grid-template-columns: repeat(7, 92px); overflow-x: auto; }
+  }
+  @media print {
+    nav.indice { display: none; } .layout { display: block; } main section { break-inside: avoid; border: none; padding: 0 0 16px; }
+    header.capa { color: #000; background: none; } header.capa p { color: #333; }
+  }
+</style>
+</head>
+<body>
+
+<header class="capa">
+  <div class="in">
+    <a href="/treinos" style="display:inline-block;margin-bottom:14px;color:#2AABE1;font-size:14px;text-decoration:none">← Voltar aos treinos</a><br><span class="tag">ADTRISC · Sistema de Gestão</span>
+    <h1>Manual do Módulo de Treinos</h1>
+    <p>Como planejar os treinos das turmas de rendimento, acompanhar cada atleta, usar o portal do atleta e a integração com o Intervals.icu e o relógio. Com pressa? Veja o <a href="/manuais/treinos-quick-start.html" style="color:#2AABE1">Quick Start</a>.</p>
+    <div class="faixa"></div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="indice" id="indice">
+    <p>Começo</p>
+    <a href="#visao">1. Visão geral</a>
+    <a href="#ligar">2. Ligar o módulo na turma</a>
+    <p>Treinador</p>
+    <a href="#calendario">3. O calendário</a>
+    <a href="#montar">4. Montar um treino</a>
+    <a href="#zonas">5. Zonas e limiares</a>
+    <a href="#ajuste">6. Ajuste individual</a>
+    <a href="#arrastar">7. Arrastar, reordenar e duplicar</a>
+    <a href="#biblioteca">8. Biblioteca de treinos</a>
+    <a href="#planos">9. Planos e gerador automático</a>
+    <p>Atleta</p>
+    <a href="#convite">10. Dar acesso ao atleta</a>
+    <a href="#portal">11. O portal do atleta</a>
+    <a href="#intervals">12. Intervals.icu e relógio</a>
+    <p>Acompanhamento</p>
+    <a href="#realizado">13. Realizado, comparativo e extras</a>
+    <a href="#fit">14. Arquivos .fit</a>
+    <a href="#acompanhar">15. Cumprimento e relatórios</a>
+    <p>Ajuda</p>
+    <a href="#faq">16. Perguntas frequentes</a>
+    <a href="#glossario">17. Glossário</a>
+  </nav>
+
+  <main>
+
+    <!-- 1 -->
+    <section id="visao">
+      <h2><span class="num">1</span>Visão geral</h2>
+      <p class="sub">O que o módulo faz e quem usa cada parte.</p>
+      <p>O módulo de treinos permite que o treinador planeje os treinos da <strong>turma</strong> (com ajustes para atletas específicos), que cada atleta veja os seus treinos no celular com os <strong>ritmos calculados para ele</strong>, e que o treinador acompanhe o que foi feito.</p>
+      <div class="fluxo">
+        <span>Treinador monta o treino</span><i>→</i><span>Publica</span><i>→</i><span>Atleta vê no portal / relógio</span><i>→</i><span>Atleta treina</span><i>→</i><span>Feito chega ao treinador</span>
+      </div>
+      <div class="grade">
+        <div class="cartao"><b>Treinador(a) e auxiliar</b><p>Menu <strong>Treinos</strong>: calendário, montador, biblioteca, planos, acompanhamento. O auxiliar tem as mesmas permissões do titular.</p></div>
+        <div class="cartao"><b>Atleta</b><p>Entra no <strong>portal do atleta</strong> (pelo celular) com o login criado a partir do convite. Vê só os próprios treinos.</p></div>
+        <div class="cartao"><b>Administração</b><p>Liga o módulo nas turmas e vê tudo, como os treinadores.</p></div>
+      </div>
+      <div class="caixa dica"><strong>Rascunho × publicado</strong>Tudo o que você cria nasce como <em>rascunho</em> — só a equipe vê. O atleta só enxerga (e o relógio só recebe) depois de <strong>publicar</strong>.</div>
+    </section>
+
+    <!-- 2 -->
+    <section id="ligar">
+      <h2><span class="num">2</span>Ligar o módulo na turma</h2>
+      <p class="sub">Só as turmas marcadas aparecem em Treinos.</p>
+      <ol class="passos">
+        <li>Vá em <strong>Turmas</strong> e abra a turma → <span class="btn">Editar</span>.</li>
+        <li>Marque <strong>“Esta turma usa o módulo de treinos”</strong> e salve.</li>
+      </ol>
+      <p>Hoje já vêm ligadas: <strong>Pré equipe</strong>, <strong>Equipe Triathlon</strong> e <strong>Equipe Natação</strong>. Desmarcar esconde a turma em Treinos e impede novos convites ao portal para os atletas dela.</p>
+    </section>
+
+    <!-- 3 -->
+    <section id="calendario">
+      <h2><span class="num">3</span>O calendário</h2>
+      <p class="sub">Menu Treinos → escolha a turma.</p>
+      <div class="maq">
+        <div class="barra"><b>‹ Hoje ›</b> 05/10 a 11/10 <kbd>Semana</kbd><kbd>Mês</kbd> <span style="margin-left:auto"></span><kbd>Duplicar semana</kbd><kbd>Biblioteca</kbd><span class="btn azul">Publicar 2 rascunhos</span></div>
+        <div class="sem">
+          <div class="dia"><small>Seg 05</small><div class="t base">Base 45′<br><span class="selo aj">2 ajustes</span></div></div>
+          <div class="dia"><small>Ter 06</small><div class="t int">Intervalado 6×400 ★<br><span class="selo ok">publicado</span></div></div>
+          <div class="dia"><small>Qua 07</small></div>
+          <div class="dia"><small>Qui 08</small><div class="t base rasc">Regenerativo<br><span class="selo r">rascunho</span></div></div>
+          <div class="dia"><small>Sex 09</small></div>
+          <div class="dia"><small>Sáb 10</small><div class="t longo rasc">Longo 70′ ★<br><span class="selo r">rascunho</span></div></div>
+          <div class="dia"><small>Dom 11</small></div>
+        </div>
+      </div>
+      <h3>Turma inteira ou um atleta</h3>
+      <p>No topo, <strong>Turma inteira</strong> mostra o treino do grupo. Escolha um atleta em <strong>“Um atleta…” → abrir</strong> para ver o calendário dele: o treino da turma (ou o ajuste dele no lugar), os treinos individuais, o que ele marcou no portal, as atividades extras e o painel de <strong>limiares e zonas</strong>.</p>
+      <h3>Como ler os cards</h3>
+      <div class="tabela"><table>
+        <tr><th>Sinal</th><th>Significado</th></tr>
+        <tr><td>Borda tracejada / “rascunho”</td><td>Ainda não publicado — o atleta não vê.</td></tr>
+        <tr><td>Cor do card</td><td>Tipo de treino (base, longo, intervalado, recuperativo, técnica, força, simulado, transição).</td></tr>
+        <tr><td>Letra C / B / N / F</td><td>Modalidade: corrida, bike, natação, força.</td></tr>
+        <tr><td>★</td><td>Sessão-chave da semana.</td></tr>
+        <tr><td>“N ajustes” / “ajustado”</td><td>Há versões individuais desse treino (ver seção 6).</td></tr>
+        <tr><td>“✓ feito”, “parcial”, “✗ não feito”, “comentou”</td><td>(visão do atleta) O que o atleta marcou ou o que chegou do Intervals.</td></tr>
+        <tr><td>Card cinza “extra”</td><td>(visão do atleta) Atividade feita sem treino planejado.</td></tr>
+      </table></div>
+      <p>A coluna <strong>Semana</strong> à direita soma número de treinos, tempo, distância e <strong>carga</strong> planejada.</p>
+    </section>
+
+    <!-- 4 -->
+    <section id="montar">
+      <h2><span class="num">4</span>Montar um treino</h2>
+      <p class="sub">Clique no <kbd>+</kbd> de um dia (novo) ou num card (editar).</p>
+      <ol class="passos">
+        <li>Preencha <strong>data, modalidade, tipo, local</strong> e o <strong>título</strong> (ex.: “Intervalado 6×400”).</li>
+        <li>Na aba <strong>Blocos</strong>, monte a sequência. Cada bloco tem uma seção (aquecimento, bloco principal, recuperação, volta à calma, técnica, força) e um modo:
+          <ul>
+            <li><strong>Contínuo</strong> — um esforço por tempo (mm:ss), distância (m) ou livre (até a volta).</li>
+            <li><strong>Intervalado</strong> — <em>N repetições</em> de um esforço + um <em>descanso</em> (ex.: 6 × 400 m em Z4 com 1:30 em Z1).</li>
+            <li><strong>Orientação</strong> — só texto para o atleta (ex.: “hidratar entre os tiros”).</li>
+          </ul>
+        </li>
+        <li>Defina o <strong>alvo</strong> de cada esforço: zona (pode ser faixa, ex.: Z1 até Z2), pace, velocidade, frequência cardíaca, potência ou esforço percebido (1 a 5).</li>
+        <li>Use as setas para reordenar, o ícone de copiar para duplicar e a lixeira para remover blocos.</li>
+        <li>Confira a aba <strong>Visão geral</strong>: duração, distância e carga estimadas, e o <strong>pace de cada atleta</strong> (escolha o atleta na lista) e o texto que vai para o Intervals.</li>
+        <li><span class="btn">Salvar rascunho</span> ou <span class="btn azul">Salvar e publicar</span>.</li>
+      </ol>
+      <div class="bloco" style="border-left-color:var(--z1)"><b>Aquecimento</b> · Contínuo · 10:00 · Z1 até Z2</div>
+      <div class="bloco" style="border-left-color:var(--z4)"><b>Bloco principal</b> · Intervalado · 6 × 400 m em Z4 · descanso 1:30 em Z1</div>
+      <div class="bloco" style="border-left-color:var(--z1)"><b>Volta à calma</b> · Contínuo · 5:00 · Z1</div>
+      <div class="caixa dica"><strong>Por que usar zona e não pace fixo?</strong>Com zona, cada atleta recebe o ritmo calculado pelo teste dele. O mesmo treino da turma vira “3:35–4:00/km” para um e “4:40–5:10/km” para outro.</div>
+      <p>No rodapé também há <strong>Salvar na biblioteca</strong> (seção 8) e <strong>Apagar</strong>. Apagar um treino publicado também o tira do Intervals de quem estava conectado.</p>
+    </section>
+
+    <!-- 5 -->
+    <section id="zonas">
+      <h2><span class="num">5</span>Zonas e limiares</h2>
+      <p class="sub">De onde vêm os ritmos de cada atleta.</p>
+      <div class="zonas"><span style="background:var(--z1)">Z1 Muito leve</span><span style="background:var(--z2)">Z2 Leve</span><span style="background:var(--z3)">Z3 Moderado</span><span style="background:var(--z4)">Z4 Forte</span><span style="background:var(--z5)">Z5 Muito forte</span></div>
+      <p>As zonas são as mesmas da ADTRISC (porcentagem da velocidade do teste, configuradas em Configurações → Avaliações). A <strong>referência (100%)</strong> de cada atleta vem, nesta ordem:</p>
+      <ol>
+        <li><strong>Limiar cadastrado pelo treinador</strong> (painel “Limiares e zonas” no calendário do atleta, lápis de cada modalidade);</li>
+        <li><strong>Último teste</strong>: Dabonneville 5′ (corrida), ciclismo 2 km (bike), natação 100 m;</li>
+        <li><strong>Valor padrão</strong>, quando o atleta ainda não fez o teste (aparece “sem teste — padrão”).</li>
+      </ol>
+      <div class="caixa atencao"><strong>Atleta sem teste</strong>Os ritmos ficam genéricos. Registre o teste de campo (página do atleta → Testes de campo) ou cadastre um limiar para que os treinos fiquem certos para ele.</div>
+    </section>
+
+    <!-- 6 -->
+    <section id="ajuste">
+      <h2><span class="num">6</span>Ajuste individual</h2>
+      <p class="sub">Mudar o treino da turma só para um atleta (lesão, volta de férias, nível diferente).</p>
+      <ol class="passos">
+        <li>Abra o treino da turma → aba <strong>Atletas</strong>.</li>
+        <li>Na linha do atleta, clique em <strong>Ajustar para este atleta</strong>. Uma cópia é criada e abre no montador.</li>
+        <li>Altere o que precisar e salve (publique quando quiser que ele veja).</li>
+      </ol>
+      <p>O ajuste <strong>substitui</strong> o treino da turma só para aquele atleta (no portal e no relógio). Para abrir depois: aba Atletas → <strong>Ajustado · abrir</strong>, ou no calendário do atleta. Para desfazer, abra o ajuste e clique em <strong>Remover ajuste</strong> — o atleta volta a receber o treino da turma.</p>
+      <div class="caixa dica"><strong>Mover o treino da turma</strong>Os ajustes acompanham: se você arrasta o treino da turma para outro dia, os ajustes vão junto.</div>
+    </section>
+
+    <!-- 7 -->
+    <section id="arrastar">
+      <h2><span class="num">7</span>Arrastar, reordenar e duplicar</h2>
+      <div class="grade">
+        <div class="cartao"><b>Mover de dia</b><p>Arraste o card para outro dia. Se estava publicado, o Intervals dos atletas é atualizado.</p></div>
+        <div class="cartao"><b>Reordenar no dia</b><p>Arraste um card para cima de outro do mesmo dia (dois treinos no dia, ex.: natação de manhã e corrida à tarde).</p></div>
+        <div class="cartao"><b>Duplicar semana</b><p>Copia todos os treinos da semana aberta (com os ajustes) para a semana seguinte, como rascunho.</p></div>
+      </div>
+      <p>No celular, segure o card por um instante antes de arrastar. Na visão do atleta, só os treinos individuais dele podem ser arrastados (o da turma se move na visão da turma).</p>
+    </section>
+
+    <!-- 8 -->
+    <section id="biblioteca">
+      <h2><span class="num">8</span>Biblioteca de treinos</h2>
+      <p class="sub">Modelos reutilizáveis, organizados em pastas.</p>
+      <h3>Guardar um treino como modelo</h3>
+      <p>Abra o treino → <strong>Salvar na biblioteca</strong>. Se já existir um modelo com o mesmo nome e modalidade, o sistema avisa e oferece <strong>Salvar mesmo assim</strong>.</p>
+      <h3>Usar um modelo no calendário</h3>
+      <ol class="passos">
+        <li>No calendário, clique em <span class="btn">Biblioteca</span> — abre o painel lateral com busca e pastas.</li>
+        <li><strong>Arraste</strong> o modelo para o dia. No celular: toque no modelo e depois no <kbd>+</kbd> do dia.</li>
+        <li>O treino entra como rascunho; ajuste e publique.</li>
+      </ol>
+      <h3>Organizar</h3>
+      <p>Em <strong>gerenciar biblioteca</strong> (link no topo do calendário): criar, renomear e apagar pastas (os modelos de uma pasta apagada ficam “sem pasta”), criar e editar modelos no próprio montador, mover modelos entre pastas e <strong>Importar FIT</strong> (seção 14).</p>
+    </section>
+
+    <!-- 9 -->
+    <section id="planos">
+      <h2><span class="num">9</span>Planos e gerador automático</h2>
+      <p class="sub">Um período de treinos com objetivo (ex.: 8 semanas até a prova).</p>
+      <ol class="passos">
+        <li>No calendário, clique em <strong>planos</strong> → <span class="btn azul">Novo plano</span>.</li>
+        <li>Escolha o <strong>objetivo</strong>, o período, a modalidade, o nível, quantos treinos por semana, o dia do longo, os dias disponíveis e, se quiser, distância alvo, força e a prova alvo.</li>
+        <li>Veja a <strong>prévia ao vivo</strong>: semanas, treinos de cada dia, carga por semana e avisos. Mude os parâmetros até ficar bom.</li>
+        <li><span class="btn azul">Criar plano</span> — os treinos entram no calendário como rascunho.</li>
+        <li>Revise e ajuste no calendário; depois, na página do plano, <span class="btn azul">Publicar plano</span>.</li>
+      </ol>
+      <div class="tabela"><table>
+        <tr><th>Objetivo</th><th>O que o gerador faz</th></tr>
+        <tr><td>Base aeróbica</td><td>Progressão conservadora, maioria dos treinos em Z2–Z3, um longo por semana.</td></tr>
+        <tr><td>Resistência</td><td>Mais volume semanal e longos progressivos.</td></tr>
+        <tr><td>Velocidade</td><td>Inclui intervalados (Z4–Z5) e recuperativos.</td></tr>
+        <tr><td>Prova alvo</td><td>Intervalado + simulado de prova; reduz o volume nas 2 semanas antes da prova (polimento).</td></tr>
+        <tr><td>Recuperação</td><td>Volume reduzido, para retomada.</td></tr>
+        <tr><td>Manual</td><td>Plano vazio — você monta os treinos.</td></tr>
+      </table></div>
+      <p>Regras automáticas: o volume cresce até ~35% ao longo do plano e a cada 4 semanas há uma semana mais leve. Na página do plano você também edita nome/prova/observações, <strong>duplica</strong> o plano para outra data e <strong>apaga</strong> (apaga junto todos os treinos dele).</p>
+    </section>
+
+    <!-- 10 -->
+    <section id="convite">
+      <h2><span class="num">10</span>Dar acesso ao atleta (convite pelo WhatsApp)</h2>
+      <p class="sub">Na página do atleta, card “Portal do atleta”.</p>
+      <ol class="passos">
+        <li>Abra o atleta (menu Atletas) → card <strong>Portal do atleta</strong> → <strong>Gerar convite</strong>.</li>
+        <li>Clique no botão verde com o nome do responsável (ou do atleta) para abrir o WhatsApp com a mensagem pronta — ou copie o link.</li>
+        <li>O atleta (ou o responsável, se menor) abre o link e escolhe <strong>nome de usuário</strong> ou <strong>e-mail</strong>, cria a senha e concorda com a política de privacidade. Já entra logado no portal.</li>
+      </ol>
+      <div class="caixa atencao"><strong>Regras do link</strong>Vale por 7 dias e só uma vez. Gerar um novo invalida o anterior. Para atletas menores de idade, mande ao responsável.</div>
+      <h3>Esqueceu a senha</h3>
+      <p>Não há recuperação por e-mail. No mesmo card, clique em <strong>Gerar link de nova senha</strong> e mande pelo WhatsApp.</p>
+      <h3>Tirar o acesso</h3>
+      <p><strong>Remover acesso</strong> apaga só o login do atleta — cadastro, treinos e histórico continuam. Atletas desligados perdem o acesso automaticamente.</p>
+      <div class="caixa dica"><strong>Login sem e-mail</strong>Quem escolheu nome de usuário entra digitando só o usuário (ex.: <code>joao.silva</code>) no campo “Email ou usuário” da tela de login.</div>
+    </section>
+
+    <!-- 11 -->
+    <section id="portal">
+      <h2><span class="num">11</span>O portal do atleta</h2>
+      <p class="sub">Feito para o celular. Mesmo endereço do sistema — o atleta cai direto no portal.</p>
+      <div class="grade" style="align-items:start">
+        <div class="celular">
+          <div class="topo">Arthur Martins · Equipe Triathlon</div>
+          <div class="corpo">
+            <small style="color:var(--muted)">PRÓXIMO TREINO · TER 06/10</small>
+            <div class="item destaque"><b>Intervalado de velocidade ★</b><br>Corrida · 40 min · 5,8 km</div>
+            <div class="item"><b>Seg 05</b> · Base 45′ <span class="selo ok">Feito</span></div>
+            <div class="item"><b>Qui 08</b> · Regenerativo 25′</div>
+            <div class="item"><b>Sáb 10</b> · Longo 70′</div>
+          </div>
+        </div>
+        <div>
+          <h3 style="margin-top:0">Treinos</h3>
+          <p>Próximo treino em destaque, a semana dia a dia (com setas para outras semanas) e resumo: treinos, tempo, feitos.</p>
+          <h3>Detalhe do treino</h3>
+          <p>Cada bloco em linguagem simples, com o <strong>pace/velocidade dele</strong> (ex.: “4 × 2:30 em Z4–Z5 (2:50 a 4:00/km)”), as observações do treinador e:</p>
+          <ul>
+            <li><strong>Como foi?</strong> — <span class="btn verde">Feito</span> <span class="btn">Parcial</span> <span class="btn">Não fiz</span> + comentário para o treinador;</li>
+            <li><strong>Realizado</strong> — comparativo com o que foi feito, enviar o .fit da atividade, baixar o treino para o relógio.</li>
+          </ul>
+          <h3>Atividades sem treino</h3>
+          <p>Aparecem na semana; tocando, o atleta liga a atividade a um treino.</p>
+          <h3>Zonas e Conta</h3>
+          <p><strong>Zonas</strong>: a tabela de ritmos de cada zona. <strong>Conta</strong>: login, trocar senha, conectar/desconectar o Intervals.icu.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section id="intervals">
+      <h2><span class="num">12</span>Intervals.icu e relógio</h2>
+      <p class="sub">Opcional. O Intervals.icu é gratuito e liga o portal ao relógio (Garmin e outros).</p>
+      <div class="fluxo"><span>ADTRISC</span><i>⇄</i><span>Intervals.icu</span><i>⇄</i><span>Garmin Connect / relógio</span></div>
+      <h3>O atleta conecta (uma vez)</h3>
+      <ol class="passos">
+        <li>Ter conta no Intervals.icu e, lá, ligar o Garmin (ou outro) em Settings → Connections.</li>
+        <li>No portal: <strong>Conta → Conectar Intervals.icu</strong> → autorizar as duas permissões (calendário e atividades).</li>
+      </ol>
+      <h3>O que acontece depois, sozinho</h3>
+      <ul>
+        <li>Todo treino <strong>publicado</strong> vai para o calendário do atleta no Intervals (e de lá para o relógio), já com os ritmos dele. Editar, mover ou apagar no ADTRISC atualiza lá.</li>
+        <li>Quando o atleta termina uma atividade, ela volta do Intervals: se houver treino da mesma modalidade no dia, o treino é marcado <strong>feito</strong> e o comparativo aparece; senão, vira <strong>atividade extra</strong>.</li>
+        <li>Uma vez por dia o sistema confere de novo as atividades e reenvia o que tiver falhado.</li>
+      </ul>
+      <h3>Para o treinador</h3>
+      <p>No treino da turma, aba <strong>Atletas</strong>: <span class="selo ok">no Intervals ✓</span> enviado, <span class="selo" style="background:#fde2e2;color:#b91c1c">falhou · reenviar</span> (clique para tentar de novo), “sem Intervals” (não conectou).</p>
+      <div class="caixa atencao"><strong>Ajuste individual e Intervals</strong>Quando um ajuste é publicado, o atleta passa a receber o ajuste no lugar do treino da turma — o sistema troca sozinho lá também.</div>
+    </section>
+
+    <!-- 13 -->
+    <section id="realizado">
+      <h2><span class="num">13</span>Realizado, comparativo e atividades extras</h2>
+      <h3>Comparativo planejado × realizado</h3>
+      <p>No calendário do <strong>atleta</strong>, abra o treino → aba <strong>Comparativo</strong> (o atleta vê o mesmo em “Realizado”).</p>
+      <div class="tabela"><table>
+        <tr><th></th><th>Planejado</th><th>Realizado</th><th>Diferença</th></tr>
+        <tr><td>Duração</td><td>25:00</td><td><b>27:00</b></td><td>+2:00 (+8%)</td></tr>
+        <tr><td>Distância</td><td>4,59 km</td><td><b>3,4 km</b></td><td>−1,19 km (−26%)</td></tr>
+        <tr><td>Pace médio</td><td>5:27/km</td><td><b>7:56/km</b></td><td></td></tr>
+        <tr><td>FC média / máx.</td><td>—</td><td><b>146 / 168 bpm</b></td><td></td></tr>
+      </table></div>
+      <p>Abaixo, o gráfico de <strong>tempo por zona</strong> (quando o relógio registra FC). <strong>Desvincular</strong> transforma a atividade em extra (o “feito” automático volta a “sem registro”).</p>
+      <h3>Atividades extras</h3>
+      <p>Card cinza “extra” no calendário do atleta (ou “Atividades sem treino” no portal). Ao abrir:</p>
+      <ul>
+        <li><strong>Vincular</strong> a um treino publicado dos 3 dias em volta que ainda não tenha atividade;</li>
+        <li><strong>Mover</strong> para outro dia (ex.: relógio com data errada);</li>
+        <li><strong>Apagar</strong> (atividades enviadas por arquivo; as do Intervals se desvinculam, não se apagam).</li>
+      </ul>
+    </section>
+
+    <!-- 14 -->
+    <section id="fit">
+      <h2><span class="num">14</span>Arquivos .fit</h2>
+      <p class="sub">Para quem não usa o Intervals, ou para importar treinos prontos.</p>
+      <div class="grade">
+        <div class="cartao"><b>Baixar o treino (.fit)</b><p>No comparativo ou no portal: “Baixar treino (.fit) para o relógio”. Copie para a pasta <code>GARMIN/Workouts</code> do relógio via USB, ou importe no Garmin Connect. Zonas viram a faixa de ritmo do atleta.</p></div>
+        <div class="cartao"><b>Enviar a atividade (.fit)</b><p>“Enviar atividade (.fit)” no treino (atleta ou treinador). O arquivo exportado do relógio/Garmin Connect liga a atividade ao treino. Um treino aceita uma atividade.</p></div>
+        <div class="cartao"><b>Importar treino na biblioteca</b><p>Biblioteca → <strong>Importar FIT</strong>: um treino estruturado (do Garmin Connect, TrainingPeaks etc.) vira modelo.</p></div>
+      </div>
+    </section>
+
+    <!-- 15 -->
+    <section id="acompanhar">
+      <h2><span class="num">15</span>Cumprimento e relatórios</h2>
+      <p>“Cumprimento” = treinos <strong>feitos ou parciais</strong> ÷ treinos <strong>publicados</strong> do atleta nos últimos 30 dias (só os que já passaram; o ajuste conta no lugar do treino da turma).</p>
+      <div class="grade">
+        <div class="cartao"><b>Página do atleta</b><p>Card “Treinos”: % de cumprimento (verde ≥ 80%, amarelo ≥ 50%, vermelho abaixo), último treino feito, últimos treinos com a situação, se usa portal e Intervals.</p></div>
+        <div class="cartao"><b>Turma → Desempenho</b><p>Coluna “Treinos 30d”, ordenável, para ver quem está cumprindo menos.</p></div>
+        <div class="cartao"><b>Relatórios</b><p>Grupo “Treinos”: cumprimento, feitos, planejados, último treino, tem portal, Intervals conectado — combináveis com os outros filtros.</p></div>
+      </div>
+    </section>
+
+    <!-- 16 -->
+    <section id="faq">
+      <h2><span class="num">16</span>Perguntas frequentes</h2>
+      <h3>O atleta diz que não vê o treino.</h3>
+      <p>Confira se está <strong>publicado</strong> (sem borda tracejada), se a turma dele usa o módulo e se o cadastro dele está ativo.</p>
+      <h3>O treino não chegou no relógio.</h3>
+      <p>Veja na aba Atletas se está “no Intervals ✓”. Se sim, o atleta precisa ter o Garmin ligado no Intervals.icu e sincronizar o relógio. Se “falhou”, clique em reenviar. Se “sem Intervals”, ele não conectou.</p>
+      <h3>Os ritmos estão estranhos para um atleta.</h3>
+      <p>Ele provavelmente não tem teste (aparece “sem teste — padrão”). Registre o teste ou cadastre o limiar no painel de zonas.</p>
+      <h3>A atividade não marcou o treino como feito.</h3>
+      <p>Ela só casa sozinha com treino <strong>publicado</strong>, do <strong>mesmo dia</strong> e da <strong>mesma modalidade</strong>. Senão vira extra — abra e vincule.</p>
+      <h3>O link do convite não funciona.</h3>
+      <p>Venceu (7 dias), já foi usado ou um novo foi gerado depois. Gere outro.</p>
+      <h3>Quero mudar o treino de um atleta só.</h3>
+      <p>Use o ajuste individual (seção 6) — não edite o treino da turma.</p>
+    </section>
+
+    <!-- 17 -->
+    <section id="glossario">
+      <h2><span class="num">17</span>Glossário</h2>
+      <div class="tabela"><table>
+        <tr><td><b>Rascunho / publicado</b></td><td>Rascunho só a equipe vê; publicado o atleta vê e vai para o Intervals.</td></tr>
+        <tr><td><b>Ajuste individual</b></td><td>Versão do treino da turma só para um atleta; substitui o da turma para ele.</td></tr>
+        <tr><td><b>Treino individual</b></td><td>Treino extra criado só para um atleta (no calendário dele).</td></tr>
+        <tr><td><b>Sessão-chave ★</b></td><td>O treino mais importante da semana.</td></tr>
+        <tr><td><b>Carga</b></td><td>Número que estima o esforço do treino (duração × tipo × intensidade); somado por semana.</td></tr>
+        <tr><td><b>Referência / limiar</b></td><td>A velocidade que vale 100% para calcular as zonas do atleta.</td></tr>
+        <tr><td><b>Esforço percebido (PSE)</b></td><td>Escala de 1 (muito leve) a 5 (muito forte).</td></tr>
+        <tr><td><b>Atividade extra</b></td><td>Atividade registrada sem treino planejado correspondente.</td></tr>
+        <tr><td><b>Cumprimento</b></td><td>% dos treinos publicados que foram feitos nos últimos 30 dias.</td></tr>
+        <tr><td><b>Intervals.icu</b></td><td>Plataforma gratuita que conecta o ADTRISC ao relógio do atleta.</td></tr>
+        <tr><td><b>.fit</b></td><td>Formato de arquivo de treino/atividade dos relógios (Garmin e outros).</td></tr>
+      </table></div>
+    </section>
+
+  </main>
+</div>
+
+<footer>ADTRISC — Associação Desportiva Triatlética de Santa Catarina · Manual do Módulo de Treinos · outubro de 2026</footer>
+
+<script>
+  // Destaca no índice a seção visível.
+  const links = [...document.querySelectorAll('#indice a')]
+  const obs = new IntersectionObserver((entradas) => {
+    for (const e of entradas) if (e.isIntersecting) {
+      links.forEach((a) => a.classList.toggle('ativo', a.getAttribute('href') === '#' + e.target.id))
+    }
+  }, { rootMargin: '-20% 0px -70% 0px' })
+  document.querySelectorAll('main section').forEach((s) => obs.observe(s))
+</script>
+</body>
+</html>

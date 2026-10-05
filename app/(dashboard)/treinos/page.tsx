@@ -9,6 +9,7 @@ import CalendarioTreinos, { type SessaoCalendario } from '@/components/treinos/C
 import type { ExecucaoView } from '@/components/treinos/ComparativoTreino'
 import { somarDias } from '@/lib/treinos/datas'
 import PainelLimiares from '@/components/treinos/PainelLimiares'
+import AjudaTreinos from '@/components/treinos/AjudaTreinos'
 import { getTurmasDoCoach } from '@/lib/turmas'
 import { getConfigAvaliacao } from '@/lib/config-avaliacao'
 import { referenciasDosAtletas } from '@/lib/treinos/referencia'
@@ -44,7 +45,7 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
     return (
       <div className="p-4 sm:p-8">
         <PageHeader title="Treinos" subtitle="Escolha a turma para planejar os treinos"
-          action={<Link href="/treinos/biblioteca" className="text-sm text-sky-500 hover:underline">Biblioteca de treinos</Link>} />
+          action={<div className="flex flex-wrap items-center gap-2"><AjudaTreinos /><Link href="/treinos/biblioteca" className="text-sm text-sky-500 hover:underline ml-1">Biblioteca de treinos</Link></div>} />
         {turmas.length === 0 ? (
           <Card><EmptyState icon={CalendarRange} title="Nenhuma turma com o módulo de treinos"
             description="Ligue “Esta turma usa o módulo de treinos” no cadastro da turma." /></Card>
@@ -164,6 +165,7 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
         <Link href={`/treinos/planos?${aluno ? `aluno=${aluno.id}` : `turma=${turma.id}`}`} className="ml-auto text-xs font-medium text-sky-500 hover:underline">planos</Link>
         <Link href="/treinos/biblioteca" className="text-xs text-gray-400 hover:text-navy-500">gerenciar biblioteca</Link>
         <Link href="/treinos" className="text-xs text-gray-400 hover:text-navy-500">trocar turma</Link>
+        <AjudaTreinos compacto />
       </div>
 
       <CalendarioTreinos

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Start Treinos</title>
+<style>
+  :root {
+    --navy: #0C143D; --sky: #2AABE1; --red: #EB2127;
+    --bg: #f6f8fb; --card: #ffffff; --text: #1f2937; --muted: #6b7280; --line: #e5e7eb; --soft: #e8f6fc; --amber: #fff7e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0b1020; --card: #121a33; --text: #e5e7eb; --muted: #9ca3af; --line: #26304f; --soft: #0f2a3a; --amber: #33270f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  header { background: var(--navy); color: #fff; padding: 32px 16px 28px; }
+  .in { max-width: 1040px; margin: 0 auto; }
+  header small { color: var(--sky); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+  header h1 { margin: 6px 0 4px; font-size: clamp(26px, 5vw, 36px); }
+  header p { margin: 0; color: #c9d3ea; }
+  .faixa { height: 4px; width: 110px; margin-top: 16px; border-radius: 2px; background: linear-gradient(90deg, var(--sky) 0 60%, var(--red) 60%); }
+  main { padding: 24px 16px 48px; }
+  .regra { background: var(--soft); border-left: 4px solid var(--sky); border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .col { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .col h2 { margin: 0 0 2px; font-size: 20px; }
+  .col .quem { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+  ol { counter-reset: p; list-style: none; margin: 0; padding: 0; }
+  ol li { counter-increment: p; position: relative; padding: 0 0 14px 42px; }
+  ol li::before { content: counter(p); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--navy); color: #fff; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) ol li::before { background: var(--sky); } }
+  ol li b { display: block; }
+  ol li span { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-block; font-size: 13px; font-weight: 600; padding: 0 7px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .btn.azul { background: var(--sky); border-color: var(--sky); color: #fff; }
+  .problemas { margin-top: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .problemas h2 { margin: 0 0 10px; font-size: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; width: 38%; }
+  .rodape { color: var(--muted); font-size: 13px; text-align: center; margin-top: 20px; }
+  @media print { body { background: #fff; } header { background: none; color: #000; } header p { color: #333; } .col, .problemas { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="in">
+    <a href="/treinos" style="display:inline-block;margin-bottom:14px;color:#2AABE1;font-size:14px;text-decoration:none">← Voltar aos treinos</a><br><small>ADTRISC · Módulo de Treinos</small>
+    <h1>Quick Start</h1>
+    <p>O essencial para começar em 5 minutos. Detalhes no <a href="/manuais/treinos-manual.html" style="color:#2AABE1">Manual do Módulo de Treinos</a>.</p>
+    <div class="faixa"></div>
+  </div>
+</header>
+
+<main class="in">
+  <div class="regra"><strong>Regra de ouro:</strong> tudo nasce como <em>rascunho</em> (só a equipe vê). O atleta só vê — e o relógio só recebe — depois de <span class="btn azul">Publicar</span>.</div>
+
+  <div class="cols">
+    <div class="col">
+      <h2>Treinador</h2>
+      <p class="quem">Menu <b>Treinos</b> · titular e auxiliar podem tudo</p>
+      <ol>
+        <li><b>Escolha a turma</b><span>Só aparecem turmas com “usa o módulo de treinos” marcado (Turmas → Editar).</span></li>
+        <li><b>Crie o treino</b><span>Clique no <span class="btn">+</span> do dia → título, modalidade, tipo → monte os blocos (contínuo ou intervalado) com alvo em <b>zona</b> — cada atleta recebe o ritmo dele.</span></li>
+        <li><b>Publique</b><span><span class="btn azul">Salvar e publicar</span> no treino, ou <span class="btn azul">Publicar N rascunhos</span> para a semana toda.</span></li>
+        <li><b>Ajuste para um atleta, se precisar</b><span>No treino → aba <b>Atletas</b> → “Ajustar para este atleta”. Não edite o treino da turma.</span></li>
+        <li><b>Dê acesso ao atleta</b><span>Página do atleta → card <b>Portal do atleta</b> → Gerar convite → botão do WhatsApp (menor: mande ao responsável).</span></li>
+        <li><b>Acompanhe</b><span>“Um atleta… → abrir”: feito / não feito, comentários e comparativo. Turma → Desempenho: coluna “Treinos 30d”.</span></li>
+      </ol>
+    </div>
+
+    <div class="col">
+      <h2>Atleta</h2>
+      <p class="quem">No celular · mesmo endereço do sistema</p>
+      <ol>
+        <li><b>Crie seu acesso</b><span>Abra o link do convite → escolha <b>nome de usuário</b> (ou e-mail) e senha. Vale 7 dias, uma vez.</span></li>
+        <li><b>Entre</b><span>Tela de login → digite o usuário (ex.: joao.silva) e a senha.</span></li>
+        <li><b>Veja o treino</b><span>“Próximo treino” no topo; toque para ver os blocos com o <b>seu pace</b>.</span></li>
+        <li><b>Marque como foi</b><span>Feito, Parcial ou Não fiz + comentário para o treinador.</span></li>
+        <li><b>Opcional: relógio</b><span>Conta → <b>Conectar Intervals.icu</b> (com o Garmin ligado lá). Os treinos vão para o relógio e o que você fizer volta sozinho.</span></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="problemas">
+    <h2>Deu algo errado?</h2>
+    <table>
+      <tr><td>Atleta não vê o treino</td><td>Está publicado? A turma usa o módulo? O cadastro está ativo?</td></tr>
+      <tr><td>Esqueceu a senha</td><td>Página do atleta → Portal do atleta → <b>Gerar link de nova senha</b>.</td></tr>
+      <tr><td>Convite não abre</td><td>Venceu, já foi usado ou foi gerado outro. Gere de novo.</td></tr>
+      <tr><td>Treino não chegou no relógio</td><td>Aba Atletas do treino: “falhou” → reenviar; “sem Intervals” → atleta não conectou.</td></tr>
+      <tr><td>Ritmos estranhos</td><td>Atleta sem teste de campo. Registre o teste ou cadastre o limiar no calendário dele.</td></tr>
+      <tr><td>Atividade não marcou “feito”</td><td>Só casa com treino publicado, mesmo dia e modalidade. Senão vira “extra”: abra e vincule.</td></tr>
+    </table>
+  </div>
+
+  <p class="rodape">ADTRISC — Associação Desportiva Triatlética de Santa Catarina · Quick Start do Módulo de Treinos · outubro de 2026</p>
+</main>
+</body>
+</html>
