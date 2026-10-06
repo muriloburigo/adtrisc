@@ -75,3 +75,7 @@ export function escoposFaltando(concedido: string): string[] {
     return !nivel[area] || (n === 'WRITE' && nivel[area] !== 'WRITE')
   })
 }
+
+/** Voltas/tiros detectados pelo Intervals (IntervalsDTO.icu_intervals). */
+export const voltasDaAtividade = (token: string, atividadeId: string) =>
+  comToken<{ icu_intervals?: unknown[] }>(token, 'GET', `/api/v1/activity/${encodeURIComponent(atividadeId)}/intervals`)

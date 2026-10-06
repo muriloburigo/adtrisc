@@ -11,6 +11,8 @@ import { formatDate } from '@/lib/utils'
 import MarcarSituacao from '@/components/portal/MarcarSituacao'
 import ComparativoTreino, { type ExecucaoView } from '@/components/treinos/ComparativoTreino'
 import { metricasPlanejadas } from '@/lib/treinos/calculos'
+import { alvoPrincipal } from '@/lib/treinos/descricao'
+import { somarDias } from '@/lib/treinos/datas'
 
 type Db = any // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -35,10 +37,16 @@ export default async function TreinoAtletaPage({ params }: { params: Promise<{ i
     referenciasDosAtletas(createAdminClient() as Db, [atleta.aluno.id]),
     getConfigAvaliacao(db),
     db.from('treino_entregas').select('situacao, observacao_atleta').eq('sessao_id', id).eq('aluno_id', atleta.aluno.id).maybeSingle(),
-    db.from('treino_execucoes').select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, zonas, treino_entregas!inner(sessao_id)')
+    db.from('treino_execucoes').select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, cadencia_media, elevacao_m, zonas, dados, treino_entregas!inner(sessao_id)')
       .eq('aluno_id', atleta.aluno.id).eq('treino_entregas.sessao_id', id).limit(1),
   ])
   const execucao = exRaw?.[0] ? ({ ...exRaw[0], sessao_id: id } as ExecucaoView) : null
+  // Atividades sem treino até 3 dias em volta (para vincular).
+  const { data: soltas } = execucao ? { data: [] } : await db.from('treino_execucoes')
+    .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, cadencia_media, elevacao_m, zonas, dados')
+    .eq('aluno_id', atleta.aluno.id).is('entrega_id', null)
+    .gte('executado_em', `${somarDias(s.data, -3)}T00:00:00-03:00`).lt('executado_em', `${somarDias(s.data, 4)}T00:00:00-03:00`)
+  const candidatas = ((soltas ?? []) as ExecucaoView[]).map((c) => ({ ...c, sessao_id: null }))
   const r = refs.get(atleta.aluno.id)
   const referencia = r ? referenciaDe(r, treino.modalidade) : null
   const linhas = descreverTreino(treino.passos, treino.modalidade, { referencia, limites: config.zona_limites, fcMax: r?.fcMax })
@@ -86,7 +94,12 @@ export default async function TreinoAtletaPage({ params }: { params: Promise<{ i
         <section className="space-y-2">
           <p className="text-sm font-semibold text-navy-500">Realizado</p>
           <ComparativoTreino sessaoId={treino.id} alunoId={atleta.aluno.id} modalidade={treino.modalidade} execucao={execucao}
-            planejado={{ duracao_s: plano?.duracao_s ?? (treino.duracao_min ? treino.duracao_min * 60 : null), distancia_km: plano?.distancia_km ?? treino.distancia_km, velocidade_ms: plano?.duracao_s && plano.distancia_km ? (plano.distancia_km * 1000) / plano.duracao_s : null }} />
+            candidatas={candidatas} referencia={referencia} limites={config.zona_limites} titulo={treino.titulo} notas={treino.notas} comentario={entrega?.observacao_atleta ?? null}
+            planejado={{
+              data: treino.data, duracao_s: plano?.duracao_s ?? (treino.duracao_min ? treino.duracao_min * 60 : null), distancia_km: plano?.distancia_km ?? treino.distancia_km,
+              velocidade_ms: plano?.duracao_s && plano.distancia_km ? (plano.distancia_km * 1000) / plano.duracao_s : null,
+              carga: treino.carga, passos: treino.passos, alvo: alvoPrincipal(treino.passos, treino.modalidade, { referencia, limites: config.zona_limites }),
+            }} />
         </section>
       )}
 

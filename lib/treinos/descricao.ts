@@ -64,3 +64,10 @@ export function descreverTreino(passos: Passo[], modalidade: Modalidade, ctx: Co
     return { secao: b.secao, rotulo: TIPOS_PASSO[b.secao] ?? '', principal, alvo: alvo.texto, cor: alvo.cor, notas: b.notas }
   })
 }
+
+/** Alvo do bloco principal (1º passo de esforço com alvo), para o comparativo. */
+export function alvoPrincipal(passos: Passo[], modalidade: Modalidade, ctx: Contexto = {}): string | null {
+  const p = [...passos].sort((a, b) => a.ordem - b.ordem).find((x) => (x.tipo === 'work' || x.tipo === 'drill') && x.alvo_min != null)
+  if (!p) return null
+  return textoAlvo({ tipo: p.intensidade_tipo ?? 'open', min: p.alvo_min, max: p.alvo_max, unidade: p.alvo_unidade }, modalidade, ctx).texto || null
+}

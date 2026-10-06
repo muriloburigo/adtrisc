@@ -43,20 +43,23 @@ export async function registrarExecucao(alunoId: string, sessaoId: string | null
 
 export async function vincular(execId: string, sessaoId: string): Promise<{ error?: string }> {
   const db = createAdminClient() as Db
-  const { data: ex } = await db.from('treino_execucoes').select('id, aluno_id, entrega_id').eq('id', execId).maybeSingle()
+  const { data: ex } = await db.from('treino_execucoes').select('id, aluno_id, entrega_id, dados').eq('id', execId).maybeSingle()
   if (!ex) return { error: 'Atividade não encontrada.' }
   if (await sessaoOcupada(sessaoId, ex.aluno_id)) return { error: 'Esse treino já tem uma atividade vinculada.' }
   const entrega = await entregaPara(db, sessaoId, ex.aluno_id)
-  await db.from('treino_execucoes').update({ entrega_id: entrega }).eq('id', execId)
+  const dados = { ...(ex.dados ?? {}), vinculo: { modo: 'manual', em: new Date().toISOString() } }
+  await db.from('treino_execucoes').update({ entrega_id: entrega, dados }).eq('id', execId)
   await liberarEntrega(db, ex.entrega_id)
   return {}
 }
 
 export async function desvincular(execId: string): Promise<{ error?: string }> {
   const db = createAdminClient() as Db
-  const { data: ex } = await db.from('treino_execucoes').select('entrega_id').eq('id', execId).maybeSingle()
+  const { data: ex } = await db.from('treino_execucoes').select('entrega_id, dados').eq('id', execId).maybeSingle()
   if (!ex) return { error: 'Atividade não encontrada.' }
-  await db.from('treino_execucoes').update({ entrega_id: null }).eq('id', execId)
+  // "desvinculado" = a sincronização não vincula de novo sozinha.
+  const dados = { ...(ex.dados ?? {}), vinculo: { modo: 'desvinculado', em: new Date().toISOString() } }
+  await db.from('treino_execucoes').update({ entrega_id: null, dados }).eq('id', execId)
   await liberarEntrega(db, ex.entrega_id)
   return {}
 }
@@ -70,13 +73,14 @@ export async function apagarExecucao(execId: string): Promise<{ error?: string }
   return {}
 }
 
-/** Mover uma atividade extra de dia (ex.: relógio com data errada). */
+/** Mover uma atividade de dia (ex.: relógio com data errada). Se estava vinculada, vira extra no dia novo. */
 export async function moverExtra(execId: string, data: string): Promise<{ error?: string }> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { error: 'Data inválida.' }
   const db = createAdminClient() as Db
   const { data: ex } = await db.from('treino_execucoes').select('executado_em, entrega_id').eq('id', execId).maybeSingle()
   if (!ex) return { error: 'Atividade não encontrada.' }
-  if (ex.entrega_id) return { error: 'Desvincule a atividade do treino antes de mover.' }
+  // Vinculada: ao mudar de dia, sai do treino e fica como extra no dia novo.
+  if (ex.entrega_id) { const r = await desvincular(execId); if (r.error) return r }
   const hora = new Date(ex.executado_em).toLocaleTimeString('sv-SE', { timeZone: 'America/Sao_Paulo' })
   await db.from('treino_execucoes').update({ executado_em: `${data}T${hora}-03:00` }).eq('id', execId)
   return {}

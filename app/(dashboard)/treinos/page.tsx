@@ -116,7 +116,7 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
   const extras: ExecucaoView[] = []
   if (aluno) {
     const { data: exs } = await db.from('treino_execucoes')
-      .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, zonas, treino_entregas(sessao_id)')
+      .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, cadencia_media, elevacao_m, zonas, dados, treino_entregas(sessao_id)')
       .eq('aluno_id', aluno.id).gte('executado_em', `${de}T00:00:00-03:00`).lt('executado_em', `${somarDias(ate, 1)}T00:00:00-03:00`)
     for (const e of (exs ?? []) as (Omit<ExecucaoView, 'sessao_id'> & { treino_entregas: { sessao_id: string } | null })[]) {
       const { treino_entregas, ...resto } = e

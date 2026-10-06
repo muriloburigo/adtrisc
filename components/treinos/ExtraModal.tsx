@@ -4,12 +4,11 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Link2, Trash2, X } from 'lucide-react'
 import { apagarAtividade, moverAtividade, vincularAtividade } from '@/app/(dashboard)/treinos/execucoes-actions'
-import { GraficoZonas, type ExecucaoView } from './ComparativoTreino'
-import { formatarDuracao, formatarVelocidade } from '@/lib/treinos/calculos'
+import { GraficoZonas, linhasRealizado, type ExecucaoView } from './ComparativoTreino'
 import type { Modalidade } from '@/lib/treinos/tipos'
 
 /** Atividade extra (feita sem treino): vincular a um treino próximo, mover de dia ou apagar. */
-export default function ExtraModal({ extra, opcoes, onFechar }: { extra: ExecucaoView; opcoes: { id: string; rotulo: string }[]; onFechar: () => void }) {
+export default function ExtraModal({ extra, opcoes, onFechar }: { extra: ExecucaoView; opcoes: { id: string; rotulo: string; similaridade?: number | null }[]; onFechar: () => void }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
@@ -30,23 +29,22 @@ export default function ExtraModal({ extra, opcoes, onFechar }: { extra: Execuca
           <div className="flex-1">
             <p className="text-[11px] text-gray-400">Atividade extra · {extra.origem === 'intervals' ? 'Intervals.icu' : extra.origem === 'upload' ? 'arquivo FIT' : 'manual'}</p>
             <p className="font-semibold text-navy-500">{extra.titulo ?? 'Atividade'}</p>
-            <p className="text-xs text-gray-500">
-              {new Date(extra.executado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })}
-              {extra.distancia_m ? ` · ${(Number(extra.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} km` : ''}
-              {extra.duracao_s ? ` · ${formatarDuracao(extra.duracao_s)}` : ''}
-              {extra.velocidade_media_ms ? ` · ${formatarVelocidade(extra.velocidade_media_ms, mod)}` : ''}
-              {extra.fc_media ? ` · FC ${extra.fc_media}` : ''}
-            </p>
+            <p className="text-xs text-gray-500">{new Date(extra.executado_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })}{extra.dados?.dispositivo ? ` · ${extra.dados.dispositivo}` : ''}</p>
           </div>
           <button onClick={onFechar} className="text-gray-400"><X size={16} /></button>
         </div>
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs max-h-48 overflow-y-auto">
+          {linhasRealizado(extra, mod).map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-2 border-b border-gray-50 py-0.5"><dt className="text-gray-400">{k}</dt><dd className="font-medium text-navy-500 text-right">{v}</dd></div>
+          ))}
+        </dl>
         {extra.zonas?.fc && <GraficoZonas segundos={extra.zonas.fc} titulo="Tempo por zona de FC" />}
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold text-gray-500">Vincular a um treino</p>
+          <p className="text-xs font-semibold text-gray-500">Vincular a um treino <span className="font-normal text-gray-400">(ou arraste o card sobre o treino no calendário)</span></p>
           {opcoes.length ? (
             <div className="flex gap-2">
               <select value={alvo} onChange={(e) => setAlvo(e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm">
-                {opcoes.map((o) => <option key={o.id} value={o.id}>{o.rotulo}</option>)}
+                {opcoes.map((o) => <option key={o.id} value={o.id}>{o.rotulo}{o.similaridade != null ? ` — ${Math.round(o.similaridade * 100)}% parecida` : ''}</option>)}
               </select>
               <button disabled={pending || !alvo} onClick={() => acao(() => vincularAtividade(extra.id, alvo))} className="inline-flex items-center gap-1 text-sm font-semibold bg-sky-400 hover:bg-sky-500 text-white rounded-lg px-3 disabled:opacity-50"><Link2 size={13} /> Vincular</button>
             </div>

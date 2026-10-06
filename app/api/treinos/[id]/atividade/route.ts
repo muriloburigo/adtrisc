@@ -36,7 +36,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     origem: 'upload', atividade_externa_id: `fit-${a.executado_em ?? caminho}`, modalidade: a.modalidade, titulo: arquivo.name.replace(/\.fit$/i, ''),
     executado_em: a.executado_em ?? `${s.data}T12:00:00-03:00`, duracao_s: a.duracao_s, distancia_m: a.distancia_m, fc_media: a.fc_media, fc_max: a.fc_max,
     pace_medio_s_km: a.pace_medio_s_km, velocidade_media_ms: a.velocidade_media_ms, potencia_media_w: a.potencia_media_w, calorias: a.calorias,
-    cadencia_media: a.cadencia_media, zonas: a.zonas, arquivo_fit: caminho,
+    cadencia_media: a.cadencia_media, elevacao_m: a.elevacao_m, zonas: a.zonas, arquivo_fit: caminho,
+    dados: { ...a.dados, vinculo: { modo: 'manual', em: new Date().toISOString() } },
   })
   if (r.error) { await admin.storage.from('treinos-fit').remove([caminho]); return NextResponse.json({ error: r.error }, { status: 400 }) }
   await logAudit({ userId: ator.userId, userName: ator.nome, action: 'criar', resource: ator.papel === 'atleta' ? 'portal' : 'treino', resourceId: id, resourceLabel: `Enviou atividade (FIT) para ${s.titulo} — ${s.data}` })

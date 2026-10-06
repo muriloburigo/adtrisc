@@ -9,6 +9,7 @@
 
 import { faixaZona, type Referencia } from './calculos'
 import type { Modalidade, Passo, TipoPasso } from './tipos'
+import type { DadosExecucao, Volta } from '@/lib/intervals/atividade'
 
 const EPOCA_FIT = 631065600 // segundos entre 1970-01-01 e 1989-12-31 UTC
 const CRC = [0x0000, 0xcc01, 0xd801, 0x1400, 0xf001, 0x3c00, 0x2800, 0xe401, 0xa001, 0x6c00, 0x7800, 0xb401, 0x5000, 0x9c01, 0x8801, 0x4400]
@@ -105,30 +106,54 @@ export function lerMensagens(buf: Uint8Array, globais?: number[]): { global: num
 export type AtividadeFit = {
   executado_em: string | null; modalidade: Modalidade; duracao_s: number | null; distancia_m: number | null
   velocidade_media_ms: number | null; pace_medio_s_km: number | null; fc_media: number | null; fc_max: number | null
-  potencia_media_w: number | null; calorias: number | null; cadencia_media: number | null; zonas: { fc?: number[] } | null
+  potencia_media_w: number | null; calorias: number | null; cadencia_media: number | null; elevacao_m: number | null
+  zonas: { fc?: number[] } | null
+  dados: DadosExecucao
 }
 const ESPORTE: Record<number, Modalidade> = { 1: 'running', 2: 'cycling', 5: 'swimming', 4: 'strength', 10: 'strength' }
+const ROTULO_VOLTA: Record<number, string> = { 2: 'Aquecimento', 3: 'Volta à calma' }
 
+/** Atividade feita (.fit do relógio): sessão (msg 18) + voltas (msg 19). */
 export function lerAtividadeFit(buf: Uint8Array): AtividadeFit | null {
-  const msgs = lerMensagens(buf, [18, 0])
+  const msgs = lerMensagens(buf, [18, 19, 0])
   if (!msgs) return null
   const s = msgs.find((m) => m.global === 18)?.campos
   if (!s) return null
-  const n = (k: number) => (typeof s[k] === 'number' ? (s[k] as number) : null)
-  const dur = n(7) ?? n(8)
+  const n = (k: number, m: Mensagem = s) => (typeof m[k] === 'number' ? (m[k] as number) : null)
+  const tempoTotal = n(7), mov = n(8) ?? n(7)
   const dist = n(9)
   const vel = n(124) ?? n(14)
-  const v = vel ? vel / 1000 : dist && dur ? (dist / 100) / (dur / 1000) : null
+  const v = vel ? vel / 1000 : dist && mov ? (dist / 100) / (mov / 1000) : null
+  const vmax = n(125) ?? n(15)
   const zonasFc = Array.isArray(s[65]) ? (s[65] as number[]).map((x) => Math.round(x / 1000)) : undefined
+  const voltas: Volta[] = msgs.filter((m) => m.global === 19).slice(0, 80).map(({ campos: l }) => {
+    const lv = n(110, l) ?? n(13, l)
+    const intens = n(23, l)
+    return {
+      tipo: intens === 1 ? 'RECOVERY' : intens === 0 ? 'WORK' : null,
+      rotulo: intens != null ? ROTULO_VOLTA[intens] ?? null : null,
+      duracao_s: n(8, l) != null ? Math.round(n(8, l)! / 1000) : n(7, l) != null ? Math.round(n(7, l)! / 1000) : null,
+      distancia_m: n(9, l) != null ? Math.round(n(9, l)!) / 100 : null,
+      vel_ms: lv ? Math.round(lv) / 1000 : null,
+      fc_media: n(15, l), fc_max: n(16, l), potencia: n(19, l), cadencia: n(17, l), zona: null,
+    }
+  })
   return {
     executado_em: n(2) != null ? new Date((n(2)! + EPOCA_FIT) * 1000).toISOString() : null,
     modalidade: ESPORTE[n(5) ?? -1] ?? 'other',
-    duracao_s: dur != null ? Math.round(dur / 1000) : null,
+    duracao_s: mov != null ? Math.round(mov / 1000) : null,
     distancia_m: dist != null ? Math.round(dist) / 100 : null,
     velocidade_media_ms: v && v > 0 ? Math.round(v * 1000) / 1000 : null,
     pace_medio_s_km: v && v > 0 ? Math.round(1000 / v) : null,
-    fc_media: n(16), fc_max: n(17), potencia_media_w: n(20), calorias: n(11), cadencia_media: n(18),
+    fc_media: n(16), fc_max: n(17), potencia_media_w: n(20), calorias: n(11), cadencia_media: n(18), elevacao_m: n(22),
     zonas: zonasFc?.some((x) => x > 0) ? { fc: zonasFc } : null,
+    dados: {
+      tipo: 'fit', tempo_total_s: tempoTotal != null ? Math.round(tempoTotal / 1000) : null,
+      vel_max_ms: vmax ? Math.round(vmax) / 1000 : null, cadencia_media: n(18), elev_ganho: n(22), elev_perda: n(23),
+      temperatura: n(57), potencia_np: n(34), potencia_max: n(21),
+      intensidade: n(36) != null ? Math.round(n(36)! / 10) : null,      // IF ×1000 → %
+      voltas: voltas.length > 1 ? voltas : null,                          // 1 volta = a atividade inteira
+    },
   }
 }
 

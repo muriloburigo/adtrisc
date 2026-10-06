@@ -23,6 +23,7 @@ export type TreinoAtleta = SessaoBase & {
   id: string
   data: string
   ordem: number
+  carga: number | null
   local: string | null
   chave: boolean
   notas: string | null

@@ -7,7 +7,7 @@ import { eventoIntervals } from '@/lib/treinos/textoIntervals'
 import { hojeISO, somarDias } from '@/lib/treinos/datas'
 import type { Modalidade, Passo } from '@/lib/treinos/tipos'
 import * as api from './client'
-import { escolherTreino, mapearAtividade } from './atividade'
+import { escolherTreino, mapearAtividade, mapearVoltas, type DadosExecucao } from './atividade'
 
 // Sincronização com o Intervals.icu — porte de IntervalsSessionSyncService,
 // SyncIntervalsActivitiesJob e ProcessIntervalsActivityAction do Movelly.
@@ -120,12 +120,12 @@ export async function removerEventos(sessaoIds: string[]): Promise<void> {
 
 /** Sessões publicadas do atleta (turma sem as substituídas por ajuste + as dele) entre duas datas. */
 async function sessoesDoAtleta(db: Db, aluno: { id: string; turma_id: string | null }, de: string, ate: string) {
-  const sel = 'id, data, modalidade, distancia_km, sessao_origem_id'
+  const sel = 'id, data, modalidade, duracao_min, distancia_km, sessao_origem_id'
   const [{ data: turma }, { data: dele }] = await Promise.all([
     aluno.turma_id ? db.from('treino_sessoes').select(sel).eq('turma_id', aluno.turma_id).eq('status', 'publicado').gte('data', de).lte('data', ate) : Promise.resolve({ data: [] }),
     db.from('treino_sessoes').select(sel).eq('aluno_id', aluno.id).eq('status', 'publicado').gte('data', de).lte('data', ate),
   ])
-  type S = { id: string; data: string; modalidade: Modalidade; distancia_km: number | null; sessao_origem_id: string | null }
+  type S = { id: string; data: string; modalidade: Modalidade; duracao_min: number | null; distancia_km: number | null; sessao_origem_id: string | null }
   const proprias = (dele ?? []) as S[]
   const substituidas = new Set(proprias.map((s) => s.sessao_origem_id))
   return [...((turma ?? []) as S[]).filter((s) => !substituidas.has(s.id)), ...proprias]
@@ -141,10 +141,14 @@ export async function enviarFuturos(alunoId: string): Promise<void> {
 }
 
 /**
- * Importa as atividades dos últimos `dias` e casa com os treinos (mesmo dia e
- * modalidade; havendo dois, a distância mais próxima). Sem treino → extra.
+ * Importa as atividades dos últimos `dias` e casa com os treinos publicados:
+ * 1º o pareamento que o próprio Intervals fez com o evento que enviamos;
+ * 2º similaridade (mesma modalidade, mesmo dia ou vizinho, distância/duração
+ * parecidas). Sem treino → extra. Atividades já importadas são atualizadas
+ * (o Intervals analisa depois do upload: zonas, carga e voltas chegam depois),
+ * mas nunca re-vinculadas — o vínculo manual ou "desvinculado" é respeitado.
  */
-export async function importarAtividades(alunoId: string, dias = 3): Promise<{ novas: number; erro?: string }> {
+export async function importarAtividades(alunoId: string, dias = 3): Promise<{ novas: number; atualizadas?: number; erro?: string }> {
   const db = createAdminClient() as Db
   const c = (await conexoes(db, [alunoId])).get(alunoId)
   if (!c) return { novas: 0, erro: 'Atleta sem Intervals conectado.' }
@@ -156,39 +160,64 @@ export async function importarAtividades(alunoId: string, dias = 3): Promise<{ n
   }
   const { data: a } = await db.from('alunos').select('id, turma_id').eq('id', alunoId).maybeSingle()
   const mapeadas = (r.data ?? []).map((x) => mapearAtividade(x, de)).filter((x): x is NonNullable<typeof x> => Boolean(x))
-  const { data: jaTem } = await db.from('treino_execucoes').select('atividade_externa_id').eq('aluno_id', alunoId).eq('origem', 'intervals')
-  const conhecidas = new Set(((jaTem ?? []) as { atividade_externa_id: string }[]).map((x) => x.atividade_externa_id))
-  const sessoes = a ? await sessoesDoAtleta(db, a, de, ate) : []
-  // Sessões que já têm uma execução vinculada não recebem outra.
+  const { data: jaTem } = await db.from('treino_execucoes').select('id, atividade_externa_id, dados').eq('aluno_id', alunoId).eq('origem', 'intervals')
+  const conhecidas = new Map(((jaTem ?? []) as { id: string; atividade_externa_id: string; dados: DadosExecucao | null }[]).map((x) => [x.atividade_externa_id, x]))
+
+  // Candidatos: treinos publicados (±1 dia da janela) ainda sem atividade, com o evento que enviamos.
+  const sessoes = a ? await sessoesDoAtleta(db, a, somarDias(de, -1), somarDias(ate, 1)) : []
+  const { data: ents } = await db.from('treino_entregas').select('id, sessao_id, situacao, intervals_event_id').eq('aluno_id', alunoId).in('sessao_id', sessoes.length ? sessoes.map((s) => s.id) : ['00000000-0000-0000-0000-000000000000'])
+  const entregaDe = new Map(((ents ?? []) as { id: string; sessao_id: string; situacao: string; intervals_event_id: string | null }[]).map((e) => [e.sessao_id, e]))
   const { data: usadas } = await db.from('treino_execucoes').select('treino_entregas!inner(sessao_id)').eq('aluno_id', alunoId).not('entrega_id', 'is', null)
   const ocupadas = new Set(((usadas ?? []) as { treino_entregas: { sessao_id: string } }[]).map((u) => u.treino_entregas.sessao_id))
 
-  let novas = 0
+  const comVoltas = async (at: ReturnType<typeof mapearAtividade> & object, antes?: DadosExecucao | null) => {
+    if (antes?.voltas && antes.analisado === at.dados.analisado) return antes.voltas
+    const v = await api.voltasDaAtividade(c.token, at.id)
+    return v.ok ? mapearVoltas(v.data?.icu_intervals) : (antes?.voltas ?? null)
+  }
+  const colunas = (at: NonNullable<ReturnType<typeof mapearAtividade>>) => ({
+    modalidade: at.modalidade, titulo: at.titulo, executado_em: `${at.executado_em}-03:00`, duracao_s: at.duracao_s, distancia_m: at.distancia_m,
+    fc_media: at.fc_media, fc_max: at.fc_max, pace_medio_s_km: at.pace_medio_s_km, velocidade_media_ms: at.velocidade_media_ms,
+    cadencia_media: at.cadencia_media, elevacao_m: at.elevacao_m, potencia_media_w: at.potencia_media_w, calorias: at.calorias, tss: at.tss, zonas: at.zonas,
+  })
+
+  let novas = 0, atualizadas = 0
   for (const at of mapeadas.sort((x, y) => x.executado_em.localeCompare(y.executado_em))) {
-    if (conhecidas.has(at.id)) continue
-    const treino = escolherTreino(sessoes.filter((s) => s.data === at.data && !ocupadas.has(s.id)), at)
+    const antes = conhecidas.get(at.id)
+    if (antes) {
+      // Já importada: atualiza métricas e detalhes, mantendo o vínculo que existe.
+      const dados: DadosExecucao = { ...at.dados, voltas: await comVoltas(at, antes.dados), ...(antes.dados?.vinculo ? { vinculo: antes.dados.vinculo } : {}) }
+      await db.from('treino_execucoes').update({ ...colunas(at), dados }).eq('id', antes.id)
+      atualizadas++
+      continue
+    }
+    const livres = sessoes.filter((s) => !ocupadas.has(s.id)).map((s) => ({
+      id: s.id, modalidade: s.modalidade, data: s.data, duracao_min: s.duracao_min, distancia_km: s.distancia_km, evento: entregaDe.get(s.id)?.intervals_event_id ?? null,
+    }))
+    const escolha = escolherTreino(livres, { ...at, evento_pareado: at.dados.evento_pareado })
     let entregaId: string | null = null
-    if (treino) {
-      ocupadas.add(treino.id)
-      const { data: ent } = await db.from('treino_entregas').select('id, situacao').eq('sessao_id', treino.id).eq('aluno_id', alunoId).maybeSingle()
+    if (escolha) {
+      ocupadas.add(escolha.treino.id)
+      const ent = entregaDe.get(escolha.treino.id)
+      const agora = new Date().toISOString()
       if (ent) {
         entregaId = ent.id
-        if (ent.situacao === 'planejado') await db.from('treino_entregas').update({ situacao: 'feito', marcado_por: 'auto', marcado_em: new Date().toISOString() }).eq('id', ent.id)
+        if (ent.situacao === 'planejado') await db.from('treino_entregas').update({ situacao: 'feito', marcado_por: 'auto', marcado_em: agora }).eq('id', ent.id)
       } else {
-        const { data: nova } = await db.from('treino_entregas').insert({ sessao_id: treino.id, aluno_id: alunoId, situacao: 'feito', marcado_por: 'auto', marcado_em: new Date().toISOString() }).select('id').single()
+        const { data: nova } = await db.from('treino_entregas').insert({ sessao_id: escolha.treino.id, aluno_id: alunoId, situacao: 'feito', marcado_por: 'auto', marcado_em: agora }).select('id').single()
         entregaId = nova?.id ?? null
       }
     }
-    const { error } = await db.from('treino_execucoes').insert({
-      entrega_id: entregaId, aluno_id: alunoId, origem: 'intervals', atividade_externa_id: at.id, modalidade: at.modalidade, titulo: at.titulo,
-      executado_em: `${at.executado_em}-03:00`, duracao_s: at.duracao_s, distancia_m: at.distancia_m, fc_media: at.fc_media, fc_max: at.fc_max,
-      pace_medio_s_km: at.pace_medio_s_km, velocidade_media_ms: at.velocidade_media_ms, cadencia_media: at.cadencia_media, elevacao_m: at.elevacao_m,
-      potencia_media_w: at.potencia_media_w, calorias: at.calorias, tss: at.tss, zonas: at.zonas, dados: { tipo: at.tipo },
-    })
-    if (!error) { novas++; conhecidas.add(at.id) } else console.error('[intervals] execução', at.id, error.message)
+    const dados: DadosExecucao = {
+      ...at.dados, voltas: await comVoltas(at),
+      ...(escolha ? { vinculo: { modo: 'auto' as const, criterio: escolha.criterio, similaridade: escolha.similaridade, em: new Date().toISOString() } } : {}),
+    }
+    const { error } = await db.from('treino_execucoes').insert({ entrega_id: entregaId, aluno_id: alunoId, origem: 'intervals', atividade_externa_id: at.id, ...colunas(at), dados })
+    if (!error) novas++
+    else console.error('[intervals] execução', at.id, error.message)
   }
   await db.from('intervals_conexoes').update({ ultima_sincronizacao: new Date().toISOString(), ultimo_erro: null }).eq('aluno_id', alunoId)
-  return { novas }
+  return { novas, atualizadas }
 }
 
 /** ACTIVITY_DELETED: tira a execução; se o "feito" tinha sido automático, volta a planejado. */

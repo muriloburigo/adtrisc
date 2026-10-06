@@ -11,6 +11,7 @@ import { linhasIntervals } from '@/lib/treinos/textoIntervals'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type Passo, type TipoSessao } from '@/lib/treinos/tipos'
 import { salvarSessao, apagarSessao, criarAjuste, reenviarIntervals } from '@/app/(dashboard)/treinos/actions'
 import ComparativoTreino, { type ExecucaoView } from './ComparativoTreino'
+import { alvoPrincipal } from '@/lib/treinos/descricao'
 import { salvarModelo, apagarModelo, salvarSessaoComoModelo } from '@/app/(dashboard)/treinos/biblioteca-actions'
 
 export type SessaoView = {
@@ -53,9 +54,10 @@ const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:
 const rotulo = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1'
 
 export default function MontadorTreino({
-  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao, modo = 'sessao', modelo = null, pastas = [], entregas = {}, execucao = null,
+  sessao, novo, atletas, ajustes, limites, onFechar, onAbrirSessao, modo = 'sessao', modelo = null, pastas = [], entregas = {}, execucao = null, candidatas = [],
 }: {
   execucao?: ExecucaoView | null          // visão do atleta: atividade ligada a este treino
+  candidatas?: ExecucaoView[]             // atividades extras do atleta (para vincular)
   entregas?: Record<string, EntregaRef>   // aluno_id → envio ao Intervals / situação
   modo?: 'sessao' | 'modelo'           // 'modelo' = editar um modelo da biblioteca
   modelo?: ModeloView | null
@@ -186,7 +188,7 @@ export default function MontadorTreino({
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-black/40 sm:p-4" onClick={onFechar}>
-      <div className="bg-gray-50 sm:rounded-2xl shadow-xl w-full max-w-3xl flex flex-col max-h-[100svh] sm:max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-gray-50 sm:rounded-2xl shadow-xl w-full max-w-4xl flex flex-col h-[100svh] sm:h-[88vh]" onClick={(e) => e.stopPropagation()}>
         {/* Cabeçalho */}
         <div className="bg-white sm:rounded-t-2xl px-5 pt-4 border-b border-gray-200">
           <div className="flex items-start gap-3">
@@ -323,7 +325,12 @@ export default function MontadorTreino({
 
           {aba === 'comparativo' && sessao && atletaDoTreino && (
             <ComparativoTreino sessaoId={sessao.id} alunoId={atletaDoTreino.id} modalidade={f.modalidade} execucao={execucao}
-              planejado={{ duracao_s: metricas.duracao_s, distancia_km: metricas.distancia_km, velocidade_ms: metricas.duracao_s && metricas.distancia_km ? (metricas.distancia_km * 1000) / metricas.duracao_s : null }} />
+              candidatas={candidatas} referencia={ref} limites={limites} titulo={f.titulo} notas={f.notas || null} comentario={sessao.obsAtleta ?? null}
+              planejado={{
+                data: f.data, duracao_s: metricas.duracao_s, distancia_km: metricas.distancia_km, carga, passos,
+                velocidade_ms: metricas.duracao_s && metricas.distancia_km ? (metricas.distancia_km * 1000) / metricas.duracao_s : null,
+                alvo: alvoPrincipal(passos, f.modalidade, { referencia: ref, limites }),
+              }} />
           )}
 
         </div>

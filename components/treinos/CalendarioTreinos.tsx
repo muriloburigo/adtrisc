@@ -7,11 +7,13 @@ import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, Co
 import MontadorTreino, { type AtletaRef, type EntregaRef, type SessaoView } from './MontadorTreino'
 import type { ExecucaoView } from './ComparativoTreino'
 import ExtraModal from './ExtraModal'
+import { similaridade } from '@/lib/intervals/atividade'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type TipoSessao } from '@/lib/treinos/tipos'
 import { NOMES_DIA, diaMes, hojeISO, mesAnterior, rotuloMes, somarDias } from '@/lib/treinos/datas'
 import { publicarPeriodo } from '@/app/(dashboard)/treinos/actions'
 import { moverSessao, reordenarDia, usarModelo, duplicarSemana } from '@/app/(dashboard)/treinos/biblioteca-actions'
+import { moverAtividade, vincularAtividade } from '@/app/(dashboard)/treinos/execucoes-actions'
 
 export type SessaoCalendario = SessaoView & {
   origem: 'turma' | 'ajuste' | 'individual'
@@ -88,6 +90,31 @@ function CelulaDia({ d, children, destaque, vista, foraMes, onMais, selecionando
       </div>
       <div className="space-y-1">{children}</div>
     </div>
+  )
+}
+
+/** Atividade extra: arraste sobre um treino para vincular, ou para outro dia para mover. */
+function CardExtra({ x, onAbrir }: { x: ExecucaoView; onAbrir: () => void }) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: `x:${x.id}` })
+  return (
+    <button ref={setNodeRef} type="button" onClick={onAbrir} {...listeners} {...attributes}
+      title="Atividade sem treino. Arraste sobre um treino para vincular."
+      className={`w-full text-left rounded-lg border border-dashed border-gray-300 bg-gray-50 px-2 py-1.5 hover:border-sky-300 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}>
+      <p className="text-[11px] font-semibold text-gray-600 truncate">{x.titulo ?? 'Atividade'}</p>
+      <p className="text-[10px] text-gray-400">extra{x.distancia_m ? ` · ${(Number(x.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''}{x.duracao_s ? ` · ${Math.round(x.duracao_s / 60)} min` : ''}</p>
+    </button>
+  )
+}
+
+/** Realizado já vinculado (visão do atleta): arraste para outro treino (re-vincula) ou para um dia (vira extra lá). */
+function CardRealizado({ x, onAbrir }: { x: ExecucaoView; onAbrir: () => void }) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: `x:${x.id}` })
+  return (
+    <button ref={setNodeRef} type="button" onClick={onAbrir} {...listeners} {...attributes}
+      title="Realizado (vinculado). Arraste para outro treino ou para outro dia."
+      className={`w-full text-left rounded-md border border-green-200 bg-green-50/60 px-2 py-1 -mt-0.5 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}>
+      <p className="text-[10px] text-green-800 truncate">✓ {x.titulo ?? 'Realizado'}{x.distancia_m ? ` · ${(Number(x.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''}{x.duracao_s ? ` · ${Math.round(x.duracao_s / 60)} min` : ''}</p>
+    </button>
   )
 }
 
@@ -171,6 +198,22 @@ export default function CalendarioTreinos({
     const diaDestino = o.startsWith('d:') ? o.slice(2) : (e.over?.data.current?.data as string | undefined)
     if (!diaDestino) return
     if (a.startsWith('m:')) return executar(() => usarModelo(a.slice(2), diaDestino, escopoAcao), 'Modelo colocado no calendário (rascunho).')
+    if (a.startsWith('x:')) {
+      // Atividade extra: sobre um treino → vincula; num dia → muda a data.
+      const exec = a.slice(2)
+      const vinculada = Object.entries(execucoesPorSessao).find(([, e]) => e.id === exec)
+      if (o.startsWith('sd:')) {
+        const alvo = sessoes.find((s) => s.id === o.slice(3))
+        if (vinculada?.[0] === alvo?.id) return
+        if (alvo && execucoesPorSessao[alvo.id]) return setMsg('Esse treino já tem uma atividade. Desvincule a atual no comparativo antes.')
+        return executar(() => vincularAtividade(exec, o.slice(3)), `Atividade vinculada a “${alvo?.titulo ?? 'treino'}”.`)
+      }
+      const x = extras.find((e) => e.id === exec) ?? vinculada?.[1]
+      if (x && (vinculada || diaLocal(x.executado_em) !== diaDestino)) {
+        return executar(() => moverAtividade(exec, diaDestino), vinculada ? 'Atividade movida de dia (saiu do treino e ficou como extra).' : 'Atividade movida de dia.')
+      }
+      return
+    }
     if (!a.startsWith('s:')) return
     const id = a.slice(2)
     const s = sessoes.find((x) => x.id === id)
@@ -264,14 +307,13 @@ export default function CalendarioTreinos({
                     {sem.map((d) => (
                       <CelulaDia key={d} d={d} vista={vista} destaque={d === hoje} foraMes={vista === 'mes' && d.slice(0, 7) !== ancora.slice(0, 7)}
                         onMais={() => maisNoDia(d)} selecionandoModelo={Boolean(modeloSel)}>
-                        {porDia(d).map((s) => <CardSessao key={s.id} s={s} arrastavel={arrastavel(s)} onAbrir={() => setAberto({ sessaoId: s.id })} />)}
-                        {extras.filter((x) => diaLocal(x.executado_em) === d).map((x) => (
-                          <button key={x.id} type="button" onClick={() => setExtraAberta(x)} title="Atividade feita sem treino planejado"
-                            className="w-full text-left rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 hover:border-sky-300">
-                            <p className="text-[11px] font-semibold text-gray-600 truncate">{x.titulo ?? 'Atividade'}</p>
-                            <p className="text-[10px] text-gray-400">extra{x.distancia_m ? ` · ${(Number(x.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''}{x.duracao_s ? ` · ${Math.round(x.duracao_s / 60)} min` : ''}</p>
-                          </button>
+                        {porDia(d).map((s) => (
+                          <div key={s.id} className="space-y-1">
+                            <CardSessao s={s} arrastavel={arrastavel(s)} onAbrir={() => setAberto({ sessaoId: s.id })} />
+                            {escopo.tipo === 'aluno' && execucoesPorSessao[s.id] && <CardRealizado x={execucoesPorSessao[s.id]} onAbrir={() => setAberto({ sessaoId: s.id })} />}
+                          </div>
                         ))}
+                        {extras.filter((x) => diaLocal(x.executado_em) === d).map((x) => <CardExtra key={x.id} x={x} onAbrir={() => setExtraAberta(x)} />)}
                       </CelulaDia>
                     ))}
                     <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 text-[11px] text-gray-500 space-y-0.5">
@@ -331,6 +373,7 @@ export default function CalendarioTreinos({
             ajustes={sessaoAberta ? ajustesPorSessao[sessaoAberta.id] ?? {} : {}}
             entregas={sessaoAberta ? entregasPorSessao[sessaoAberta.id] ?? {} : {}}
             execucao={sessaoAberta ? execucoesPorSessao[sessaoAberta.id] ?? null : null}
+            candidatas={extras}
             limites={limites}
             onFechar={() => setAberto(null)}
             onAbrirSessao={(id) => setAberto({ sessaoId: id })}
@@ -340,11 +383,15 @@ export default function CalendarioTreinos({
       {extraAberta && (
         <ExtraModal extra={extraAberta} onFechar={() => setExtraAberta(null)}
           opcoes={naGrade.filter((s) => s.status === 'publicado' && !execucoesPorSessao[s.id] && Math.abs(new Date(`${s.data}T12:00:00Z`).getTime() - new Date(`${diaLocal(extraAberta.executado_em)}T12:00:00Z`).getTime()) <= 3 * 86_400_000)
-            .map((s) => ({ id: s.id, rotulo: `${s.data.slice(8)}/${s.data.slice(5, 7)} · ${s.titulo}` }))} />
+            .map((s) => ({ id: s.id, rotulo: `${s.data.slice(8)}/${s.data.slice(5, 7)} · ${s.titulo}`, similaridade: similaridade(
+              { modalidade: s.modalidade, data: s.data, duracao_s: s.duracao_min ? s.duracao_min * 60 : null, distancia_m: s.distancia_km ? Number(s.distancia_km) * 1000 : null },
+              { modalidade: extraAberta.modalidade ?? '', data: diaLocal(extraAberta.executado_em), duracao_s: extraAberta.duracao_s, distancia_m: extraAberta.distancia_m ? Number(extraAberta.distancia_m) : null }) }))
+            .sort((a, b) => (b.similaridade ?? -1) - (a.similaridade ?? -1))} />
       )}
       <DragOverlay>
         {arrastado && <div className={`w-44 rounded-lg border px-2 py-1.5 shadow-lg ${COR_TIPO[arrastado.tipo] ?? 'bg-white'}`}><ConteudoCard s={arrastado} /></div>}
         {modeloArrastado && <div className="w-44 rounded-lg border bg-white px-2 py-1.5 shadow-lg text-xs font-semibold text-navy-500">{modeloArrastado.titulo}</div>}
+        {arrastando?.startsWith('x:') && (() => { const x = extras.find((e) => e.id === arrastando.slice(2)) ?? Object.values(execucoesPorSessao).find((e) => e.id === arrastando.slice(2)); return x ? <div className="w-44 rounded-lg border border-dashed border-sky-400 bg-white px-2 py-1.5 shadow-lg text-xs font-semibold text-gray-600">{x.titulo ?? 'Atividade'} <span className="block text-[10px] font-normal text-sky-600">solte sobre o treino</span></div> : null })()}
       </DragOverlay>
     </DndContext>
   )
