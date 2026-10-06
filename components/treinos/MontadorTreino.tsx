@@ -12,6 +12,7 @@ import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type Passo, type TipoSessao
 import { salvarSessao, apagarSessao, criarAjuste, reenviarIntervals } from '@/app/(dashboard)/treinos/actions'
 import ComparativoTreino, { type ExecucaoView } from './ComparativoTreino'
 import { alvoPrincipal } from '@/lib/treinos/descricao'
+import GraficoIntensidade from './GraficoIntensidade'
 import { salvarModelo, apagarModelo, salvarSessaoComoModelo } from '@/app/(dashboard)/treinos/biblioteca-actions'
 
 export type SessaoView = {
@@ -223,6 +224,7 @@ export default function MontadorTreino({
               </select></div>
             <div><label className={rotulo}>Local</label><input className={input} placeholder="Ex.: Beira-mar" value={f.local} onChange={(e) => setF({ ...f, local: e.target.value })} /></div>
           </div>
+          {passos.length > 0 && <GraficoIntensidade passos={passos} modalidade={f.modalidade} referencia={ehModelo ? referenciaPadrao(f.modalidade) : ref} limites={limites} altura={96} />}
           <div className="flex gap-1 overflow-x-auto">
             {abaBtn('blocos', 'Blocos')}
             {abaBtn('geral', 'Visão geral')}

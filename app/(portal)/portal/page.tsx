@@ -5,6 +5,7 @@ import { MODALIDADES, TIPOS_SESSAO } from '@/lib/treinos/tipos'
 import { diaMes, diasDaSemana, hojeISO, NOMES_DIA, somarDias } from '@/lib/treinos/datas'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import ExtrasDaSemana from '@/components/portal/ExtrasDaSemana'
+import { MiniBarras } from '@/components/treinos/GraficoIntensidade'
 import type { ExecucaoView } from '@/components/treinos/ComparativoTreino'
 
 const SITUACAO: Record<TreinoAtleta['situacao'], { txt: string; cls: string } | null> = {
@@ -28,6 +29,7 @@ function CardTreino({ t, destaque = false }: { t: TreinoAtleta; destaque?: boole
         {MODALIDADES[t.modalidade]} · {TIPOS_SESSAO[t.tipo]}{t.duracao_min ? ` · ${t.duracao_min} min` : ''}{t.distancia_km ? ` · ${Number(t.distancia_km).toLocaleString('pt-BR')} km` : ''}
       </p>
       {t.ajustado && <p className={`text-[11px] mt-1 inline-flex items-center gap-1 ${destaque ? 'text-amber-300' : 'text-amber-700'}`}><UserCog size={11} /> ajustado para você</p>}
+      {t.passos.length > 0 && <MiniBarras passos={t.passos} modalidade={t.modalidade} />}
     </Link>
   )
 }

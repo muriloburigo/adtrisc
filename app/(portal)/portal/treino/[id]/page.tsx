@@ -9,6 +9,7 @@ import { descreverTreino } from '@/lib/treinos/descricao'
 import { MODALIDADES, TIPOS_SESSAO } from '@/lib/treinos/tipos'
 import { formatDate } from '@/lib/utils'
 import MarcarSituacao from '@/components/portal/MarcarSituacao'
+import GraficoIntensidade from '@/components/treinos/GraficoIntensidade'
 import ComparativoTreino, { type ExecucaoView } from '@/components/treinos/ComparativoTreino'
 import { metricasPlanejadas } from '@/lib/treinos/calculos'
 import { alvoPrincipal } from '@/lib/treinos/descricao'
@@ -70,6 +71,7 @@ export default async function TreinoAtletaPage({ params }: { params: Promise<{ i
         {treino.ajustado && <p className="text-xs text-amber-700 mt-1 inline-flex items-center gap-1"><UserCog size={12} /> O treinador ajustou este treino para você.</p>}
       </div>
 
+      {treino.passos.length > 0 && <GraficoIntensidade passos={treino.passos} modalidade={treino.modalidade} referencia={referencia} limites={config.zona_limites} altura={96} />}
       <div className="space-y-2">
         {linhas.map((l, i) => (
           <div key={i} className={`bg-white rounded-xl border border-gray-200 border-l-4 ${COR_SECAO[l.secao] ?? ''} p-3`}>

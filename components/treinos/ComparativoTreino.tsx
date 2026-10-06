@@ -7,6 +7,7 @@ import { apagarAtividade, desvincularAtividade, vincularAtividade } from '@/app/
 import { faixaZona, formatarDuracao, formatarVelocidade, type Referencia } from '@/lib/treinos/calculos'
 import { descreverTreino, textoAlvo } from '@/lib/treinos/descricao'
 import { similaridade, type DadosExecucao, type Volta } from '@/lib/intervals/atividade'
+import GraficoIntensidade from './GraficoIntensidade'
 import { CORES_ZONA, TIPOS_PASSO, type Modalidade, type Passo } from '@/lib/treinos/tipos'
 
 export type ExecucaoView = {
@@ -163,39 +164,6 @@ export type PlanejadoView = {
   passos?: Passo[]
 }
 
-/** Faixa com a estrutura do treino (como no TrainingPeaks): largura = tempo, altura = intensidade. */
-export function GraficoEstrutura({ passos, referencia, limites }: { passos: Passo[]; modalidade?: Modalidade; referencia: Referencia | null; limites?: number[] }) {
-  const ord = [...passos].sort((a, b) => a.ordem - b.ordem).filter((p) => p.tipo !== 'note')
-  const seq: Passo[] = []
-  for (let i = 0; i < ord.length; i++) {
-    const p = ord[i], n = p.repeticoes ?? 1
-    if (n > 1) {
-      const d = ord[i + 1]?.tipo === 'recovery' ? ord[++i] : null
-      for (let k = 0; k < n; k++) { seq.push(p); if (d && k < n - 1) seq.push(d) }
-    } else seq.push(p)
-  }
-  const blocos = seq.map((p) => {
-    const f = faixaDoPasso(p, referencia, limites)
-    const vel = f ? (f.min + f.max) / 2 : (referencia?.velocidade_ms ?? 3) * 0.75
-    const dur = p.duracao_s ?? (p.distancia_m ? p.distancia_m / vel : 60)
-    let nivel = 1
-    if (p.alvo_unidade === 'zone' && p.alvo_min != null) nivel = p.alvo_max ?? p.alvo_min
-    else if (p.alvo_unidade === 'rpe' && p.alvo_min != null) nivel = p.alvo_min
-    else if (f && referencia) { const pct = (vel / referencia.velocidade_ms) * 100; nivel = 1 + (limites ?? [65, 75, 85, 95, 120]).filter((l) => pct > l).length }
-    return { dur, nivel: Math.min(5, Math.max(1, Math.round(nivel))), titulo: p.titulo || TIPOS_PASSO[p.tipo] }
-  })
-  const total = blocos.reduce((t, b) => t + b.dur, 0)
-  if (!total) return null
-  return (
-    <div className="flex items-end h-16 gap-px bg-white rounded-lg border border-gray-200 px-2 pt-2" title="Estrutura do treino">
-      {blocos.map((b, i) => (
-        <div key={i} title={`${b.titulo} · Z${b.nivel} · ${formatarDuracao(b.dur)}`}
-          style={{ width: `${(b.dur / total) * 100}%`, height: `${18 + b.nivel * 16}%`, background: CORES_ZONA[b.nivel - 1] }} className="rounded-t-sm min-w-[2px]" />
-      ))}
-    </div>
-  )
-}
-
 export default function ComparativoTreino({ sessaoId, alunoId, modalidade, planejado, execucao, candidatas = [], referencia = null, limites, podeEditar = true, mostrarDownload = true, titulo, notas, comentario }: {
   sessaoId: string
   alunoId: string
@@ -302,8 +270,8 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
         )}
       </div>
 
-      {/* Estrutura do treino */}
-      {planejado.passos?.length ? <GraficoEstrutura passos={planejado.passos} modalidade={modalidade} referencia={referencia} limites={limites} /> : null}
+      {/* Estrutura do treino (gráfico de intensidade do Movelly) */}
+      {planejado.passos?.length ? <GraficoIntensidade passos={planejado.passos} modalidade={modalidade} referencia={referencia} limites={limites} /> : null}
 
       {/* Planejado × Realizado (esq.) · Descrição e comentários (dir.) */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">

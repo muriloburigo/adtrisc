@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, type CollisionDetection, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare } from 'lucide-react'
@@ -8,6 +8,7 @@ import MontadorTreino, { type AtletaRef, type EntregaRef, type SessaoView } from
 import type { ExecucaoView } from './ComparativoTreino'
 import ExtraModal from './ExtraModal'
 import { similaridade } from '@/lib/intervals/atividade'
+import { MiniBarras } from './GraficoIntensidade'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type TipoSessao } from '@/lib/treinos/tipos'
 import { NOMES_DIA, diaMes, hojeISO, mesAnterior, rotuloMes, somarDias } from '@/lib/treinos/datas'
@@ -64,14 +65,20 @@ function ConteudoCard({ s }: { s: SessaoCalendario }) {
   )
 }
 
-function CardSessao({ s, arrastavel, onAbrir }: { s: SessaoCalendario; arrastavel: boolean; onAbrir: () => void }) {
-  const { setNodeRef: refArrasto, listeners, attributes, isDragging } = useDraggable({ id: `s:${s.id}`, disabled: !arrastavel })
+function CardSessao({ s, arrastavel, onAbrir, realizado }: { s: SessaoCalendario; arrastavel: boolean; onAbrir: () => void; realizado?: ExecucaoView | null }) {
+  // Treino com atividade vinculada = um card só (verde). Arrastar move a atividade realizada.
+  const { setNodeRef: refArrasto, listeners, attributes, isDragging } = useDraggable({ id: realizado ? `x:${realizado.id}` : `s:${s.id}`, disabled: !realizado && !arrastavel })
   const { setNodeRef: refAlvo, isOver } = useDroppable({ id: `sd:${s.id}`, data: { data: s.data } })
+  const km = realizado?.distancia_m ? ` · ${(Number(realizado.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''
+  const min = realizado?.duracao_s ? ` · ${Math.round(realizado.duracao_s / 60)} min` : ''
   return (
-    <div ref={refAlvo} className={isOver ? 'border-t-2 border-sky-400 pt-0.5' : ''}>
+    <div ref={refAlvo} className={isOver ? 'rounded-lg ring-2 ring-sky-400' : ''}>
       <button ref={refArrasto} type="button" onClick={onAbrir} {...listeners} {...attributes}
-        className={`w-full text-left rounded-lg border px-2 py-1.5 hover:shadow-sm transition-shadow ${COR_TIPO[s.tipo] ?? 'bg-white border-gray-200'} ${s.status === 'rascunho' ? 'border-dashed opacity-80' : ''} ${isDragging ? 'opacity-30' : ''} ${arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+        title={realizado ? 'Treino realizado. Arraste para outro treino (troca o vínculo) ou para outro dia (vira extra).' : undefined}
+        className={`w-full text-left rounded-lg border px-2 py-1.5 hover:shadow-sm transition-shadow ${realizado ? 'bg-green-50 border-green-300' : COR_TIPO[s.tipo] ?? 'bg-white border-gray-200'} ${!realizado && s.status === 'rascunho' ? 'border-dashed opacity-80' : ''} ${isDragging ? 'opacity-30' : ''} ${realizado || arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}>
         <ConteudoCard s={s} />
+        {realizado && <p className="text-[10px] text-green-800 truncate mt-0.5">✓ {realizado.titulo ?? 'Realizado'}{km}{min}</p>}
+        {s.passos.length > 0 && <MiniBarras passos={s.passos} modalidade={s.modalidade} />}
       </button>
     </div>
   )
@@ -106,18 +113,6 @@ function CardExtra({ x, onAbrir }: { x: ExecucaoView; onAbrir: () => void }) {
   )
 }
 
-/** Realizado já vinculado (visão do atleta): arraste para outro treino (re-vincula) ou para um dia (vira extra lá). */
-function CardRealizado({ x, onAbrir }: { x: ExecucaoView; onAbrir: () => void }) {
-  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: `x:${x.id}` })
-  return (
-    <button ref={setNodeRef} type="button" onClick={onAbrir} {...listeners} {...attributes}
-      title="Realizado (vinculado). Arraste para outro treino ou para outro dia."
-      className={`w-full text-left rounded-md border border-green-200 bg-green-50/60 px-2 py-1 -mt-0.5 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}>
-      <p className="text-[10px] text-green-800 truncate">✓ {x.titulo ?? 'Realizado'}{x.distancia_m ? ` · ${(Number(x.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''}{x.duracao_s ? ` · ${Math.round(x.duracao_s / 60)} min` : ''}</p>
-    </button>
-  )
-}
-
 function CardModelo({ m, selecionado, onSelecionar }: { m: ModeloResumo; selecionado: boolean; onSelecionar: () => void }) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: `m:${m.id}` })
   return (
@@ -130,7 +125,7 @@ function CardModelo({ m, selecionado, onSelecionar }: { m: ModeloResumo; selecio
 }
 
 export default function CalendarioTreinos({
-  escopo, vista, ancora, semanas, sessoes, atletas, ajustesPorSessao, limites, biblioteca, entregasPorSessao = {}, execucoesPorSessao = {}, extras = [],
+  escopo, vista, ancora, semanas, sessoes: sessoesProp, atletas, ajustesPorSessao, limites, biblioteca, entregasPorSessao = {}, execucoesPorSessao: execProp = {}, extras: extrasProp = [],
 }: {
   execucoesPorSessao?: Record<string, ExecucaoView>
   extras?: ExecucaoView[]
@@ -156,6 +151,48 @@ export default function CalendarioTreinos({
   const [modeloSel, setModeloSel] = useState<string | null>(null)
   const [arrastando, setArrastando] = useState<string | null>(null)
   const [extraAberta, setExtraAberta] = useState<ExecucaoView | null>(null)
+  // Estado otimista: arrastar mostra o resultado na hora; o servidor confirma por trás
+  // (ao terminar a ação, volta a valer o que veio do servidor — inclusive se der erro).
+  type Otimista = { sessoes: SessaoCalendario[]; extras: ExecucaoView[]; exec: Record<string, ExecucaoView> }
+  type Acao =
+    | { t: 'moverSessao'; id: string; data: string }
+    | { t: 'ordem'; ids: string[] }
+    | { t: 'vincular'; exec: string; sessao: string }
+    | { t: 'moverAtividade'; exec: string; data: string }
+    | { t: 'modelo'; data: string; titulo: string; modalidade: Modalidade; tipo: TipoSessao }
+  const [ot, aplicar] = useOptimistic<Otimista, Acao>({ sessoes: sessoesProp, extras: extrasProp, exec: execProp }, (st, a) => {
+    switch (a.t) {
+      case 'moverSessao':
+        return { ...st, sessoes: st.sessoes.map((x) => (x.id === a.id || x.sessao_origem_id === a.id ? { ...x, data: a.data, ordem: x.id === a.id ? 99 : x.ordem } : x)) }
+      case 'ordem':
+        return { ...st, sessoes: st.sessoes.map((x) => (a.ids.includes(x.id) ? { ...x, ordem: a.ids.indexOf(x.id) + 1 } : x)) }
+      case 'vincular': {
+        const ex = st.extras.find((e) => e.id === a.exec) ?? Object.values(st.exec).find((e) => e.id === a.exec)
+        if (!ex) return st
+        const exec = Object.fromEntries(Object.entries(st.exec).filter(([, e]) => e.id !== a.exec))
+        exec[a.sessao] = { ...ex, sessao_id: a.sessao, dados: { ...(ex.dados ?? {}), vinculo: { modo: 'manual' } } }
+        return { ...st, extras: st.extras.filter((e) => e.id !== a.exec), exec }
+      }
+      case 'moverAtividade': {
+        const vinc = Object.entries(st.exec).find(([, e]) => e.id === a.exec)
+        const ex = vinc?.[1] ?? st.extras.find((e) => e.id === a.exec)
+        if (!ex) return st
+        const movida = { ...ex, sessao_id: null, executado_em: `${a.data}T12:00:00-03:00` }
+        return {
+          ...st,
+          exec: vinc ? Object.fromEntries(Object.entries(st.exec).filter(([k]) => k !== vinc[0])) : st.exec,
+          extras: [...st.extras.filter((e) => e.id !== a.exec), movida],
+        }
+      }
+      case 'modelo':
+        return { ...st, sessoes: [...st.sessoes, {
+          id: `tmp-${a.data}-${st.sessoes.length}`, turma_id: null, aluno_id: null, sessao_origem_id: null, data: a.data, ordem: 99, titulo: a.titulo,
+          tipo: a.tipo, modalidade: a.modalidade, local: null, chave: false, notas: null, status: 'rascunho', duracao_min: null, distancia_km: null, carga: null,
+          passos: [], origem: escopo.tipo === 'turma' ? 'turma' : 'individual', nAjustes: 0,
+        } as SessaoCalendario] }
+    }
+  })
+  const sessoes = ot.sessoes, extras = ot.extras, execucoesPorSessao = ot.exec
   const diaLocal = (iso: string) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
   const hoje = hojeISO()
   const sensores = useSensors(
@@ -185,7 +222,8 @@ export default function CalendarioTreinos({
     return biblioteca.modelos.filter((m) => !b || m.titulo.toLowerCase().includes(b))
   }, [busca, biblioteca.modelos])
 
-  const executar = (fn: () => Promise<{ error?: string }>, ok?: string) => startTransition(async () => {
+  const executar = (fn: () => Promise<{ error?: string }>, ok?: string, otimista?: Acao) => startTransition(async () => {
+    if (otimista) aplicar(otimista)
     const r = await fn()
     setMsg(r.error ?? ok ?? null)
     router.refresh()
@@ -197,7 +235,11 @@ export default function CalendarioTreinos({
     if (!o) return
     const diaDestino = o.startsWith('d:') ? o.slice(2) : (e.over?.data.current?.data as string | undefined)
     if (!diaDestino) return
-    if (a.startsWith('m:')) return executar(() => usarModelo(a.slice(2), diaDestino, escopoAcao), 'Modelo colocado no calendário (rascunho).')
+    if (a.startsWith('m:')) {
+      const m = biblioteca.modelos.find((x) => x.id === a.slice(2))
+      return executar(() => usarModelo(a.slice(2), diaDestino, escopoAcao), 'Modelo colocado no calendário (rascunho).',
+        m ? { t: 'modelo', data: diaDestino, titulo: m.titulo, modalidade: m.modalidade, tipo: m.tipo } : undefined)
+    }
     if (a.startsWith('x:')) {
       // Atividade extra: sobre um treino → vincula; num dia → muda a data.
       const exec = a.slice(2)
@@ -206,11 +248,11 @@ export default function CalendarioTreinos({
         const alvo = sessoes.find((s) => s.id === o.slice(3))
         if (vinculada?.[0] === alvo?.id) return
         if (alvo && execucoesPorSessao[alvo.id]) return setMsg('Esse treino já tem uma atividade. Desvincule a atual no comparativo antes.')
-        return executar(() => vincularAtividade(exec, o.slice(3)), `Atividade vinculada a “${alvo?.titulo ?? 'treino'}”.`)
+        return executar(() => vincularAtividade(exec, o.slice(3)), `Atividade vinculada a “${alvo?.titulo ?? 'treino'}”.`, { t: 'vincular', exec, sessao: o.slice(3) })
       }
       const x = extras.find((e) => e.id === exec) ?? vinculada?.[1]
       if (x && (vinculada || diaLocal(x.executado_em) !== diaDestino)) {
-        return executar(() => moverAtividade(exec, diaDestino), vinculada ? 'Atividade movida de dia (saiu do treino e ficou como extra).' : 'Atividade movida de dia.')
+        return executar(() => moverAtividade(exec, diaDestino), vinculada ? 'Atividade movida de dia (saiu do treino e ficou como extra).' : 'Atividade movida de dia.', { t: 'moverAtividade', exec, data: diaDestino })
       }
       return
     }
@@ -224,16 +266,18 @@ export default function CalendarioTreinos({
       if (alvo === id) return
       const ordem = porDia(diaDestino).map((x) => x.id).filter((x) => x !== id)
       ordem.splice(ordem.indexOf(alvo), 0, id)
-      return executar(() => reordenarDia(ordem))
+      return executar(() => reordenarDia(ordem), undefined, { t: 'ordem', ids: ordem })
     }
-    if (s.data !== diaDestino) return executar(() => moverSessao(id, diaDestino))
+    if (s.data !== diaDestino) return executar(() => moverSessao(id, diaDestino), undefined, { t: 'moverSessao', id, data: diaDestino })
   }
 
   function maisNoDia(d: string) {
     if (modeloSel) {
       const m = modeloSel
       setModeloSel(null)
-      return executar(() => usarModelo(m, d, escopoAcao), 'Modelo colocado no calendário (rascunho).')
+      const mod = biblioteca.modelos.find((x) => x.id === m)
+      return executar(() => usarModelo(m, d, escopoAcao), 'Modelo colocado no calendário (rascunho).',
+        mod ? { t: 'modelo', data: d, titulo: mod.titulo, modalidade: mod.modalidade, tipo: mod.tipo } : undefined)
     }
     setAberto({ novoData: d })
   }
@@ -308,10 +352,8 @@ export default function CalendarioTreinos({
                       <CelulaDia key={d} d={d} vista={vista} destaque={d === hoje} foraMes={vista === 'mes' && d.slice(0, 7) !== ancora.slice(0, 7)}
                         onMais={() => maisNoDia(d)} selecionandoModelo={Boolean(modeloSel)}>
                         {porDia(d).map((s) => (
-                          <div key={s.id} className="space-y-1">
-                            <CardSessao s={s} arrastavel={arrastavel(s)} onAbrir={() => setAberto({ sessaoId: s.id })} />
-                            {escopo.tipo === 'aluno' && execucoesPorSessao[s.id] && <CardRealizado x={execucoesPorSessao[s.id]} onAbrir={() => setAberto({ sessaoId: s.id })} />}
-                          </div>
+                          <CardSessao key={s.id} s={s} arrastavel={arrastavel(s)} onAbrir={() => setAberto({ sessaoId: s.id })}
+                            realizado={escopo.tipo === 'aluno' ? execucoesPorSessao[s.id] ?? null : null} />
                         ))}
                         {extras.filter((x) => diaLocal(x.executado_em) === d).map((x) => <CardExtra key={x.id} x={x} onAbrir={() => setExtraAberta(x)} />)}
                       </CelulaDia>
@@ -388,7 +430,7 @@ export default function CalendarioTreinos({
               { modalidade: extraAberta.modalidade ?? '', data: diaLocal(extraAberta.executado_em), duracao_s: extraAberta.duracao_s, distancia_m: extraAberta.distancia_m ? Number(extraAberta.distancia_m) : null }) }))
             .sort((a, b) => (b.similaridade ?? -1) - (a.similaridade ?? -1))} />
       )}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {arrastado && <div className={`w-44 rounded-lg border px-2 py-1.5 shadow-lg ${COR_TIPO[arrastado.tipo] ?? 'bg-white'}`}><ConteudoCard s={arrastado} /></div>}
         {modeloArrastado && <div className="w-44 rounded-lg border bg-white px-2 py-1.5 shadow-lg text-xs font-semibold text-navy-500">{modeloArrastado.titulo}</div>}
         {arrastando?.startsWith('x:') && (() => { const x = extras.find((e) => e.id === arrastando.slice(2)) ?? Object.values(execucoesPorSessao).find((e) => e.id === arrastando.slice(2)); return x ? <div className="w-44 rounded-lg border border-dashed border-sky-400 bg-white px-2 py-1.5 shadow-lg text-xs font-semibold text-gray-600">{x.titulo ?? 'Atividade'} <span className="block text-[10px] font-normal text-sky-600">solte sobre o treino</span></div> : null })()}
