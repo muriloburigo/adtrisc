@@ -116,7 +116,7 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
   const extras: ExecucaoView[] = []
   if (aluno) {
     const { data: exs } = await db.from('treino_execucoes')
-      .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, cadencia_media, elevacao_m, zonas, dados, treino_entregas(sessao_id)')
+      .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, cadencia_media, elevacao_m, zonas, dados, ordem, treino_entregas(sessao_id)')
       .eq('aluno_id', aluno.id).gte('executado_em', `${de}T00:00:00-03:00`).lt('executado_em', `${somarDias(ate, 1)}T00:00:00-03:00`)
     for (const e of (exs ?? []) as (Omit<ExecucaoView, 'sessao_id'> & { treino_entregas: { sessao_id: string } | null })[]) {
       const { treino_entregas, ...resto } = e
@@ -129,11 +129,11 @@ export default async function TreinosPage({ searchParams }: { searchParams: Prom
 
   // Visão do atleta: o que ele marcou no portal (feito / não feito + comentário).
   if (aluno && sessoes.length) {
-    const { data: ents } = await db.from('treino_entregas').select('sessao_id, situacao, observacao_atleta').eq('aluno_id', aluno.id).in('sessao_id', sessoes.map((s) => s.id))
-    const porSessao = new Map(((ents ?? []) as { sessao_id: string; situacao: string; observacao_atleta: string | null }[]).map((e) => [e.sessao_id, e]))
+    const { data: ents } = await db.from('treino_entregas').select('sessao_id, situacao, observacao_atleta, ordem').eq('aluno_id', aluno.id).in('sessao_id', sessoes.map((s) => s.id))
+    const porSessao = new Map(((ents ?? []) as { sessao_id: string; situacao: string; observacao_atleta: string | null; ordem: number | null }[]).map((e) => [e.sessao_id, e]))
     for (const s of sessoes) {
       const e = porSessao.get(s.id)
-      if (e) { s.situacao = e.situacao as SessaoCalendario['situacao']; s.obsAtleta = e.observacao_atleta }
+      if (e) { s.situacao = e.situacao as SessaoCalendario['situacao']; s.obsAtleta = e.observacao_atleta; s.ordemAtleta = e.ordem }
     }
   }
 

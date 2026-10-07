@@ -16,6 +16,7 @@ export type ExecucaoView = {
   cadencia_media?: number | null; elevacao_m?: number | null
   zonas: { fc?: number[]; pace?: number[]; potencia?: number[]; gap?: number[] } | null; sessao_id: string | null
   dados?: DadosExecucao | null
+  ordem?: number | null   // ordem pessoal no dia (só extras)
 }
 
 const ORIGEM = { intervals: 'Intervals.icu', upload: 'arquivo .fit', manual: 'lançamento manual' }

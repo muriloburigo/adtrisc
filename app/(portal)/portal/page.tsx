@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Star, UserCog, Check, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Star, UserCog } from 'lucide-react'
 import { atletaLogado, treinosDoAtleta, type TreinoAtleta } from '@/lib/portalAtleta'
 import { MODALIDADES, TIPOS_SESSAO } from '@/lib/treinos/tipos'
 import { diaMes, diasDaSemana, hojeISO, NOMES_DIA, somarDias } from '@/lib/treinos/datas'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
-import ExtrasDaSemana from '@/components/portal/ExtrasDaSemana'
+import SemanaPortal from '@/components/portal/SemanaPortal'
 import { MiniBarras } from '@/components/treinos/GraficoIntensidade'
 import type { ExecucaoView } from '@/components/treinos/ComparativoTreino'
 
@@ -34,7 +34,7 @@ function CardTreino({ t, destaque = false }: { t: TreinoAtleta; destaque?: boole
   )
 }
 
-// "Meus treinos": próximo treino em destaque + a semana dia a dia.
+// "Meus treinos": próximo treino em destaque + a semana (mesmos cards do calendário da equipe).
 export default async function PortalPage({ searchParams }: { searchParams: Promise<{ data?: string }> }) {
   const sp = await searchParams
   const { db, atleta } = await atletaLogado()
@@ -49,11 +49,16 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
   const daSemana = todos.filter((t) => t.data >= dias[0] && t.data <= dias[6])
   const proximo = todos.find((t) => t.data >= hoje && t.situacao === 'planejado')
   const { data: exs } = await db.from('treino_execucoes')
-    .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, cadencia_media, elevacao_m, zonas, dados, entrega_id, treino_entregas(sessao_id)')
+    .select('id, origem, titulo, modalidade, executado_em, duracao_s, distancia_m, velocidade_media_ms, pace_medio_s_km, fc_media, fc_max, potencia_media_w, calorias, tss, cadencia_media, elevacao_m, zonas, dados, ordem, entrega_id, treino_entregas(sessao_id)')
     .eq('aluno_id', atleta.aluno.id).gte('executado_em', `${somarDias(dias[0], -3)}T00:00:00-03:00`).lt('executado_em', `${somarDias(dias[6], 1)}T00:00:00-03:00`)
   type Ex = ExecucaoView & { entrega_id: string | null; treino_entregas: { sessao_id: string } | null }
-  const ocupados = new Set(((exs ?? []) as Ex[]).map((e) => e.treino_entregas?.sessao_id).filter(Boolean))
-  const extras = ((exs ?? []) as Ex[]).filter((e) => !e.entrega_id).map((e) => ({ ...e, sessao_id: null }))
+  const execucoes: Record<string, ExecucaoView> = {}
+  const extras: ExecucaoView[] = []
+  for (const { treino_entregas, entrega_id, ...e } of (exs ?? []) as Ex[]) {
+    const sessao = entrega_id ? treino_entregas?.sessao_id ?? null : null
+    if (sessao) execucoes[sessao] = { ...e, sessao_id: sessao }
+    else if (!entrega_id) extras.push({ ...e, sessao_id: null })
+  }
   const tot = somarSessoes(daSemana)
   const feitos = daSemana.filter((t) => t.situacao === 'feito' || t.situacao === 'parcial').length
   const passados = daSemana.filter((t) => t.data < hoje).length
@@ -81,22 +86,13 @@ export default async function PortalPage({ searchParams }: { searchParams: Promi
           <div className="bg-white rounded-xl border border-gray-200 py-2"><p className="text-[11px] text-gray-400">Tempo</p><p className="font-semibold text-navy-500">{formatarDuracao(tot.duracao_min * 60)}</p></div>
           <div className="bg-white rounded-xl border border-gray-200 py-2"><p className="text-[11px] text-gray-400">Feitos</p><p className="font-semibold text-navy-500">{feitos}/{passados || daSemana.length}</p></div>
         </div>
-        {dias.map((d, i) => {
-          const doDia = daSemana.filter((t) => t.data === d)
-          return (
-            <div key={d} className="flex gap-3">
-              <div className={`w-12 shrink-0 text-center pt-2 ${d === hoje ? 'text-sky-600 font-bold' : 'text-gray-400'}`}>
-                <p className="text-[11px]">{NOMES_DIA[i]}</p><p className="text-sm">{d.slice(8)}</p>
-              </div>
-              <div className="flex-1 space-y-1.5 min-w-0 py-1">
-                {doDia.length ? doDia.map((t) => <CardTreino key={t.id} t={t} />) : <p className="text-xs text-gray-300 pt-2.5">Descanso</p>}
-              </div>
-            </div>
-          )
-        })}
+        {/* No computador a semana vira grade de 7 colunas (mais larga que o resto do portal). */}
+        <div className="lg:relative lg:left-1/2 lg:-translate-x-1/2 lg:w-[min(72rem,calc(100vw-2rem))]">
+          <SemanaPortal alunoId={atleta.aluno.id} dias={dias} hoje={hoje} execucoes={execucoes} extras={extras}
+            treinos={daSemana.map((t) => ({ ...t, status: 'publicado' as const, origem: t.ajustado ? 'ajuste' as const : 'turma' as const, nAjustes: 0 }))}
+            todos={todos.map((t) => ({ id: t.id, data: t.data, titulo: t.titulo, modalidade: t.modalidade, duracao_min: t.duracao_min, distancia_km: t.distancia_km }))} />
+        </div>
       </section>
-      <ExtrasDaSemana extras={extras} treinos={todos.map((t) => ({ id: t.id, data: t.data, titulo: t.titulo, ocupado: ocupados.has(t.id), modalidade: t.modalidade, duracao_min: t.duracao_min, distancia_km: t.distancia_km }))} />
-      <p className="text-[11px] text-gray-400 flex items-center gap-3"><span className="inline-flex items-center gap-1"><Check size={11} /> Marque cada treino como feito</span><span className="inline-flex items-center gap-1"><X size={11} /> ou não feito</span></p>
     </div>
   )
 }

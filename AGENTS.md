@@ -425,7 +425,7 @@ public.get_my_role()  -- returns role of the current authenticated user (used in
 
 ### Treinos (`/treinos`) — training module
 Port of Movelly Core's training module (spec = that code; `lib/` files say what was ported and what was changed on purpose). Staff only; turmas with `usa_treinos`.
-- **Calendar** week/month per turma or per athlete, weekly totals (time, distance, load). Drag & drop (`@dnd-kit`): move a workout (its adjustments follow), reorder within a day, drop a library template on a day; "Duplicar semana"; "Publicar N rascunhos".
+- **Calendar** week/month per turma or per athlete, weekly totals (time, distance, load). Drag & drop (`@dnd-kit`): move a workout (its adjustments follow), reorder within a day (drop between cards on the blue slot, on a card = before it, on the empty day = end), drop a library template on a day; "Duplicar semana"; "Publicar N rascunhos". Cards live in `components/treinos/CardsCalendario.tsx` (shared with the portal). **Order within a day:** turma view writes `treino_sessoes.ordem` (everyone); athlete view and portal write the athlete's own order (`treino_entregas.ordem` for workouts, `treino_execucoes.ordem` for extras, `ordenarDiaDoAtleta`), so turma workouts can be reordered per athlete without touching the others.
 - **Builder** (`MontadorTreino`): blocks continuous/interval/note with targets zone (range Z1–Z2 allowed), pace, speed, HR, power, effort 1–5; "Visão geral" shows each athlete's paces and the Intervals text; "Atletas" tab creates an **individual adjustment** and shows each athlete's Intervals status ("reenviar"); "Comparativo" (athlete view) = planned × done, difference, time-in-zone chart; download the workout as .fit.
 - **Library** (`/treinos/biblioteca`): folders, templates edited in the builder, "Salvar na biblioteca" with duplicate warning, import a workout .fit.
 - **Plans** (`/treinos/planos`): manual or **generated** (`lib/treinos/gerador.ts`, Movelly's rule v1-progressive-simple adapted: ADTRISC zones, effort 1–5, intervals split across reps), live preview, publish (sessions + adjustments), duplicate to another date, delete with its sessions.
@@ -436,7 +436,7 @@ Port of Movelly Core's training module (spec = that code; `lib/` files say what 
 ### Athlete portal (`/portal`) and invites
 - Coach → athlete page → "Portal do atleta": generate an invite (or a new-password link) and send it by WhatsApp (guardians first; repeated numbers once). One valid link at a time, 7 days, single use; reserved before the account is created (no double accounts). "Remover acesso" deletes only the login.
 - `/convite/[token]`: e-mail **or** username + password + privacy agreement (guardian if minor); signs in and lands on `/portal`.
-- Portal (mobile first): next workout, the week day by day, workout detail in plain language with **their** paces, mark done/partial/not done + comment to the coach, upload the activity .fit, download the workout .fit, link extras, my zones, account (password, Intervals connect/disconnect). Forgotten password → ask the coach for a new-password link (no e-mail flow).
+- Portal (mobile first): next workout, the week with the **same cards and status colors as the staff calendar** (`components/portal/SemanaPortal.tsx`: list on phones, 7-day grid on desktop; drag to reorder the day, drop an activity on a workout to link, or on another day to move it — athletes never create/edit workouts or move them between days), workout detail in plain language with **their** paces, mark done/partial/not done + comment to the coach, upload the activity .fit, download the workout .fit, link extras, my zones, account (password, Intervals connect/disconnect). Forgotten password → ask the coach for a new-password link (no e-mail flow).
 
 ### Public Enrollment (`/inscricao`)
 Parents fill a form to pre-enroll their child. Requires selecting a turma with `captacao_aberta = true`. Creates a `candidatos` record with status `pendente`. Uses `createAdminClient()` to bypass RLS.
@@ -712,7 +712,9 @@ This is the unlikely worst case. Steps, roughly in order:
 
    37. `treinos_oculto.sql` — `treino_sessoes.oculto` (Visível/Oculto, like Movelly) + athlete read policies exclude hidden sessions (needs #33).
 
-   #32–36 were run in production on 05/10/2026; #37 on 06/10/2026.
+   38. `treinos_ordem_atleta.sql` — `treino_entregas.ordem` + `treino_execucoes.ordem`: each athlete's own order of the cards within a day (needs #33).
+
+   #32–36 were run in production on 05/10/2026; #37 and #38 on 06/10/2026.
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

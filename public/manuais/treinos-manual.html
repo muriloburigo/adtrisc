@@ -196,7 +196,7 @@
         <tr><th>Faixa do card</th><th>Significado</th></tr>
         <tr><td><span style="color:#22c55e;font-weight:700">Verde</span></td><td>Planejado e feito: há uma atividade vinculada, entre 80% e 120% do planejado.</td></tr>
         <tr><td><span style="color:#d4a017;font-weight:700">Amarelo</span></td><td>Vinculado, mas o executado ficou mais de 20% acima ou abaixo (distância, se o treino foi montado por distância; senão, duração).</td></tr>
-        <tr><td><span style="color:#ef4444;font-weight:700">Vermelho</span></td><td>Treino planejado sem atividade vinculada e com data anterior a hoje.</td></tr>
+        <tr><td><span style="color:#ef4444;font-weight:700">Vermelho</span></td><td>Treino planejado sem atividade vinculada e com data anterior a hoje. Exceção: se o atleta marcou “Feito” à mão (ex.: natação sem relógio), fica verde; “Parcial”, amarelo.</td></tr>
         <tr><td><span style="color:#9ca3af;font-weight:700">Cinza</span></td><td>Atividade feita sem treino planejado (extra) — ou treino <strong>oculto</strong> (com o olho cortado).</td></tr>
       </table></div>
       <p>No card feito, os números em negrito são o realizado (duração ✓, km, carga) e as linhas “P:” mostram o planejado.</p>
@@ -261,10 +261,10 @@
       <h2><span class="num">7</span>Arrastar, reordenar e duplicar</h2>
       <div class="grade">
         <div class="cartao"><b>Mover de dia</b><p>Arraste o card para outro dia. Se estava publicado, o Intervals dos atletas é atualizado.</p></div>
-        <div class="cartao"><b>Reordenar no dia</b><p>Arraste um card para cima de outro do mesmo dia (dois treinos no dia, ex.: natação de manhã e corrida à tarde).</p></div>
+        <div class="cartao"><b>Trocar a ordem no dia</b><p>Arraste o card e solte entre outros dois (aparece uma <strong>faixa azul</strong> onde ele vai entrar), em cima de um treino (fica antes dele) ou no espaço vazio do dia (vai para o fim). Ex.: natação de manhã e corrida à tarde.</p></div>
         <div class="cartao"><b>Duplicar semana</b><p>Copia todos os treinos da semana aberta (com os ajustes) para a semana seguinte, como rascunho.</p></div>
       </div>
-      <p>No celular, segure o card por um instante antes de arrastar. Na visão do atleta, só os treinos individuais dele podem ser arrastados (o da turma se move na visão da turma).</p>
+      <p>No celular, segure o card por um instante antes de arrastar. Na <strong>visão da turma</strong>, a ordem vale para todos. Na <strong>visão do atleta</strong> (e no portal), a ordem é <strong>só dele</strong>: dá para trocar a ordem de qualquer card do dia, inclusive treinos da turma e atividades extras, sem mexer nos outros atletas. Mudar de dia, nessa visão, só os treinos individuais dele (o da turma muda de dia na visão da turma).</p>
     </section>
 
     <!-- 8 -->
@@ -338,14 +338,15 @@
           <div class="corpo">
             <small style="color:var(--muted)">PRÓXIMO TREINO · TER 06/10</small>
             <div class="item destaque"><b>Intervalado de velocidade ★</b><br>Corrida · 40 min · 5,8 km</div>
-            <div class="item"><b>Seg 05</b> · Base 45′ <span class="selo ok">Feito</span></div>
+            <div class="item" style="border-top:4px solid #22c55e"><b>Seg 05</b> · Base 45′ ✓</div>
+            <div class="item" style="border-top:4px solid #ef4444"><b>Qua 07</b> · Técnica 30′</div>
+            <div class="item" style="border-top:4px solid #d1d5db"><b>Qua 07</b> · Pedal (sem treino)</div>
             <div class="item"><b>Qui 08</b> · Regenerativo 25′</div>
-            <div class="item"><b>Sáb 10</b> · Longo 70′</div>
           </div>
         </div>
         <div>
           <h3 style="margin-top:0">Treinos</h3>
-          <p>Próximo treino em destaque, a semana dia a dia (com setas para outras semanas) e resumo: treinos, tempo, feitos.</p>
+          <p>Próximo treino em destaque, a semana (com setas para outras semanas) e resumo: treinos, tempo, feitos. Os cards são <strong>os mesmos do calendário do treinador</strong>, com as mesmas cores: verde feito, amarelo fora do planejado (±20%), vermelho não feito (data passada sem atividade), cinza atividade sem treino. Sem atividade, o que o atleta marcou vale: “Feito” fica verde e “Parcial” amarelo. No celular, a semana é uma lista; no computador, uma grade de 7 dias.</p><p><strong>Arrastar no portal</strong>: trocar a ordem dos cards no dia (a ordem é só dele), soltar uma atividade sobre o treino para ligar os dois, ou levar a atividade para outro dia. No celular, toque e segure o card. Criar e editar treinos e planos, e mudar treino de dia, continuam só com a equipe.</p>
           <h3>Detalhe do treino</h3>
           <p>Cada bloco em linguagem simples, com o <strong>pace/velocidade dele</strong> (ex.: “4 × 2:30 em Z4–Z5 (2:50 a 4:00/km)”), as observações do treinador e:</p>
           <ul>
@@ -353,7 +354,7 @@
             <li><strong>Realizado</strong> — comparativo com o que foi feito, enviar o .fit da atividade, baixar o treino para o relógio.</li>
           </ul>
           <h3>Atividades sem treino</h3>
-          <p>Aparecem na semana; tocando, o atleta liga a atividade a um treino.</p>
+          <p>Aparecem no próprio dia, em cinza. Tocando, abre o mesmo modal da equipe: ligar a um treino (sugestões por similaridade) ou mudar de dia. Também dá para arrastar sobre o treino.</p>
           <h3>Zonas e Conta</h3>
           <p><strong>Zonas</strong>: a tabela de ritmos de cada zona. <strong>Conta</strong>: login, trocar senha, conectar/desconectar o Intervals.icu.</p>
         </div>

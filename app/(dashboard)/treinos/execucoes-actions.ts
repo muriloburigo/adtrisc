@@ -33,3 +33,25 @@ export async function vincularAtividade(execId: string, sessaoId: string) { retu
 export async function desvincularAtividade(execId: string) { return executar(execId, 'Desvinculou atividade do treino', () => ex.desvincular(execId)) }
 export async function apagarAtividade(execId: string) { return executar(execId, 'Apagou atividade', () => ex.apagarExecucao(execId)) }
 export async function moverAtividade(execId: string, data: string) { return executar(execId, `Moveu atividade extra para ${data}`, () => ex.moverExtra(execId, data)) }
+
+/**
+ * Ordem pessoal dos cards de um dia do atleta (arrastar no calendário do atleta
+ * ou no portal). `itens` na ordem desejada: `s:<sessão>` (treino, com ou sem
+ * atividade vinculada) e `x:<execução>` (atividade extra).
+ */
+export async function ordenarDiaDoAtleta(alunoId: string, itens: string[]): Promise<{ error?: string }> {
+  if (!Array.isArray(itens) || itens.length > 30) return { error: 'Lista inválida.' }
+  const ator = await atorParaAtleta(alunoId)
+  if (!ator) return { error: 'Sem acesso.' }
+  const sessoes = itens.filter((i) => i.startsWith('s:')).map((i) => i.slice(2))
+  // Treinos: precisam ser visíveis para quem ordena (RLS). Extras: do próprio atleta.
+  if (sessoes.length) {
+    const { data } = await ator.db.from('treino_sessoes').select('id').in('id', sessoes)
+    if ((data ?? []).length !== new Set(sessoes).size) return { error: 'Treino não encontrado.' }
+  }
+  if (itens.some((i) => !/^[sx]:/.test(i))) return { error: 'Lista inválida.' }
+  const r = await ex.ordenarDia(alunoId, itens.map((i) => ({ tipo: i[0] as 's' | 'x', id: i.slice(2) })))
+  if (r.error) return r
+  revalidar()
+  return {}
+}

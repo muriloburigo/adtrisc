@@ -2,26 +2,26 @@
 
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, type CollisionDetection, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
-import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare, Footprints, Bike, Waves, Dumbbell, Activity, EyeOff } from 'lucide-react'
+import { DndContext, DragOverlay, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
+import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare } from 'lucide-react'
 import MontadorTreino, { type AtletaRef, type EntregaRef, type SessaoView } from './MontadorTreino'
 import type { ExecucaoView } from './ComparativoTreino'
 import ExtraModal from './ExtraModal'
 import { similaridade } from '@/lib/intervals/atividade'
-import { MiniBarras } from './GraficoIntensidade'
-import { descreverTreino } from '@/lib/treinos/descricao'
+import { CardExtra, CardSessao, ListaDoDia, chaveOrdemExtra, colisao, reposicionar, statusDoTreino } from './CardsCalendario'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type TipoSessao } from '@/lib/treinos/tipos'
 import { NOMES_DIA, diaMes, hojeISO, mesAnterior, rotuloMes, somarDias } from '@/lib/treinos/datas'
 import { publicarPeriodo } from '@/app/(dashboard)/treinos/actions'
 import { moverSessao, reordenarDia, usarModelo, duplicarSemana } from '@/app/(dashboard)/treinos/biblioteca-actions'
-import { moverAtividade, vincularAtividade } from '@/app/(dashboard)/treinos/execucoes-actions'
+import { moverAtividade, ordenarDiaDoAtleta, vincularAtividade } from '@/app/(dashboard)/treinos/execucoes-actions'
 
 export type SessaoCalendario = SessaoView & {
   origem: 'turma' | 'ajuste' | 'individual'
   nAjustes: number
   situacao?: 'planejado' | 'feito' | 'nao_feito' | 'parcial'   // só na visão do atleta
   obsAtleta?: string | null
+  ordemAtleta?: number | null   // ordem pessoal no dia (entrega), só na visão do atleta
 }
 export type ModeloResumo = { id: string; titulo: string; modalidade: Modalidade; tipo: TipoSessao; duracao_min: number | null; distancia_km: number | null; pasta_id: string | null }
 export type Biblioteca = { pastas: { id: string; nome: string }[]; modelos: ModeloResumo[] }
@@ -31,14 +31,6 @@ const COR_TIPO: Record<string, string> = {
   recovery: 'bg-green-50 border-green-200', technique: 'bg-purple-50 border-purple-200', strength: 'bg-gray-100 border-gray-300',
   race_simulation: 'bg-red-50 border-red-200', brick: 'bg-amber-50 border-amber-200',
 }
-// Solta onde está o ponteiro (não onde o card largo da biblioteca encosta);
-// sobre um treino, vale o treino (reordenar) em vez do dia.
-const colisao: CollisionDetection = (args) => {
-  const sob = pointerWithin(args)
-  const lista = sob.length ? sob : rectIntersection(args)
-  return [...lista].sort((a, b) => Number(String(b.id).startsWith('sd:')) - Number(String(a.id).startsWith('sd:')))
-}
-
 const SIGLA_MOD: Record<string, string> = { running: 'C', cycling: 'B', swimming: 'N', strength: 'F', other: '•' }
 
 function ConteudoCard({ s }: { s: SessaoCalendario }) {
@@ -63,122 +55,6 @@ function ConteudoCard({ s }: { s: SessaoCalendario }) {
         {s.obsAtleta && <span title={s.obsAtleta} className="text-[9px] text-sky-700 inline-flex items-center gap-0.5"><MessageSquare size={9} />comentou</span>}
       </div>
     </>
-  )
-}
-
-// Card no padrão do TrainingPeaks: faixa colorida no topo — verde = planejado COM
-// atividade vinculada (80–120% do planejado); amarelo = vinculado, mas fora dessa faixa;
-// vermelho = planejado SEM vínculo e com data anterior a hoje;
-// cinza = feito sem plano (extra) —, ícone + título, números em negrito (realizado
-// com ✓; senão o planejado), linhas "P:" com o planejado, descrição curta e barras.
-type Status = 'feito' | 'desvio' | 'perdido' | null
-const TOPO_STATUS: Record<Exclude<Status, null>, string> = { feito: 'bg-green-500', desvio: 'bg-amber-300', perdido: 'bg-red-500' }
-const FUNDO_STATUS: Record<Exclude<Status, null>, string> = { feito: 'bg-green-50 border-green-200', desvio: 'bg-amber-50 border-amber-200', perdido: 'bg-red-50 border-red-200' }
-
-/**
- * Executado ÷ planejado na medida que o treinador definiu: treino montado por
- * distância compara a distância; por tempo, a duração (a outra é estimativa).
- * Fora de 80%–120% → amarelo.
- */
-function proporcaoExecutada(s: SessaoCalendario, r: ExecucaoView): number | null {
-  const esforco = s.passos.filter((p) => p.tipo !== 'note' && p.tipo !== 'warmup' && p.tipo !== 'cooldown')
-  const porDistancia = esforco.length > 0 && esforco.every((p) => p.distancia_m && !p.duracao_s)
-  const plan = porDistancia ? (s.distancia_km ? Number(s.distancia_km) * 1000 : null) : (s.duracao_min ? s.duracao_min * 60 : null)
-  const real = porDistancia ? (r.distancia_m ? Number(r.distancia_m) : null) : r.duracao_s
-  if (!plan || !real) {
-    const pd = s.duracao_min ? s.duracao_min * 60 : null
-    return pd && r.duracao_s ? r.duracao_s / pd : null
-  }
-  return real / plan
-}
-const TOPO_TIPO: Record<string, string> = {
-  base: 'bg-sky-300', long: 'bg-indigo-300', interval: 'bg-orange-300', recovery: 'bg-green-300', technique: 'bg-purple-300',
-  strength: 'bg-gray-400', race_simulation: 'bg-red-300', brick: 'bg-amber-300',
-}
-const ICONE_MOD: Record<string, typeof Footprints> = { running: Footprints, cycling: Bike, swimming: Waves, strength: Dumbbell, other: Activity }
-const COR_ICONE: Record<string, string> = { running: 'text-green-600', cycling: 'text-purple-600', swimming: 'text-sky-600', strength: 'text-gray-600', other: 'text-gray-500' }
-const fmtKm = (km: number | null | undefined) => (km ? `${Number(km).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}` : null)
-
-function Cabeca({ modalidade, titulo, chave, oculto }: { modalidade: string; titulo: string; chave?: boolean; oculto?: boolean }) {
-  const Icone = ICONE_MOD[modalidade] ?? Activity
-  return (
-    <>
-      <div className="flex items-center gap-1"><Icone size={15} className={COR_ICONE[modalidade] ?? 'text-gray-500'} />{chave && <Star size={10} className="ml-auto text-amber-500 fill-amber-400" />}</div>
-      <p className={`text-[11px] font-semibold leading-tight line-clamp-2 mt-0.5 ${oculto ? 'text-gray-500' : 'text-navy-500'}`}>{oculto && <EyeOff size={11} className="inline mr-1 -mt-0.5" />}{titulo}</p>
-    </>
-  )
-}
-
-function CardSessao({ s, arrastavel, onAbrir, realizado, status = null }: { s: SessaoCalendario; arrastavel: boolean; onAbrir: () => void; realizado?: ExecucaoView | null; status?: Status }) {
-  // Treino com atividade vinculada = um card só. Arrastar move a atividade realizada.
-  const { setNodeRef: refArrasto, listeners, attributes, isDragging } = useDraggable({ id: realizado ? `x:${realizado.id}` : `s:${s.id}`, disabled: !realizado && !arrastavel })
-  const { setNodeRef: refAlvo, isOver } = useDroppable({ id: `sd:${s.id}`, data: { data: s.data } })
-  const planDur = s.duracao_min ? formatarDuracao(s.duracao_min * 60) : null
-  const descricao = useMemo(() => descreverTreino(s.passos, s.modalidade).filter((l) => l.principal).slice(0, 3)
-    .map((l) => `${l.principal}${l.alvo ? ` ${l.alvo.split(' (')[0].split(' · ')[0]}` : ''}`), [s.passos, s.modalidade])
-  return (
-    <div ref={refAlvo} className={isOver ? 'rounded-lg ring-2 ring-sky-400' : ''}>
-      <button ref={refArrasto} type="button" onClick={onAbrir} {...listeners} {...attributes}
-        title={realizado ? 'Treino realizado. Arraste para outro treino (troca o vínculo) ou para outro dia (vira extra).' : undefined}
-        className={`w-full text-left rounded-lg border overflow-hidden hover:shadow-md transition-shadow ${s.oculto ? 'bg-gray-100 border-gray-200 opacity-65' : status ? FUNDO_STATUS[status] : 'bg-white border-gray-200'} ${!status && s.status === 'rascunho' ? 'border-dashed opacity-80' : ''} ${isDragging ? 'opacity-30' : ''} ${realizado || arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}>
-        <div className={`h-1.5 ${s.oculto ? 'bg-gray-300' : status ? TOPO_STATUS[status] : TOPO_TIPO[s.tipo] ?? 'bg-gray-300'}`} />
-        <div className="px-2 pt-1.5 pb-1">
-          <Cabeca modalidade={s.modalidade} titulo={s.titulo} chave={s.chave} oculto={s.oculto} />
-          <div className="mt-1 text-[11px] font-bold text-navy-500 leading-snug tabular-nums">
-            {realizado ? (
-              <>
-                {realizado.duracao_s ? <p>{formatarDuracao(realizado.duracao_s)} <span className="text-green-600">✓</span></p> : null}
-                {realizado.distancia_m ? <p>{fmtKm(Number(realizado.distancia_m) / 1000)} <span className="font-normal">km</span></p> : null}
-                {realizado.tss ? <p>{Math.round(realizado.tss)} <span className="font-normal">carga</span></p> : null}
-              </>
-            ) : (
-              <>
-                {planDur && <p>{planDur}</p>}
-                {fmtKm(s.distancia_km) && <p>{fmtKm(s.distancia_km)} <span className="font-normal">km</span></p>}
-                {s.carga ? <p>{Math.round(Number(s.carga))} <span className="font-normal">carga</span></p> : null}
-              </>
-            )}
-          </div>
-          {realizado && (planDur || s.distancia_km || s.carga) ? (
-            <div className="mt-0.5 text-[10px] text-gray-500 leading-snug tabular-nums">
-              {planDur && <p>P: {planDur}</p>}
-              {fmtKm(s.distancia_km) && <p>P: {fmtKm(s.distancia_km)} km</p>}
-              {s.carga ? <p>P: {Math.round(Number(s.carga))} carga</p> : null}
-            </div>
-          ) : null}
-          {descricao.length > 0 && <div className="mt-1 text-[10px] text-gray-600 leading-snug">{descricao.map((d, i) => <p key={i} className="truncate">{d}</p>)}</div>}
-          <div className="flex flex-wrap gap-1 mt-1">
-            {s.status === 'rascunho' && <span className="text-[9px] font-semibold text-gray-500 bg-gray-100 rounded px-1">rascunho</span>}
-            {s.origem === 'ajuste' && <span className="text-[9px] font-semibold text-amber-700 bg-amber-100 rounded px-1 inline-flex items-center gap-0.5"><UserCog size={9} />ajustado</span>}
-            {s.origem === 'individual' && <span className="text-[9px] font-semibold text-sky-700 bg-sky-100 rounded px-1 inline-flex items-center gap-0.5"><User size={9} />individual</span>}
-            {s.nAjustes > 0 && <span className="text-[9px] text-amber-700">{s.nAjustes} ajuste{s.nAjustes > 1 ? 's' : ''}</span>}
-            {s.obsAtleta && <span title={s.obsAtleta} className="text-[9px] text-sky-700 inline-flex items-center gap-0.5"><MessageSquare size={9} />comentou</span>}
-          </div>
-        </div>
-        {s.passos.length > 0 && <div className="px-1.5 pb-1"><MiniBarras passos={s.passos} modalidade={s.modalidade} /></div>}
-      </button>
-    </div>
-  )
-}
-
-/** Atividade extra (feita sem treino): cinza. Arraste sobre um treino para vincular, ou para outro dia. */
-function CardExtra({ x, onAbrir }: { x: ExecucaoView; onAbrir: () => void }) {
-  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: `x:${x.id}` })
-  return (
-    <button ref={setNodeRef} type="button" onClick={onAbrir} {...listeners} {...attributes}
-      title="Atividade sem treino planejado. Arraste sobre um treino para vincular."
-      className={`w-full text-left rounded-lg border border-gray-200 bg-white overflow-hidden hover:shadow-md cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}>
-      <div className="h-1.5 bg-gray-300" />
-      <div className="px-2 pt-1.5 pb-1.5">
-        <Cabeca modalidade={x.modalidade ?? 'other'} titulo={x.titulo ?? 'Atividade'} />
-        <div className="mt-1 text-[11px] font-bold text-navy-500 leading-snug tabular-nums">
-          {x.duracao_s ? <p>{formatarDuracao(x.duracao_s)}</p> : null}
-          {x.distancia_m ? <p>{fmtKm(Number(x.distancia_m) / 1000)} <span className="font-normal">km</span></p> : null}
-          {x.tss ? <p>{Math.round(x.tss)} <span className="font-normal">carga</span></p> : null}
-        </div>
-        <p className="text-[9px] text-gray-400 mt-0.5">sem treino planejado</p>
-      </div>
-    </button>
   )
 }
 
@@ -242,6 +118,7 @@ export default function CalendarioTreinos({
   type Acao =
     | { t: 'moverSessao'; id: string; data: string }
     | { t: 'ordem'; ids: string[] }
+    | { t: 'ordemAtleta'; itens: string[] }
     | { t: 'vincular'; exec: string; sessao: string }
     | { t: 'moverAtividade'; exec: string; data: string }
     | { t: 'modelo'; data: string; titulo: string; modalidade: Modalidade; tipo: TipoSessao }
@@ -251,6 +128,14 @@ export default function CalendarioTreinos({
         return { ...st, sessoes: st.sessoes.map((x) => (x.id === a.id || x.sessao_origem_id === a.id ? { ...x, data: a.data, ordem: x.id === a.id ? 99 : x.ordem } : x)) }
       case 'ordem':
         return { ...st, sessoes: st.sessoes.map((x) => (a.ids.includes(x.id) ? { ...x, ordem: a.ids.indexOf(x.id) + 1 } : x)) }
+      case 'ordemAtleta': {
+        const pos = (k: string) => a.itens.indexOf(k) + 1
+        return {
+          ...st,
+          sessoes: st.sessoes.map((x) => (a.itens.includes(`s:${x.id}`) ? { ...x, ordemAtleta: pos(`s:${x.id}`) } : x)),
+          extras: st.extras.map((x) => (a.itens.includes(`x:${x.id}`) ? { ...x, ordem: pos(`x:${x.id}`) } : x)),
+        }
+      }
       case 'vincular': {
         const ex = st.extras.find((e) => e.id === a.exec) ?? Object.values(st.exec).find((e) => e.id === a.exec)
         if (!ex) return st
@@ -297,18 +182,31 @@ export default function CalendarioTreinos({
   // Na visão da turma, os ajustes individuais vêm junto (para abrir pela aba Atletas), mas não entram na grade.
   const naGrade = escopo.tipo === 'turma' ? sessoes.filter((s) => s.origem !== 'ajuste') : sessoes
   const porDia = (d: string) => naGrade.filter((s) => s.data === d).sort((a, b) => a.ordem - b.ordem)
+  // Cards do dia na ordem: na turma, a ordem da turma; no atleta, a ordem pessoal
+  // dele (treinos e extras misturados; sem ordem pessoal, extras vão depois, pela hora).
+  type Item = { k: string; s?: SessaoCalendario; x?: ExecucaoView; o: number }
+  const itensDoDia = (d: string): Item[] => {
+    const ss = porDia(d)
+    if (escopo.tipo !== 'aluno') return ss.map((s) => ({ k: `s:${s.id}`, s, o: s.ordem }))
+    return [
+      ...ss.map((s) => ({ k: `s:${s.id}`, s, o: Number(s.ordemAtleta ?? s.ordem) })),
+      ...extras.filter((x) => diaLocal(x.executado_em) === d).map((x) => ({ k: `x:${x.id}`, x, o: chaveOrdemExtra(x) })),
+    ].sort((a, b) => a.o - b.o)
+  }
   const rascunhos = naGrade.filter((s) => s.status === 'rascunho').length
   const sessaoAberta = aberto?.sessaoId ? sessoes.find((s) => s.id === aberto.sessaoId) ?? null : null
-  // Treino da turma só se mexe na visão da turma; ajustes acompanham o da turma.
-  const arrastavel = (s: SessaoCalendario) => (escopo.tipo === 'turma' ? s.origem === 'turma' : s.origem === 'individual')
+  // Trocar de dia: treino da turma só na visão da turma; ajustes acompanham o da turma.
+  // Trocar a ordem no dia: qualquer card na visão do atleta (é a ordem pessoal dele).
+  const mudaDia = (s: SessaoCalendario) => (escopo.tipo === 'turma' ? s.origem === 'turma' : s.origem === 'individual')
+  const arrastavel = (s: SessaoCalendario) => escopo.tipo === 'aluno' || mudaDia(s)
 
   const modelosFiltrados = useMemo(() => {
     const b = busca.trim().toLowerCase()
     return biblioteca.modelos.filter((m) => !b || m.titulo.toLowerCase().includes(b))
   }, [busca, biblioteca.modelos])
 
-  const executar = (fn: () => Promise<{ error?: string }>, ok?: string, otimista?: Acao) => startTransition(async () => {
-    if (otimista) aplicar(otimista)
+  const executar = (fn: () => Promise<{ error?: string }>, ok?: string, otimista?: Acao | Acao[]) => startTransition(async () => {
+    for (const o of [otimista ?? []].flat()) aplicar(o)
     const r = await fn()
     setMsg(r.error ?? ok ?? null)
     router.refresh()
@@ -325,35 +223,54 @@ export default function CalendarioTreinos({
       return executar(() => usarModelo(a.slice(2), diaDestino, escopoAcao), 'Modelo colocado no calendário (rascunho).',
         m ? { t: 'modelo', data: diaDestino, titulo: m.titulo, modalidade: m.modalidade, tipo: m.tipo } : undefined)
     }
-    if (a.startsWith('x:')) {
-      // Atividade extra: sobre um treino → vincula; num dia → muda a data.
-      const exec = a.slice(2)
-      const vinculada = Object.entries(execucoesPorSessao).find(([, e]) => e.id === exec)
-      if (o.startsWith('sd:')) {
-        const alvo = sessoes.find((s) => s.id === o.slice(3))
-        if (vinculada?.[0] === alvo?.id) return
-        if (alvo && execucoesPorSessao[alvo.id]) return setMsg('Esse treino já tem uma atividade. Desvincule a atual no comparativo antes.')
-        return executar(() => vincularAtividade(exec, o.slice(3)), `Atividade vinculada a “${alvo?.titulo ?? 'treino'}”.`, { t: 'vincular', exec, sessao: o.slice(3) })
-      }
-      const x = extras.find((e) => e.id === exec) ?? vinculada?.[1]
-      if (x && (vinculada || diaLocal(x.executado_em) !== diaDestino)) {
-        return executar(() => moverAtividade(exec, diaDestino), vinculada ? 'Atividade movida de dia (saiu do treino e ficou como extra).' : 'Atividade movida de dia.', { t: 'moverAtividade', exec, data: diaDestino })
-      }
-      return
+    const doAtleta = escopo.tipo === 'aluno'
+    // O card arrastado na lista do dia: atividade vinculada = o card do treino.
+    const exec = a.startsWith('x:') ? a.slice(2) : null
+    const vinculada = exec ? Object.entries(execucoesPorSessao).find(([, e]) => e.id === exec) : undefined
+    const k = vinculada ? `s:${vinculada[0]}` : a
+    const s = k.startsWith('s:') ? sessoes.find((x) => x.id === k.slice(2)) : null
+    const extra = exec && !vinculada ? extras.find((x) => x.id === exec) : null
+    if (!s && !extra) return
+    const diaOrigem = s ? s.data : diaLocal(extra!.executado_em)
+
+    // Atividade solta sobre um treino → vincula.
+    if (exec && o.startsWith('sd:')) {
+      const alvo = sessoes.find((x) => x.id === o.slice(3))
+      if (vinculada?.[0] === alvo?.id) return
+      if (alvo && execucoesPorSessao[alvo.id]) return setMsg('Esse treino já tem uma atividade. Desvincule a atual no comparativo antes.')
+      return executar(() => vincularAtividade(exec, o.slice(3)), `Atividade vinculada a “${alvo?.titulo ?? 'treino'}”.`, { t: 'vincular', exec, sessao: o.slice(3) })
     }
-    if (!a.startsWith('s:')) return
-    const id = a.slice(2)
-    const s = sessoes.find((x) => x.id === id)
+
+    // Posição no dia de destino: na fenda; sobre um treino, antes dele; no dia, no fim.
+    const ids = itensDoDia(diaDestino).map((i) => i.k)
+    const pos = o.startsWith('o:') ? Number(e.over?.data.current?.pos ?? ids.length) : o.startsWith('sd:') ? Math.max(0, ids.indexOf(`s:${o.slice(3)}`)) : ids.length
+    const acaoOrdem = (nova: string[]): Acao => (doAtleta ? { t: 'ordemAtleta', itens: nova } : { t: 'ordem', ids: nova.map((i) => i.slice(2)) })
+    const gravarOrdem = (nova: string[]) => (doAtleta ? ordenarDiaDoAtleta(escopo.id, nova) : reordenarDia(nova.map((i) => i.slice(2))))
+
+    if (diaOrigem === diaDestino) {
+      const nova = reposicionar(ids, k, pos)
+      if (!nova) return
+      return executar(() => gravarOrdem(nova), undefined, acaoOrdem(nova))
+    }
+
+    // Outro dia. Atividade (extra ou vinculada): muda a data e vira extra lá.
+    if (exec) {
+      const nova = [...ids]
+      nova.splice(pos, 0, `x:${exec}`)
+      return executar(async () => {
+        const r = await moverAtividade(exec, diaDestino)
+        return r.error ? r : gravarOrdem(nova)
+      }, vinculada ? 'Atividade movida de dia (saiu do treino e ficou como extra).' : 'Atividade movida de dia.', [{ t: 'moverAtividade', exec, data: diaDestino }, acaoOrdem(nova)])
+    }
     if (!s) return
-    if (o.startsWith('sd:') && s.data === diaDestino) {
-      // Reordenar dentro do dia: coloca antes do treino de destino.
-      const alvo = o.slice(3)
-      if (alvo === id) return
-      const ordem = porDia(diaDestino).map((x) => x.id).filter((x) => x !== id)
-      ordem.splice(ordem.indexOf(alvo), 0, id)
-      return executar(() => reordenarDia(ordem), undefined, { t: 'ordem', ids: ordem })
-    }
-    if (s.data !== diaDestino) return executar(() => moverSessao(id, diaDestino), undefined, { t: 'moverSessao', id, data: diaDestino })
+    if (!mudaDia(s)) return setMsg(escopo.tipo === 'aluno' ? 'Treino da turma (e o ajuste dele) muda de dia na visão da turma. Aqui dá para trocar a ordem dentro do dia.' : 'Esse treino não muda de dia por aqui.')
+    const nova = [...ids]
+    nova.splice(pos, 0, k)
+    const soMover = !doAtleta && o.startsWith('d:')   // a turma já entra no fim do dia
+    return executar(async () => {
+      const r = await moverSessao(s.id, diaDestino)
+      return r.error || soMover ? r : gravarOrdem(nova)
+    }, undefined, soMover ? { t: 'moverSessao', id: s.id, data: diaDestino } : [{ t: 'moverSessao', id: s.id, data: diaDestino }, acaoOrdem(nova)])
   }
 
   function maisNoDia(d: string) {
@@ -436,14 +353,12 @@ export default function CalendarioTreinos({
                     {sem.map((d) => (
                       <CelulaDia key={d} d={d} vista={vista} destaque={d === hoje} foraMes={vista === 'mes' && d.slice(0, 7) !== ancora.slice(0, 7)}
                         onMais={() => maisNoDia(d)} selecionandoModelo={Boolean(modeloSel)}>
-                        {porDia(d).map((s) => (
-                          <CardSessao key={s.id} s={s} arrastavel={arrastavel(s)} onAbrir={() => setAberto({ sessaoId: s.id })}
-                            realizado={escopo.tipo === 'aluno' ? execucoesPorSessao[s.id] ?? null : null}
-                            status={escopo.tipo !== 'aluno' || s.status !== 'publicado' || s.oculto ? null
-                              : execucoesPorSessao[s.id] ? (() => { const p = proporcaoExecutada(s, execucoesPorSessao[s.id]); return p !== null && (p < 0.8 || p > 1.2) ? 'desvio' : 'feito' })()
-                              : s.data < hoje ? 'perdido' : null} />
-                        ))}
-                        {extras.filter((x) => diaLocal(x.executado_em) === d).map((x) => <CardExtra key={x.id} x={x} onAbrir={() => setExtraAberta(x)} />)}
+                        <ListaDoDia dia={d} itens={itensDoDia(d)} chave={(i) => i.k} arrastando={Boolean(arrastando && !arrastando.startsWith('m:'))}
+                          render={(i) => i.s ? (
+                            <CardSessao s={i.s} arrastavel={arrastavel(i.s)} onAbrir={() => setAberto({ sessaoId: i.s!.id })}
+                              realizado={escopo.tipo === 'aluno' ? execucoesPorSessao[i.s.id] ?? null : null}
+                              status={escopo.tipo === 'aluno' ? statusDoTreino(i.s, execucoesPorSessao[i.s.id], hoje) : null} />
+                          ) : <CardExtra x={i.x!} onAbrir={() => setExtraAberta(i.x!)} />} />
                       </CelulaDia>
                     ))}
                     <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 text-[11px] text-gray-500 space-y-0.5">

@@ -85,3 +85,19 @@ export async function moverExtra(execId: string, data: string): Promise<{ error?
   await db.from('treino_execucoes').update({ executado_em: `${data}T${hora}-03:00` }).eq('id', execId)
   return {}
 }
+
+/** Grava a ordem pessoal do dia: treino → na entrega (criada se faltar); extra → na execução. */
+export async function ordenarDia(alunoId: string, itens: { tipo: 's' | 'x'; id: string }[]): Promise<{ error?: string }> {
+  const db = createAdminClient() as Db
+  for (const [i, it] of itens.entries()) {
+    const ordem = i + 1
+    if (it.tipo === 'x') {
+      const { error } = await db.from('treino_execucoes').update({ ordem }).eq('id', it.id).eq('aluno_id', alunoId)
+      if (error) return { error: 'Não foi possível salvar a ordem.' }
+      continue
+    }
+    const { error } = await db.from('treino_entregas').upsert({ sessao_id: it.id, aluno_id: alunoId, ordem }, { onConflict: 'sessao_id,aluno_id' })
+    if (error) return { error: 'Não foi possível salvar a ordem.' }
+  }
+  return {}
+}
