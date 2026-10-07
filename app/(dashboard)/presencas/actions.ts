@@ -73,37 +73,43 @@ export async function savePresencas(
     // admin, para o do titular. (Antes ia sempre para o titular, e a RLS de
     // registros_aula recusava quando quem salvava era o auxiliar.)
     const [{ data: turma }, { data: perfilActor }] = await Promise.all([
-      supabase.from('turmas').select('coach_id').eq('id', turmaId).single(),
+      supabase.from('turmas').select('coach_id, modalidade').eq('id', turmaId).single(),
       supabase.from('profiles').select('role').eq('id', actor.id).single(),
     ])
     const donoDiario: string | null = perfilActor?.role === 'coach' ? actor.id : turma?.coach_id ?? null
 
     if (donoDiario) {
-      const { data: existingRegistro } = await supabase
+      // O dia pode ter várias aulas (uma por modalidade). Se alguma já tem a
+      // turma, nada a fazer; senão a turma entra na aula da mesma modalidade
+      // dela (ou na primeira do dia); sem aula no dia, cria uma.
+      const { data: aulasDoDia } = await supabase
         .from('registros_aula')
-        .select('id')
+        .select('id, modalidade, registro_aula_turmas ( turma_id )')
         .eq('coach_id', donoDiario)
         .eq('data', data)
-        .maybeSingle()
+        .order('created_at')
+      type AulaDia = { id: string; modalidade: string; registro_aula_turmas: { turma_id: string }[] }
+      const lista = (aulasDoDia ?? []) as AulaDia[]
+      const jaTem = lista.some((a) => a.registro_aula_turmas.some((t) => t.turma_id === turmaId))
 
-      let registroId: string | null = existingRegistro?.id ?? null
-
-      if (!registroId) {
-        const { data: novo } = await supabase
-          .from('registros_aula')
-          .insert({ coach_id: donoDiario, data, modalidade: 'corrida' })
-          .select('id')
-          .single()
-        registroId = novo?.id ?? null
-      }
-
-      if (registroId) {
-        await supabase
-          .from('registro_aula_turmas')
-          .upsert(
-            { registro_aula_id: registroId, turma_id: turmaId, descricao: null },
-            { onConflict: 'registro_aula_id,turma_id', ignoreDuplicates: true }
-          )
+      if (!jaTem) {
+        let registroId: string | null = (lista.find((a) => a.modalidade === turma?.modalidade) ?? lista[0])?.id ?? null
+        if (!registroId) {
+          const { data: novo } = await supabase
+            .from('registros_aula')
+            .insert({ coach_id: donoDiario, data, modalidade: turma?.modalidade ?? 'corrida' })
+            .select('id')
+            .single()
+          registroId = novo?.id ?? null
+        }
+        if (registroId) {
+          await supabase
+            .from('registro_aula_turmas')
+            .upsert(
+              { registro_aula_id: registroId, turma_id: turmaId, descricao: null },
+              { onConflict: 'registro_aula_id,turma_id', ignoreDuplicates: true }
+            )
+        }
       }
     }
 

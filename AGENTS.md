@@ -343,9 +343,9 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 **`turma_coaches`** — junction table for turmas with more than one coach (assistant coaches)
 - `turma_id`, `coach_id`, `created_at`. Read by `coach_has_turma()` — see RLS Summary.
 
-**`registros_aula`** — one lesson-diary entry per coach per day (Diário de Aulas)
+**`registros_aula`** — one lesson (aula) of the Diário de Aulas
 - `id`, `coach_id` (FK → profiles), `data`, `modalidade`, `objetivo`, `observacoes`, `descricao`, `created_at`, `updated_at`
-- Unique per `(coach_id, data)` — upserted by `criarMultiplosRegistros()`'s batch-fill flow
+- **Several per coach per day** (one per modality, e.g. pré equipe/equipe with swimming and running the same day). Until 07/10/2026 it was unique per `(coach_id, data)`; `diario_varias_aulas.sql` dropped that. Order within a day = `created_at`.
 
 **`registro_aula_turmas`** — which turmas a `registros_aula` entry covers, with a per-turma note
 - `id`, `registro_aula_id` (FK → registros_aula), `turma_id` (FK → turmas), `descricao`
@@ -515,7 +515,7 @@ Staff generates a tokenized link per athlete (or in bulk per class). Parents ope
 Admin-only. Shows all write actions with actor, resource, and before/after diffs. Sensitive fields (`id`, `created_at`, `updated_at`, `password`, `avatar_url`, `captacao_aberta`) are stripped before logging. CPF/RG of parents/guardians are deliberately never included in audit payloads, even when the action touches a `fichas_inscricao`/`responsaveis` row — only non-sensitive fields (status, ids, counts) are logged for those.
 
 ### Class Diary (`/diario`)
-Coach logs lessons per day (modalidade, objetivo, observações, which turmas), can batch-fill a whole month, and writes a monthly summary (`diario_resumos`) used in signed reports. A "foto do dia" can be attached per turma/date (bucket `fotos`).
+A month **calendar** (like the training one): the **+** of a day (or "Nova aula") opens a modal with date, modality, turmas, objetivo, descrição, observações and the "foto do dia" per turma (bucket `fotos`, one per turma per day, saved on upload). A day can have **several aulas**, one card each, and each one is an "AULA Nº" in the printed report (the day's photo of a turma prints under the first aula of that day with the turma). Days whose attendance was saved but have no aula covering that turma show a dashed "Chamada sem aula" card that opens the modal pre-filled. Saving attendance adds the turma to that day's aula of the same modality (or the first one), creating one with the turma's modality if the day has none. Below the calendar: report data (CREF — remembered per browser —, cidade, processo, monthly summary `diario_resumos`, autosaved), print, signed documents. `/diario/nova` and `/diario/[id]/editar` now redirect to the calendar.
 
 ### Financeiro (`/financeiro`)
 Budget tracking per project (edital/patrocínio) and category, plus coach-submitted expense notes (notas fiscais). Four tabs (`FinanceiroTabs.tsx`): **Orçamento** (`/financeiro`, everyone) — pick a competência year, see every projeto that year as a card with orçado/consumido/saldo per categoria and a progress bar (green <70%, yellow 70–100%, red past 100%, computed by `lib/financeiro.ts`'s `percentConsumido()`/`progressoBarColor()`); **Notas Fiscais** (`/financeiro/notas`, everyone) — filterable list, "+ Nova nota" lets a coach log an expense (valor, categoria, data, optional anexo — PDF/JPG/PNG/WebP up to 10MB in the private `notas-fiscais` bucket) against their own name, admin can log on behalf of any coach and edit/delete anyone's; **Projetos** (`/financeiro/projetos`, admin-only) — CRUD for projects (nome, ano, descrição, objetivo, metas), per-projeto page has an inline-editable orçamento table per categoria (`OrcamentoTable.tsx` — each row is its own component with its own `useTransition`, so saving one category's value never disables another mid-edit) and a general attachments section (`ProjetoArquivosSection.tsx`, private `financeiro-arquivos` bucket, for plano de trabalho/convênio/edital docs); **Categorias** (`/financeiro/categorias`, admin-only) — manage the shared category list, rename inline, soft-disable (never hard-deleted, since budgets/notes reference them). No approval flow — a lançamento counts against the budget the moment it's saved. See the `### RLS Summary` note above for the read-open/write-scoped policy shape.
@@ -713,6 +713,8 @@ This is the unlikely worst case. Steps, roughly in order:
    37. `treinos_oculto.sql` — `treino_sessoes.oculto` (Visível/Oculto, like Movelly) + athlete read policies exclude hidden sessions (needs #33).
 
    38. `treinos_ordem_atleta.sql` — `treino_entregas.ordem` + `treino_execucoes.ordem`: each athlete's own order of the cards within a day (needs #33).
+
+   39. `diario_varias_aulas.sql` — several aulas per coach per day (drops `registros_aula_coach_id_data_key`; documents `descricao`). Run after deploying the code that no longer upserts on `(coach_id, data)`.
 
    #32–36 were run in production on 05/10/2026; #37 and #38 on 06/10/2026.
 

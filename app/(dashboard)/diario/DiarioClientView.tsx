@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
-import { X, Plus, CheckCircle, Loader, AlertCircle, Printer, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { X, Plus, CheckCircle, Loader, AlertCircle, Printer, Image as ImageIcon, Trash2, ChevronLeft, ChevronRight, Footprints, Bike, Waves, Activity, Users, Camera, ClipboardCheck } from 'lucide-react'
 import Card from '@/components/ui/Card'
-import { formatDate } from '@/lib/utils'
-import { criarMultiplosRegistros, salvarResumoDiario } from './actions'
+import { criarRegistroAula, atualizarRegistroAula, excluirRegistroAula, salvarResumoDiario } from './actions'
 import { friendlyError } from '@/lib/errors'
 import { setFotoDoDia, removerFotoDoDia, type FotoDoDia } from './fotoActions'
 import AssinaturaImpressa from '@/components/documentos/AssinaturaImpressa'
@@ -57,50 +57,49 @@ function turmaShortLabel(nome: string): string {
 
 // ── Types ───────────────────────────────────────────────────────────────────
 type TurmaBasic = { id: string; nome: string }
-type FotoBasic  = { id: string; url: string; titulo: string; turma_id: string; storage_path: string }
+export type FotoBasic = { id: string; url: string; titulo: string; turma_id: string; storage_path: string }
 
-export type InitialDay = {
-  date: string
+/** Uma aula do diário (um dia pode ter várias, uma por modalidade). */
+export type Aula = {
+  id: string
+  data: string
   modalidade: string
   objetivo: string
   descricao: string
   observacoes: string
   turmaIds: string[]
-  fotos: FotoBasic[]
 }
 
-type DayEntry = {
-  key: string
-  date: string
-  modalidade: string
-  objetivo: string
-  descricao: string
-  observacoes: string
-  turmaIds: string[]
-  fotos: FotoBasic[]
+const ICONE_MOD: Record<string, typeof Footprints> = { corrida: Footprints, ciclismo: Bike, natacao: Waves, triathlon: Activity, duathlon: Activity, reuniao: Users }
+const COR_MOD: Record<string, string> = {
+  corrida: 'bg-green-500', ciclismo: 'bg-purple-500', natacao: 'bg-sky-500',
+  triathlon: 'bg-orange-500', duathlon: 'bg-amber-400', reuniao: 'bg-gray-400',
 }
-
-type DraftEntry = Omit<DayEntry, 'fotos'>
-
-type Draft = {
-  entries: DraftEntry[]
-  cref?: string
-  cidade?: string
-  processo?: string
-  resumo?: string
+const TXT_MOD: Record<string, string> = {
+  corrida: 'text-green-600', ciclismo: 'text-purple-600', natacao: 'text-sky-600',
+  triathlon: 'text-orange-600', duathlon: 'text-amber-600', reuniao: 'text-gray-500',
 }
+const NOMES_DIA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-function loadDraft(key: string): Draft | null {
-  if (typeof window === 'undefined') return null
-  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : null }
-  catch { return null }
+/** Semanas (seg–dom) que cobrem o mês. */
+function semanasDoMes(ano: number, mes: number): string[][] {
+  const primeiro = new Date(ano, mes - 1, 1)
+  const inicio = new Date(ano, mes - 1, 1 - ((primeiro.getDay() + 6) % 7))
+  const semanas: string[][] = []
+  for (let d = new Date(inicio); d.getMonth() <= mes - 1 || d.getFullYear() < ano || semanas.length === 0;) {
+    if (d.getFullYear() > ano || (d.getFullYear() === ano && d.getMonth() > mes - 1)) break
+    const sem: string[] = []
+    for (let i = 0; i < 7; i++) { sem.push(iso(d)); d.setDate(d.getDate() + 1) }
+    semanas.push(sem)
+  }
+  return semanas
 }
 
 // ── Foto do dia (por turma) ──────────────────────────────────────────────────
 function FotoDoDiaSlot({
-  entryKey, date, turmaId, turmaLabel, foto, onChange,
+  date, turmaId, turmaLabel, foto, onChange,
 }: {
-  entryKey: string
   date: string
   turmaId: string
   turmaLabel: string | null
@@ -207,15 +206,167 @@ function FotoDoDiaSlot({
   )
 }
 
+// ── Modal da aula ───────────────────────────────────────────────────────────
+type FormAula = Omit<Aula, 'id'>
+
+function AulaModal({
+  aula, inicial, allTurmas, fotos, targetCoachId, onFoto, onFechar,
+}: {
+  aula: Aula | null                       // null = aula nova
+  inicial: FormAula
+  allTurmas: TurmaBasic[]
+  fotos: (FotoBasic & { data: string })[]
+  targetCoachId?: string
+  onFoto: (data: string, turmaId: string, foto: FotoDoDia | null) => void
+  onFechar: () => void
+}) {
+  const router = useRouter()
+  const [f, setF] = useState<FormAula>(inicial)
+  const [pending, startTransition] = useTransition()
+  const [erro, setErro] = useState<string | null>(null)
+  const [confirmaExcluir, setConfirmaExcluir] = useState(false)
+  const set = (patch: Partial<FormAula>) => setF((x) => ({ ...x, ...patch }))
+  const toggleTurma = (id: string) => set({ turmaIds: f.turmaIds.includes(id) ? f.turmaIds.filter((x) => x !== id) : [...f.turmaIds, id] })
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar() }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onFechar])
+
+  function salvar() {
+    if (!f.modalidade) { setErro('Escolha a modalidade.'); return }
+    setErro(null)
+    startTransition(async () => {
+      const r = aula ? await atualizarRegistroAula(aula.id, f) : await criarRegistroAula(f, targetCoachId)
+      if (r.error) { setErro(r.error); return }
+      router.refresh()
+      onFechar()
+    })
+  }
+  function excluir() {
+    if (!aula) return
+    startTransition(async () => {
+      const r = await excluirRegistroAula(aula.id)
+      if (r.error) { setErro(r.error); return }
+      router.refresh()
+      onFechar()
+    })
+  }
+
+  const inputCls = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white'
+  const labelCls = 'block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5'
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-black/40 sm:p-4" onClick={onFechar}>
+      <div className="bg-white sm:rounded-2xl shadow-xl w-full max-w-2xl flex flex-col h-[100svh] sm:h-auto sm:max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start gap-3 px-5 pt-4 pb-3 border-b border-gray-100">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-gray-400">{aula ? 'Editar aula' : 'Nova aula'}</p>
+            <p className="text-lg font-semibold text-navy-500">{f.data ? `${formatDataSimples(f.data)} – ${diaSemana(f.data)}` : 'Aula'}</p>
+          </div>
+          <button onClick={onFechar} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Data</label>
+              <input type="date" value={f.data} onChange={(e) => set({ data: e.target.value })} className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Modalidade</label>
+              <div className="flex flex-wrap gap-1.5">
+                {MODALIDADES.map((m) => {
+                  const Icone = ICONE_MOD[m.value] ?? Activity
+                  const ativo = f.modalidade === m.value
+                  return (
+                    <button key={m.value} type="button" onClick={() => set({ modalidade: m.value })}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold ${ativo ? 'bg-navy-500 border-navy-500 text-white' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      <Icone size={13} className={ativo ? '' : TXT_MOD[m.value]} /> {m.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Turmas atendidas</label>
+            <div className="flex flex-wrap gap-2">
+              {allTurmas.map((t) => (
+                <label key={t.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-semibold select-none ${
+                  f.turmaIds.includes(t.id) ? 'bg-sky-50 border-sky-300 text-sky-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+                }`}>
+                  <input type="checkbox" checked={f.turmaIds.includes(t.id)} onChange={() => toggleTurma(t.id)} className="w-3 h-3 accent-sky-400" />
+                  {t.nome}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Objetivo da Aula</label>
+            <textarea rows={2} value={f.objetivo} onChange={(e) => set({ objetivo: e.target.value })}
+              placeholder="Ex: Promover a interação do grupo, avaliar condicionamento..." className={`${inputCls} resize-y`} />
+          </div>
+          <div>
+            <label className={labelCls}>Descrição das Atividades / Metodologia</label>
+            <textarea rows={4} value={f.descricao} onChange={(e) => set({ descricao: e.target.value })}
+              placeholder="Descreva as atividades por turma: T1: ... T2: ..." className={`${inputCls} resize-y`} />
+          </div>
+          <div>
+            <label className={labelCls}>Observações / Intercorrências</label>
+            <textarea rows={2} value={f.observacoes} onChange={(e) => set({ observacoes: e.target.value })}
+              placeholder="Ex: ✔ Aula realizada normalmente" className={`${inputCls} resize-y`} />
+          </div>
+          <div>
+            <label className={labelCls}>Fotos do dia <span className="normal-case font-normal text-gray-400">(uma por turma por dia — já salva ao enviar)</span></label>
+            {f.turmaIds.length === 0 || !f.data ? (
+              <p className="text-xs text-gray-400">Marque ao menos uma turma atendida para adicionar fotos.</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {f.turmaIds.map((turmaId) => (
+                  <FotoDoDiaSlot key={`${f.data}-${turmaId}`} date={f.data} turmaId={turmaId}
+                    turmaLabel={allTurmas.find((t) => t.id === turmaId)?.nome ?? null}
+                    foto={fotos.find((x) => x.data === f.data && x.turma_id === turmaId)}
+                    onChange={(foto) => onFoto(f.data, turmaId, foto)} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {erro && <p className="mx-5 mb-2 text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{erro}</p>}
+        <div className="border-t border-gray-100 px-5 py-3 flex items-center gap-2">
+          {aula && (confirmaExcluir ? (
+            <span className="flex items-center gap-2 text-sm">
+              <span className="text-gray-500">Excluir esta aula?</span>
+              <button disabled={pending} onClick={excluir} className="font-semibold text-red-500 disabled:opacity-50">Sim, excluir</button>
+              <button onClick={() => setConfirmaExcluir(false)} className="text-gray-400">Não</button>
+            </span>
+          ) : (
+            <button onClick={() => setConfirmaExcluir(true)} className="inline-flex items-center gap-1 text-sm text-red-500"><Trash2 size={14} /> Excluir</button>
+          ))}
+          <button onClick={onFechar} className="ml-auto text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl px-4 py-2">Cancelar</button>
+          <button disabled={pending} onClick={salvar}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold bg-sky-400 hover:bg-sky-500 text-white rounded-xl px-4 py-2 disabled:opacity-50">
+            {pending && <Loader size={14} className="animate-spin" />} Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Component ───────────────────────────────────────────────────────────────
 export default function DiarioClientView({
-  initialDays, allTurmas, targetCoachId, mes, ano,
+  aulas, chamadas, fotos: fotosProp, allTurmas, targetCoachId, mes, ano,
   coachName,
   initialCref, initialCidade, initialProcesso, initialResumo,
   periodo, documentos,
   assinatura, linkCadastroAssinatura,
 }: {
-  initialDays: InitialDay[]
+  aulas: Aula[]
+  chamadas: Record<string, string[]>       // dia → turmas com chamada salva
+  fotos: (FotoBasic & { data: string })[]
   allTurmas: TurmaBasic[]
   targetCoachId?: string
   mes: number; ano: number
@@ -226,99 +377,39 @@ export default function DiarioClientView({
   assinatura: string | null              // assinatura cadastrada do treinador
   linkCadastroAssinatura: string | null
 }) {
+  const router = useRouter()
+  const sp = useSearchParams()
   const [incluirAssinatura, setIncluirAssinatura] = useState(true)
-  const storageKey    = `diario-draft-${targetCoachId ?? 'self'}-${ano}-${mes}`
   const hasUserEdited = useRef(false)
-  const addCounter    = useRef(0)
-
-  const [newDate,    setNewDate]    = useState('')
-  const [addError,   setAddError]   = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [saveErrorMsg, setSaveErrorMsg] = useState<string | null>(null)
+  const [aberta, setAberta] = useState<{ aula: Aula | null; inicial: FormAula } | null>(null)
+  // Fotos enviadas/removidas no modal valem na hora (antes de o servidor recarregar).
+  const [fotosAlteradas, setFotosAlteradas] = useState<Record<string, (FotoBasic & { data: string }) | null>>({})
+  const fotos = [
+    ...fotosProp.filter((f) => !(`${f.data}|${f.turma_id}` in fotosAlteradas)),
+    ...Object.values(fotosAlteradas).filter((f): f is FotoBasic & { data: string } => Boolean(f)),
+  ]
 
-  // ── Report metadata state ────────────────────────────────────────────────
-  const [cref,     setCref]     = useState(() => { const d = loadDraft(storageKey); return d?.cref     ?? initialCref })
-  const [cidade,   setCidade]   = useState(() => { const d = loadDraft(storageKey); return (d?.cidade   ?? initialCidade) || 'São José' })
-  const [processo, setProcesso] = useState(() => { const d = loadDraft(storageKey); return d?.processo ?? initialProcesso })
-  const [resumo,   setResumo]   = useState(() => { const d = loadDraft(storageKey); return d?.resumo   ?? initialResumo })
-
-  // ── Diary entries state ──────────────────────────────────────────────────
-  const [entries, setEntries] = useState<DayEntry[]>(() => {
-    const draft = loadDraft(storageKey)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const draftMap: Record<string, any> = {}
-    for (const e of draft?.entries ?? []) draftMap[e.date] = e
-
-    const fromInitial: DayEntry[] = initialDays.map((day) => {
-      const de = draftMap[day.date]
-      // Handle old draft format where "descricao" held what is now "objetivo"
-      const isOldFormat = de && ('descricao' in de) && !('objetivo' in de)
-      return {
-        key:         day.date,
-        date:        day.date,
-        modalidade:  de?.modalidade  ?? day.modalidade,
-        objetivo:    de?.objetivo    ?? (isOldFormat ? de.descricao : undefined) ?? day.objetivo,
-        descricao:   isOldFormat ? '' : (de?.descricao ?? day.descricao),
-        observacoes: de?.observacoes ?? day.observacoes,
-        turmaIds:    de?.turmaIds ?? day.turmaIds,
-        fotos:       day.fotos,
-      }
-    })
-
-    const manualDays: DayEntry[] = (draft?.entries ?? [])
-      .filter((e) => !initialDays.some((d) => d.date === e.date))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((e: any) => ({
-        key:         e.key ?? e.date,
-        date:        e.date,
-        modalidade:  e.modalidade  ?? '',
-        objetivo:    e.objetivo    ?? e.descricao ?? '',
-        descricao:   ('objetivo' in e) ? (e.descricao ?? '') : '',
-        observacoes: e.observacoes ?? '',
-        turmaIds:    e.turmaIds ?? [],
-        fotos:       [],
-      }))
-
-    return [...fromInitial, ...manualDays].sort((a, b) => a.date.localeCompare(b.date))
+  // ── Dados do relatório (salvos sozinhos) ─────────────────────────────────
+  // CREF só sai no relatório: fica lembrado neste navegador (o do perfil é o padrão).
+  const chaveCref = `diario-cref-${targetCoachId ?? 'self'}`
+  const [cref, setCrefState] = useState(() => {
+    try { return (typeof window !== 'undefined' && localStorage.getItem(chaveCref)) || initialCref } catch { return initialCref }
   })
+  const setCref = (v: string) => { setCrefState(v); try { localStorage.setItem(chaveCref, v) } catch { /* sem storage */ } }
+  const [cidade,   setCidade]   = useState(initialCidade || 'São José')
+  const [processo, setProcesso] = useState(initialProcesso)
+  const [resumo,   setResumo]   = useState(initialResumo)
 
-  // ── Autosave ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!hasUserEdited.current) return
     setSaveStatus('saving')
     let cancelled = false
-
     const timer = setTimeout(async () => {
-      localStorage.setItem(storageKey, JSON.stringify({
-        entries: entries.map(({ fotos: _f, ...rest }) => rest),
-        cref, cidade, processo, resumo,
-      }))
-
       try {
         await salvarResumoDiario(ano, mes, { cidade, processo, resumo }, targetCoachId)
-
-        let res: { error?: string } | void = undefined
-        if (entries.length > 0) {
-          res = await criarMultiplosRegistros(
-            entries.map((en) => ({
-              data:        en.date,
-              modalidade:  en.modalidade,
-              objetivo:    en.objetivo,
-              descricao:   en.descricao,
-              observacoes: en.observacoes,
-              turmaIds:    en.turmaIds,
-            })),
-            targetCoachId
-          )
-        }
-        if (!cancelled) {
-          if (res?.error) {
-            setSaveErrorMsg(res.error)
-            setSaveStatus('error')
-          } else {
-            setSaveStatus('saved')
-          }
-        }
+        if (!cancelled) setSaveStatus('saved')
       } catch (err) {
         if (!cancelled) {
           setSaveErrorMsg(friendlyError(err instanceof Error ? err : String(err), 'Erro ao salvar — tente novamente.'))
@@ -326,9 +417,8 @@ export default function DiarioClientView({
         }
       }
     }, 800)
-
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [entries, cref, cidade, processo, resumo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cref, cidade, processo, resumo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (saveStatus !== 'saved') return
@@ -336,57 +426,44 @@ export default function DiarioClientView({
     return () => clearTimeout(t)
   }, [saveStatus])
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
-  function toggleEntryTurma(entryKey: string, turmaId: string) {
-    hasUserEdited.current = true
-    setEntries((prev) => prev.map((e) => {
-      if (e.key !== entryKey) return e
-      const has = e.turmaIds.includes(turmaId)
-      return { ...e, turmaIds: has ? e.turmaIds.filter((id) => id !== turmaId) : [...e.turmaIds, turmaId] }
-    }))
-  }
-
-  function update(key: string, patch: Partial<Pick<DayEntry, 'modalidade' | 'objetivo' | 'descricao' | 'observacoes'>>) {
-    hasUserEdited.current = true
-    setEntries((prev) => prev.map((e) => (e.key === key ? { ...e, ...patch } : e)))
-  }
-
-  function addDay() {
-    if (!newDate) return
-    setAddError('')
-    if (entries.some((e) => e.date === newDate)) { setAddError('Esta data já está na lista'); return }
-    hasUserEdited.current = true
-    const key = `manual-${newDate}-${++addCounter.current}`
-    // Facilita a entrada: já vem com as turmas do dia mais recente marcadas
-    // (ou todas, se ainda não há nenhum dia), só desmarca quem faltou.
-    const lastEntry = entries[entries.length - 1]
-    const defaultTurmaIds = lastEntry ? lastEntry.turmaIds : allTurmas.map((t) => t.id)
-    setEntries((prev) =>
-      [...prev, { key, date: newDate, modalidade: '', objetivo: '', descricao: '', observacoes: '', turmaIds: defaultTurmaIds, fotos: [] }]
-        .sort((a, b) => a.date.localeCompare(b.date))
-    )
-    setNewDate('')
-  }
-
-  function removeEntry(key: string) {
-    hasUserEdited.current = true
-    setEntries((prev) => prev.filter((e) => e.key !== key))
-  }
-
-  function handleFotoChange(entryKey: string, turmaId: string, foto: FotoDoDia | null) {
-    setEntries((prev) => prev.map((e) => {
-      if (e.key !== entryKey) return e
-      const semEssaTurma = e.fotos.filter((f) => f.turma_id !== turmaId)
-      return { ...e, fotos: foto ? [...semEssaTurma, foto] : semEssaTurma }
-    }))
-  }
-
   function setMeta<T>(setter: (v: T) => void) {
     return (v: T) => { hasUserEdited.current = true; setter(v) }
   }
 
-  // ── Derived ───────────────────────────────────────────────────────────────
-  const reportEntries = entries.filter((e) => e.modalidade || e.objetivo || e.descricao || e.observacoes)
+  function handleFoto(data: string, turmaId: string, foto: FotoDoDia | null) {
+    setFotosAlteradas((prev) => ({ ...prev, [`${data}|${turmaId}`]: foto ? { ...foto, data } : null }))
+  }
+
+  // ── Calendário ───────────────────────────────────────────────────────────
+  const hoje = iso(new Date())
+  const semanas = semanasDoMes(ano, mes)
+  const aulasDoDia = (d: string) => aulas.filter((a) => a.data === d)
+  /** Turmas com chamada no dia que ainda não estão em nenhuma aula registrada. */
+  const semRegistro = (d: string) => (chamadas[d] ?? []).filter((t) => !aulasDoDia(d).some((a) => a.turmaIds.includes(t)))
+  const curto = (id: string) => { const t = allTurmas.find((x) => x.id === id); return t ? turmaShortLabel(t.nome) : '' }
+
+  function irMes(delta: number) {
+    const d = new Date(ano, mes - 1 + delta, 1)
+    const q = new URLSearchParams(sp.toString())
+    q.set('mes', String(d.getMonth() + 1)); q.set('ano', String(d.getFullYear()))
+    router.push(`/diario?${q}`, { scroll: false })
+  }
+
+  function novaAula(data: string) {
+    const pendentes = semRegistro(data)
+    // Facilita: as turmas da chamada do dia; senão as da última aula; senão todas.
+    const anterior = [...aulas].filter((a) => a.data <= data).pop()
+    const turmaIds = pendentes.length ? pendentes : anterior ? anterior.turmaIds : allTurmas.map((t) => t.id)
+    setAberta({ aula: null, inicial: { data, modalidade: '', objetivo: '', descricao: '', observacoes: '', turmaIds } })
+  }
+
+  // ── Relatório (impressão) ────────────────────────────────────────────────
+  // A foto é do dia × turma: sai na primeira aula do dia que atendeu a turma.
+  const reportEntries = aulas.map((a) => {
+    const antes = aulas.filter((x) => x.data === a.data && aulas.indexOf(x) < aulas.indexOf(a))
+    const turmasComFoto = a.turmaIds.filter((t) => !antes.some((x) => x.turmaIds.includes(t)))
+    return { ...a, fotos: fotos.filter((f) => f.data === a.data && turmasComFoto.includes(f.turma_id)) }
+  })
 
   const inputCls = 'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white'
   const labelCls = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2'
@@ -446,11 +523,11 @@ export default function DiarioClientView({
             Preencha os campos abaixo — o relatório aparecerá aqui conforme você registra.
           </p>
         ) : reportEntries.map((entry, idx) => (
-          <div key={entry.key} className="no-break" style={{ marginBottom: 24 }}>
+          <div key={entry.id} className="no-break" style={{ marginBottom: 24 }}>
             {idx > 0 && <hr style={{ borderColor: '#555', marginBottom: 16 }} />}
 
             <p style={{ fontWeight: 700, fontSize: 12, marginBottom: 2 }}>AULA Nº {idx + 1}</p>
-            <p style={{ marginBottom: 4 }}><strong>Data:</strong> {formatDataSimples(entry.date)} – {diaSemana(entry.date)}</p>
+            <p style={{ marginBottom: 4 }}><strong>Data:</strong> {formatDataSimples(entry.data)} – {diaSemana(entry.data)}</p>
 
             {entry.modalidade && (
               <p style={{ marginBottom: 4 }}>
@@ -538,22 +615,84 @@ export default function DiarioClientView({
         </div>
       </div>
 
-      {/* ══ FORM (hidden when printing) ══════════════════════════════════════ */}
+      {/* ══ TELA (escondida na impressão) ═════════════════════════════════════ */}
       <div className="print:hidden space-y-4">
-        {targetCoachId && (
-          <Card>
-            <DocumentosAssinadosSection
-              coachId={targetCoachId}
-              tipo="diario_aula"
-              periodo={periodo}
-              documentos={documentos}
-            />
-          </Card>
-        )}
+        <Card>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <button onClick={() => irMes(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500" title="Mês anterior"><ChevronLeft size={18} /></button>
+            <p className="text-base font-semibold text-navy-500 min-w-36 text-center">{MESES_LABEL[mes]} {ano}</p>
+            <button onClick={() => irMes(1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500" title="Próximo mês"><ChevronRight size={18} /></button>
+            <span className="text-xs text-gray-400 ml-1">{aulas.length} aula{aulas.length !== 1 ? 's' : ''} registrada{aulas.length !== 1 ? 's' : ''}</span>
+            <button onClick={() => novaAula(hoje.slice(0, 7) === `${ano}-${String(mes).padStart(2, '0')}` ? hoje : `${ano}-${String(mes).padStart(2, '0')}-01`)}
+              className="ml-auto inline-flex items-center gap-1.5 text-sm font-semibold bg-sky-400 hover:bg-sky-500 text-white rounded-xl px-3 py-1.5">
+              <Plus size={15} /> Nova aula
+            </button>
+          </div>
+
+          <div className="hidden sm:grid grid-cols-7 gap-1 text-[11px] font-semibold text-gray-400 mb-1">
+            {NOMES_DIA.map((n) => <div key={n} className="px-1">{n}</div>)}
+          </div>
+          <div className="space-y-1">
+            {semanas.map((sem) => (
+              <div key={sem[0]} className="sm:grid sm:grid-cols-7 sm:gap-1 space-y-1 sm:space-y-0">
+                {sem.map((d, i) => {
+                  const foraMes = Number(d.slice(5, 7)) !== mes
+                  const doDia = aulasDoDia(d)
+                  const pend = foraMes ? [] : semRegistro(d)
+                  const vazio = !doDia.length && !pend.length
+                  return (
+                    <div key={d} className={`group rounded-xl border p-1.5 sm:min-h-[120px] ${foraMes ? 'hidden sm:block opacity-40 bg-gray-50 border-gray-100' : d === hoje ? 'border-sky-400 bg-sky-50/40' : 'border-gray-200 bg-white'} ${vazio && !foraMes ? 'hidden sm:block' : ''}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-[11px] font-semibold ${d === hoje ? 'text-sky-600' : 'text-gray-400'}`}><span className="sm:hidden">{NOMES_DIA[i]} </span>{d.slice(8)}</span>
+                        {!foraMes && (
+                          <button onClick={() => novaAula(d)} title="Registrar aula neste dia"
+                            className="p-0.5 rounded text-gray-300 hover:text-sky-500 hover:bg-sky-50"><Plus size={14} /></button>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {doDia.map((a) => {
+                          const Icone = ICONE_MOD[a.modalidade] ?? Activity
+                          const temFoto = fotos.some((f) => f.data === d && a.turmaIds.includes(f.turma_id))
+                          return (
+                            <button key={a.id} onClick={() => setAberta({ aula: a, inicial: { data: a.data, modalidade: a.modalidade, objetivo: a.objetivo, descricao: a.descricao, observacoes: a.observacoes, turmaIds: a.turmaIds } })}
+                              className="w-full text-left rounded-lg border border-gray-200 bg-white overflow-hidden hover:shadow-md transition-shadow">
+                              <div className={`h-1 ${COR_MOD[a.modalidade] ?? 'bg-gray-300'}`} />
+                              <div className="px-2 py-1.5">
+                                <div className="flex items-center gap-1">
+                                  <Icone size={14} className={TXT_MOD[a.modalidade] ?? 'text-gray-500'} />
+                                  <span className="text-[11px] font-semibold text-navy-500 truncate">{MODALIDADE_LABEL[a.modalidade] ?? a.modalidade}</span>
+                                  {temFoto && <Camera size={11} className="ml-auto shrink-0 text-gray-400" />}
+                                </div>
+                                {a.turmaIds.length > 0 && <p className="text-[10px] text-gray-500 truncate mt-0.5">{a.turmaIds.map(curto).join(' · ')}</p>}
+                                {a.objetivo
+                                  ? <p className="text-[10px] text-gray-600 line-clamp-2 mt-0.5 leading-snug">{a.objetivo}</p>
+                                  : !a.descricao && <p className="text-[10px] text-amber-600 mt-0.5">falta preencher</p>}
+                              </div>
+                            </button>
+                          )
+                        })}
+                        {pend.length > 0 && (
+                          <button onClick={() => novaAula(d)} title="A chamada foi feita, mas a aula ainda não foi registrada"
+                            className="w-full text-left rounded-lg border border-dashed border-amber-300 bg-amber-50/60 px-2 py-1.5 hover:bg-amber-50">
+                            <p className="text-[10px] font-semibold text-amber-700 flex items-center gap-1"><ClipboardCheck size={11} /> Chamada sem aula</p>
+                            <p className="text-[10px] text-amber-700/80 truncate">{pend.map(curto).join(' · ')} · registrar</p>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+          {aulas.length === 0 && !Object.keys(chamadas).length && (
+            <p className="sm:hidden text-sm text-gray-400 text-center py-4">Nenhuma aula neste mês. Toque em “Nova aula”.</p>
+          )}
+          <p className="text-[11px] text-gray-400 mt-2">Clique no <Plus size={11} className="inline" /> do dia para registrar uma aula. O mesmo dia pode ter mais de uma aula (ex.: natação e corrida) — cada uma vira um card e sai como uma aula no relatório.</p>
+        </Card>
 
         <Card>
           <div className="space-y-6">
-
             {/* Report metadata */}
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -611,104 +750,6 @@ export default function DiarioClientView({
               </div>
             </div>
 
-            <hr className="border-gray-100" />
-
-            {entries.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-2">
-                Nenhum registro neste mês. Adicione uma data abaixo.
-              </p>
-            )}
-
-            {entries.map((entry) => (
-              <div key={entry.key} className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-                  <span className="text-sm font-bold text-navy-500">{formatDate(entry.date)}</span>
-                  <button type="button" onClick={() => removeEntry(entry.key)} className="text-gray-300 hover:text-red-400 transition-colors">
-                    <X size={15} />
-                  </button>
-                </div>
-                <div className="px-4 py-4 space-y-4">
-                  <div>
-                    <label className={labelCls}>Turmas atendidas</label>
-                    <div className="flex flex-wrap gap-2">
-                      {allTurmas.map((t) => (
-                        <label key={t.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors text-xs font-semibold select-none ${
-                          entry.turmaIds.includes(t.id) ? 'bg-sky-50 border-sky-300 text-sky-700' : 'bg-gray-50 border-gray-200 text-gray-400'
-                        }`}>
-                          <input type="checkbox" checked={entry.turmaIds.includes(t.id)} onChange={() => toggleEntryTurma(entry.key, t.id)} className="w-3 h-3 accent-sky-400" />
-                          {t.nome}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Modalidade</label>
-                    <select value={entry.modalidade} onChange={(e) => update(entry.key, { modalidade: e.target.value })} className={inputCls}>
-                      <option value="" disabled>Selecione...</option>
-                      {MODALIDADES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Objetivo da Aula</label>
-                    <textarea rows={2} value={entry.objetivo}
-                      onChange={(e) => update(entry.key, { objetivo: e.target.value })}
-                      placeholder="Ex: Promover a interação do grupo, avaliar condicionamento..."
-                      className={`${inputCls} resize-y`} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Descrição das Atividades / Metodologia</label>
-                    <textarea rows={4} value={entry.descricao}
-                      onChange={(e) => update(entry.key, { descricao: e.target.value })}
-                      placeholder="Descreva as atividades por turma: T1: ... T2: ..."
-                      className={`${inputCls} resize-y`} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Observações / Intercorrências</label>
-                    <textarea rows={2} value={entry.observacoes}
-                      onChange={(e) => update(entry.key, { observacoes: e.target.value })}
-                      placeholder="Ex: ✔ Aula realizada normalmente"
-                      className={`${inputCls} resize-y`} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Fotos do dia</label>
-                    {entry.turmaIds.length === 0 ? (
-                      <p className="text-xs text-gray-400">Marque ao menos uma turma atendida para adicionar fotos.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-3">
-                        {entry.turmaIds.map((turmaId) => (
-                          <FotoDoDiaSlot
-                            key={turmaId}
-                            entryKey={entry.key}
-                            date={entry.date}
-                            turmaId={turmaId}
-                            turmaLabel={entry.turmaIds.length > 1 ? (allTurmas.find((t) => t.id === turmaId)?.nome ?? null) : null}
-                            foto={entry.fotos.find((f) => f.turma_id === turmaId)}
-                            onChange={(foto) => handleFotoChange(entry.key, turmaId, foto)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Add manual day */}
-            <div className="space-y-1.5">
-              <div className="flex gap-2 items-center">
-                <input type="date" value={newDate}
-                  onChange={(e) => { setNewDate(e.target.value); setAddError('') }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDay() } }}
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-navy-500 focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white" />
-                <button type="button" onClick={addDay} disabled={!newDate}
-                  className="flex items-center gap-1.5 px-4 py-2.5 border border-gray-200 hover:border-gray-300 text-gray-500 hover:text-navy-500 font-semibold text-sm rounded-xl transition-colors disabled:opacity-40">
-                  <Plus size={15} /> Adicionar dia
-                </button>
-              </div>
-              {addError && <p className="text-xs text-red-500 pl-1">{addError}</p>}
-            </div>
-
-            {/* Save status */}
             <div className="flex justify-end pt-1 min-h-5">
               {saveStatus === 'saving' && (
                 <span className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -726,10 +767,25 @@ export default function DiarioClientView({
                 </span>
               )}
             </div>
-
           </div>
         </Card>
+
+        {targetCoachId && (
+          <Card>
+            <DocumentosAssinadosSection
+              coachId={targetCoachId}
+              tipo="diario_aula"
+              periodo={periodo}
+              documentos={documentos}
+            />
+          </Card>
+        )}
       </div>
+
+      {aberta && (
+        <AulaModal key={aberta.aula?.id ?? `novo-${aberta.inicial.data}`} aula={aberta.aula} inicial={aberta.inicial}
+          allTurmas={allTurmas} fotos={fotos} targetCoachId={targetCoachId} onFoto={handleFoto} onFechar={() => setAberta(null)} />
+      )}
     </>
   )
 }

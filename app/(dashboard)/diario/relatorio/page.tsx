@@ -97,6 +97,7 @@ export default async function DiarioRelatorioPage({
     .gte('data', dataInicio)
     .lte('data', dataFim)
     .order('data', { ascending: true })
+    .order('created_at', { ascending: true })
 
   if (targetCoachId) {
     query = query.eq('coach_id', targetCoachId)

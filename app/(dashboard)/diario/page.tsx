@@ -6,7 +6,7 @@ import { requireStaff } from '@/lib/assert'
 import Card from '@/components/ui/Card'
 import DiarioFilterForm from './DiarioFilterForm'
 import DiarioClientView from './DiarioClientView'
-import type { InitialDay } from './DiarioClientView'
+import type { Aula, FotoBasic } from './DiarioClientView'
 import type { DocumentoAssinadoItem } from '@/components/documentos/DocumentosAssinadosSection'
 
 export const dynamic = 'force-dynamic'
@@ -46,7 +46,7 @@ export default async function DiarioPage({
   // ── Load registros ───────────────────────────────────────────────────────
   type RegistroRaw = {
     id: string; data: string; modalidade: string | null; objetivo: string | null
-    descricao: string | null; observacoes: string | null
+    descricao: string | null; observacoes: string | null; created_at: string
     turmaEntries: { turma_id: string }[]
   }
 
@@ -54,18 +54,18 @@ export default async function DiarioPage({
   if (targetCoachId) {
     const { data } = await supabase
       .from('registros_aula')
-      .select(`id, data, modalidade, objetivo, descricao, observacoes,
+      .select(`id, data, modalidade, objetivo, descricao, observacoes, created_at,
                turmaEntries:registro_aula_turmas ( turma_id )`)
       .eq('coach_id', targetCoachId)
       .gte('data', dataInicio)
       .lte('data', dataFim)
       .order('data')
+      .order('created_at')
     registros = data ?? []
   }
 
   // ── Load fotos ────────────────────────────────────────────────────────────
-  type FotoBasic = { id: string; url: string; titulo: string; data: string; turma_id: string; storage_path: string }
-  let fotos: FotoBasic[] = []
+  let fotos: (FotoBasic & { data: string })[] = []
   if (targetCoachId) {
     // Titular ou auxiliar: mesmas permissões.
     const turmaIds = (await getTurmasDoCoach(supabase, targetCoachId)).map((t) => t.id)
@@ -91,52 +91,26 @@ export default async function DiarioPage({
     profileCref = cp?.cref ?? ''
   }
 
-  // ── Build initialDays ─────────────────────────────────────────────────────
-  const registroMap = new Map<string, { modalidade: string; objetivo: string; descricao: string; observacoes: string; turmaIds: string[] }>()
-  for (const r of registros) {
-    registroMap.set(r.data, {
-      modalidade:  r.modalidade  ?? '',
-      objetivo:    r.objetivo    ?? '',
-      descricao:   r.descricao   ?? '',
-      observacoes: r.observacoes ?? '',
-      turmaIds: (r.turmaEntries ?? []).map((t) => t.turma_id),
-    })
-  }
-
-  let initialDays: InitialDay[] = []
+  // ── Aulas do mês + dias com chamada (sugerem registrar a aula) ──────────
+  const aulas: Aula[] = registros.map((r) => ({
+    id: r.id, data: r.data, modalidade: r.modalidade ?? '', objetivo: r.objetivo ?? '', descricao: r.descricao ?? '',
+    observacoes: r.observacoes ?? '', turmaIds: (r.turmaEntries ?? []).map((t) => t.turma_id),
+  }))
   let allTurmas: { id: string; nome: string }[] = []
-
+  const chamadas: Record<string, string[]> = {}
   if (targetCoachId) {
     allTurmas = await getTurmasDoCoach(supabase, targetCoachId) // titular ou auxiliar
-    const turmaIds = allTurmas.map((t: { id: string }) => t.id)
-
+    const turmaIds = allTurmas.map((t) => t.id)
     if (turmaIds.length > 0) {
       const { data: presencaRows } = await supabase
         .from('presencas').select('data, turma_id')
         .in('turma_id', turmaIds)
         .gte('data', dataInicio).lte('data', dataFim)
         .is('deleted_at', null)
-
-      const byDate = new Map<string, Set<string>>()
       for (const row of (presencaRows ?? []) as { data: string; turma_id: string }[]) {
-        if (!byDate.has(row.data)) byDate.set(row.data, new Set())
-        byDate.get(row.data)!.add(row.turma_id)
+        const l = (chamadas[row.data] ??= [])
+        if (!l.includes(row.turma_id)) l.push(row.turma_id)
       }
-
-      const allDates = new Set([...registroMap.keys(), ...byDate.keys()])
-      initialDays = [...allDates].sort().map((date) => {
-        const existing = registroMap.get(date)
-        const dayFotos = fotos.filter((f) => f.data === date).map(({ id, url, titulo, turma_id, storage_path }) => ({ id, url, titulo, turma_id, storage_path }))
-        if (existing) {
-          return { date, ...existing, fotos: dayFotos }
-        }
-        return { date, modalidade: '', objetivo: '', descricao: '', observacoes: '', turmaIds: [...(byDate.get(date) ?? [])], fotos: dayFotos }
-      })
-    } else {
-      initialDays = [...registroMap.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, r]) => ({
-        date, ...r,
-        fotos: fotos.filter((f) => f.data === date).map(({ id, url, titulo, turma_id, storage_path }) => ({ id, url, titulo, turma_id, storage_path })),
-      }))
     }
   }
 
@@ -211,7 +185,7 @@ export default async function DiarioPage({
         }
       `}</style>
 
-      <div className="p-4 sm:p-8 max-w-4xl space-y-8">
+      <div className="p-4 sm:p-8 max-w-6xl space-y-6">
 
         {/* ── Filters (hidden when printing) ── */}
         <div className="print:hidden space-y-2">
@@ -235,7 +209,9 @@ export default async function DiarioPage({
         {targetCoachId && (
           <DiarioClientView
             key={`${ano}-${mes}-${targetCoachId}`}
-            initialDays={initialDays}
+            aulas={aulas}
+            chamadas={chamadas}
+            fotos={fotos}
             allTurmas={allTurmas}
             targetCoachId={targetCoachId}
             mes={mes}
