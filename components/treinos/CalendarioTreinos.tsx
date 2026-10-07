@@ -3,12 +3,13 @@
 import { useMemo, useOptimistic, useState, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { DndContext, DragOverlay, PointerSensor, pointerWithin, rectIntersection, type CollisionDetection, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
-import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Send, Star, UserCog, User, Library, CopyPlus, Search, X, Folder, MessageSquare, Footprints, Bike, Waves, Dumbbell, Activity, EyeOff } from 'lucide-react'
 import MontadorTreino, { type AtletaRef, type EntregaRef, type SessaoView } from './MontadorTreino'
 import type { ExecucaoView } from './ComparativoTreino'
 import ExtraModal from './ExtraModal'
 import { similaridade } from '@/lib/intervals/atividade'
 import { MiniBarras } from './GraficoIntensidade'
+import { descreverTreino } from '@/lib/treinos/descricao'
 import { somarSessoes, formatarDuracao } from '@/lib/treinos/calculos'
 import { MODALIDADES, TIPOS_SESSAO, type Modalidade, type TipoSessao } from '@/lib/treinos/tipos'
 import { NOMES_DIA, diaMes, hojeISO, mesAnterior, rotuloMes, somarDias } from '@/lib/treinos/datas'
@@ -65,22 +66,119 @@ function ConteudoCard({ s }: { s: SessaoCalendario }) {
   )
 }
 
-function CardSessao({ s, arrastavel, onAbrir, realizado }: { s: SessaoCalendario; arrastavel: boolean; onAbrir: () => void; realizado?: ExecucaoView | null }) {
-  // Treino com atividade vinculada = um card só (verde). Arrastar move a atividade realizada.
+// Card no padrão do TrainingPeaks: faixa colorida no topo — verde = planejado COM
+// atividade vinculada (80–120% do planejado); amarelo = vinculado, mas fora dessa faixa;
+// vermelho = planejado SEM vínculo e com data anterior a hoje;
+// cinza = feito sem plano (extra) —, ícone + título, números em negrito (realizado
+// com ✓; senão o planejado), linhas "P:" com o planejado, descrição curta e barras.
+type Status = 'feito' | 'desvio' | 'perdido' | null
+const TOPO_STATUS: Record<Exclude<Status, null>, string> = { feito: 'bg-green-500', desvio: 'bg-amber-300', perdido: 'bg-red-500' }
+const FUNDO_STATUS: Record<Exclude<Status, null>, string> = { feito: 'bg-green-50 border-green-200', desvio: 'bg-amber-50 border-amber-200', perdido: 'bg-red-50 border-red-200' }
+
+/**
+ * Executado ÷ planejado na medida que o treinador definiu: treino montado por
+ * distância compara a distância; por tempo, a duração (a outra é estimativa).
+ * Fora de 80%–120% → amarelo.
+ */
+function proporcaoExecutada(s: SessaoCalendario, r: ExecucaoView): number | null {
+  const esforco = s.passos.filter((p) => p.tipo !== 'note' && p.tipo !== 'warmup' && p.tipo !== 'cooldown')
+  const porDistancia = esforco.length > 0 && esforco.every((p) => p.distancia_m && !p.duracao_s)
+  const plan = porDistancia ? (s.distancia_km ? Number(s.distancia_km) * 1000 : null) : (s.duracao_min ? s.duracao_min * 60 : null)
+  const real = porDistancia ? (r.distancia_m ? Number(r.distancia_m) : null) : r.duracao_s
+  if (!plan || !real) {
+    const pd = s.duracao_min ? s.duracao_min * 60 : null
+    return pd && r.duracao_s ? r.duracao_s / pd : null
+  }
+  return real / plan
+}
+const TOPO_TIPO: Record<string, string> = {
+  base: 'bg-sky-300', long: 'bg-indigo-300', interval: 'bg-orange-300', recovery: 'bg-green-300', technique: 'bg-purple-300',
+  strength: 'bg-gray-400', race_simulation: 'bg-red-300', brick: 'bg-amber-300',
+}
+const ICONE_MOD: Record<string, typeof Footprints> = { running: Footprints, cycling: Bike, swimming: Waves, strength: Dumbbell, other: Activity }
+const COR_ICONE: Record<string, string> = { running: 'text-green-600', cycling: 'text-purple-600', swimming: 'text-sky-600', strength: 'text-gray-600', other: 'text-gray-500' }
+const fmtKm = (km: number | null | undefined) => (km ? `${Number(km).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}` : null)
+
+function Cabeca({ modalidade, titulo, chave, oculto }: { modalidade: string; titulo: string; chave?: boolean; oculto?: boolean }) {
+  const Icone = ICONE_MOD[modalidade] ?? Activity
+  return (
+    <>
+      <div className="flex items-center gap-1"><Icone size={15} className={COR_ICONE[modalidade] ?? 'text-gray-500'} />{chave && <Star size={10} className="ml-auto text-amber-500 fill-amber-400" />}</div>
+      <p className={`text-[11px] font-semibold leading-tight line-clamp-2 mt-0.5 ${oculto ? 'text-gray-500' : 'text-navy-500'}`}>{oculto && <EyeOff size={11} className="inline mr-1 -mt-0.5" />}{titulo}</p>
+    </>
+  )
+}
+
+function CardSessao({ s, arrastavel, onAbrir, realizado, status = null }: { s: SessaoCalendario; arrastavel: boolean; onAbrir: () => void; realizado?: ExecucaoView | null; status?: Status }) {
+  // Treino com atividade vinculada = um card só. Arrastar move a atividade realizada.
   const { setNodeRef: refArrasto, listeners, attributes, isDragging } = useDraggable({ id: realizado ? `x:${realizado.id}` : `s:${s.id}`, disabled: !realizado && !arrastavel })
   const { setNodeRef: refAlvo, isOver } = useDroppable({ id: `sd:${s.id}`, data: { data: s.data } })
-  const km = realizado?.distancia_m ? ` · ${(Number(realizado.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''
-  const min = realizado?.duracao_s ? ` · ${Math.round(realizado.duracao_s / 60)} min` : ''
+  const planDur = s.duracao_min ? formatarDuracao(s.duracao_min * 60) : null
+  const descricao = useMemo(() => descreverTreino(s.passos, s.modalidade).filter((l) => l.principal).slice(0, 3)
+    .map((l) => `${l.principal}${l.alvo ? ` ${l.alvo.split(' (')[0].split(' · ')[0]}` : ''}`), [s.passos, s.modalidade])
   return (
     <div ref={refAlvo} className={isOver ? 'rounded-lg ring-2 ring-sky-400' : ''}>
       <button ref={refArrasto} type="button" onClick={onAbrir} {...listeners} {...attributes}
         title={realizado ? 'Treino realizado. Arraste para outro treino (troca o vínculo) ou para outro dia (vira extra).' : undefined}
-        className={`w-full text-left rounded-lg border px-2 py-1.5 hover:shadow-sm transition-shadow ${realizado ? 'bg-green-50 border-green-300' : COR_TIPO[s.tipo] ?? 'bg-white border-gray-200'} ${!realizado && s.status === 'rascunho' ? 'border-dashed opacity-80' : ''} ${isDragging ? 'opacity-30' : ''} ${realizado || arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}>
-        <ConteudoCard s={s} />
-        {realizado && <p className="text-[10px] text-green-800 truncate mt-0.5">✓ {realizado.titulo ?? 'Realizado'}{km}{min}</p>}
-        {s.passos.length > 0 && <MiniBarras passos={s.passos} modalidade={s.modalidade} />}
+        className={`w-full text-left rounded-lg border overflow-hidden hover:shadow-md transition-shadow ${s.oculto ? 'bg-gray-100 border-gray-200 opacity-65' : status ? FUNDO_STATUS[status] : 'bg-white border-gray-200'} ${!status && s.status === 'rascunho' ? 'border-dashed opacity-80' : ''} ${isDragging ? 'opacity-30' : ''} ${realizado || arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+        <div className={`h-1.5 ${s.oculto ? 'bg-gray-300' : status ? TOPO_STATUS[status] : TOPO_TIPO[s.tipo] ?? 'bg-gray-300'}`} />
+        <div className="px-2 pt-1.5 pb-1">
+          <Cabeca modalidade={s.modalidade} titulo={s.titulo} chave={s.chave} oculto={s.oculto} />
+          <div className="mt-1 text-[11px] font-bold text-navy-500 leading-snug tabular-nums">
+            {realizado ? (
+              <>
+                {realizado.duracao_s ? <p>{formatarDuracao(realizado.duracao_s)} <span className="text-green-600">✓</span></p> : null}
+                {realizado.distancia_m ? <p>{fmtKm(Number(realizado.distancia_m) / 1000)} <span className="font-normal">km</span></p> : null}
+                {realizado.tss ? <p>{Math.round(realizado.tss)} <span className="font-normal">carga</span></p> : null}
+              </>
+            ) : (
+              <>
+                {planDur && <p>{planDur}</p>}
+                {fmtKm(s.distancia_km) && <p>{fmtKm(s.distancia_km)} <span className="font-normal">km</span></p>}
+                {s.carga ? <p>{Math.round(Number(s.carga))} <span className="font-normal">carga</span></p> : null}
+              </>
+            )}
+          </div>
+          {realizado && (planDur || s.distancia_km || s.carga) ? (
+            <div className="mt-0.5 text-[10px] text-gray-500 leading-snug tabular-nums">
+              {planDur && <p>P: {planDur}</p>}
+              {fmtKm(s.distancia_km) && <p>P: {fmtKm(s.distancia_km)} km</p>}
+              {s.carga ? <p>P: {Math.round(Number(s.carga))} carga</p> : null}
+            </div>
+          ) : null}
+          {descricao.length > 0 && <div className="mt-1 text-[10px] text-gray-600 leading-snug">{descricao.map((d, i) => <p key={i} className="truncate">{d}</p>)}</div>}
+          <div className="flex flex-wrap gap-1 mt-1">
+            {s.status === 'rascunho' && <span className="text-[9px] font-semibold text-gray-500 bg-gray-100 rounded px-1">rascunho</span>}
+            {s.origem === 'ajuste' && <span className="text-[9px] font-semibold text-amber-700 bg-amber-100 rounded px-1 inline-flex items-center gap-0.5"><UserCog size={9} />ajustado</span>}
+            {s.origem === 'individual' && <span className="text-[9px] font-semibold text-sky-700 bg-sky-100 rounded px-1 inline-flex items-center gap-0.5"><User size={9} />individual</span>}
+            {s.nAjustes > 0 && <span className="text-[9px] text-amber-700">{s.nAjustes} ajuste{s.nAjustes > 1 ? 's' : ''}</span>}
+            {s.obsAtleta && <span title={s.obsAtleta} className="text-[9px] text-sky-700 inline-flex items-center gap-0.5"><MessageSquare size={9} />comentou</span>}
+          </div>
+        </div>
+        {s.passos.length > 0 && <div className="px-1.5 pb-1"><MiniBarras passos={s.passos} modalidade={s.modalidade} /></div>}
       </button>
     </div>
+  )
+}
+
+/** Atividade extra (feita sem treino): cinza. Arraste sobre um treino para vincular, ou para outro dia. */
+function CardExtra({ x, onAbrir }: { x: ExecucaoView; onAbrir: () => void }) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: `x:${x.id}` })
+  return (
+    <button ref={setNodeRef} type="button" onClick={onAbrir} {...listeners} {...attributes}
+      title="Atividade sem treino planejado. Arraste sobre um treino para vincular."
+      className={`w-full text-left rounded-lg border border-gray-200 bg-white overflow-hidden hover:shadow-md cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}>
+      <div className="h-1.5 bg-gray-300" />
+      <div className="px-2 pt-1.5 pb-1.5">
+        <Cabeca modalidade={x.modalidade ?? 'other'} titulo={x.titulo ?? 'Atividade'} />
+        <div className="mt-1 text-[11px] font-bold text-navy-500 leading-snug tabular-nums">
+          {x.duracao_s ? <p>{formatarDuracao(x.duracao_s)}</p> : null}
+          {x.distancia_m ? <p>{fmtKm(Number(x.distancia_m) / 1000)} <span className="font-normal">km</span></p> : null}
+          {x.tss ? <p>{Math.round(x.tss)} <span className="font-normal">carga</span></p> : null}
+        </div>
+        <p className="text-[9px] text-gray-400 mt-0.5">sem treino planejado</p>
+      </div>
+    </button>
   )
 }
 
@@ -97,19 +195,6 @@ function CelulaDia({ d, children, destaque, vista, foraMes, onMais, selecionando
       </div>
       <div className="space-y-1">{children}</div>
     </div>
-  )
-}
-
-/** Atividade extra: arraste sobre um treino para vincular, ou para outro dia para mover. */
-function CardExtra({ x, onAbrir }: { x: ExecucaoView; onAbrir: () => void }) {
-  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: `x:${x.id}` })
-  return (
-    <button ref={setNodeRef} type="button" onClick={onAbrir} {...listeners} {...attributes}
-      title="Atividade sem treino. Arraste sobre um treino para vincular."
-      className={`w-full text-left rounded-lg border border-dashed border-gray-300 bg-gray-50 px-2 py-1.5 hover:border-sky-300 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}>
-      <p className="text-[11px] font-semibold text-gray-600 truncate">{x.titulo ?? 'Atividade'}</p>
-      <p className="text-[10px] text-gray-400">extra{x.distancia_m ? ` · ${(Number(x.distancia_m) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} km` : ''}{x.duracao_s ? ` · ${Math.round(x.duracao_s / 60)} min` : ''}</p>
-    </button>
   )
 }
 
@@ -353,7 +438,10 @@ export default function CalendarioTreinos({
                         onMais={() => maisNoDia(d)} selecionandoModelo={Boolean(modeloSel)}>
                         {porDia(d).map((s) => (
                           <CardSessao key={s.id} s={s} arrastavel={arrastavel(s)} onAbrir={() => setAberto({ sessaoId: s.id })}
-                            realizado={escopo.tipo === 'aluno' ? execucoesPorSessao[s.id] ?? null : null} />
+                            realizado={escopo.tipo === 'aluno' ? execucoesPorSessao[s.id] ?? null : null}
+                            status={escopo.tipo !== 'aluno' || s.status !== 'publicado' || s.oculto ? null
+                              : execucoesPorSessao[s.id] ? (() => { const p = proporcaoExecutada(s, execucoesPorSessao[s.id]); return p !== null && (p < 0.8 || p > 1.2) ? 'desvio' : 'feito' })()
+                              : s.data < hoje ? 'perdido' : null} />
                         ))}
                         {extras.filter((x) => diaLocal(x.executado_em) === d).map((x) => <CardExtra key={x.id} x={x} onAbrir={() => setExtraAberta(x)} />)}
                       </CelulaDia>

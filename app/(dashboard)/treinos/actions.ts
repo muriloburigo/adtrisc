@@ -31,6 +31,7 @@ export type SessaoForm = {
   passos: Partial<Passo>[]
   publicar?: boolean
   ordem?: number      // só na criação; sem ela, o treino vai para o fim do dia
+  oculto?: boolean    // oculto: atleta não vê, não vai ao Intervals (como no Movelly)
 }
 
 const limpa = (s?: string | null) => (s ?? '').replace(/\s+/g, ' ').trim() || null
@@ -84,6 +85,7 @@ export async function salvarSessao(f: SessaoForm): Promise<{ error?: string; id?
     intensidade_alvo: limpa(f.intensidade_alvo),
     local: limpa(f.local),
     chave: Boolean(f.chave),
+    oculto: Boolean(f.oculto),
     notas: limpa(f.notas),
     updated_at: new Date().toISOString(),
     ...(f.publicar ? { status: 'publicado', publicado_em: new Date().toISOString() } : {}),

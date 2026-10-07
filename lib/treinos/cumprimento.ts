@@ -25,8 +25,8 @@ export async function cumprimentoDosAtletas(db: Db, alunos: { id: string; turma_
   const turmas = [...new Set(alunos.map((a) => a.turma_id).filter(Boolean))] as string[]
   const vazio = ['00000000-0000-0000-0000-000000000000']
   const [{ data: daTurma }, { data: proprias }, { data: entregas }, { data: conexoes }] = await Promise.all([
-    db.from('treino_sessoes').select('id, turma_id').in('turma_id', turmas.length ? turmas : vazio).eq('status', 'publicado').gte('data', de).lte('data', ate),
-    db.from('treino_sessoes').select('id, aluno_id, sessao_origem_id').in('aluno_id', ids).eq('status', 'publicado').gte('data', de).lte('data', ate),
+    db.from('treino_sessoes').select('id, turma_id').in('turma_id', turmas.length ? turmas : vazio).eq('status', 'publicado').eq('oculto', false).gte('data', de).lte('data', ate),
+    db.from('treino_sessoes').select('id, aluno_id, sessao_origem_id').in('aluno_id', ids).eq('status', 'publicado').eq('oculto', false).gte('data', de).lte('data', ate),
     db.from('treino_entregas').select('aluno_id, sessao_id, situacao, treino_sessoes!inner(data)').in('aluno_id', ids).in('situacao', ['feito', 'parcial']).order('treino_sessoes(data)', { ascending: false }),
     db.from('intervals_conexoes').select('aluno_id').in('aluno_id', ids),
   ])

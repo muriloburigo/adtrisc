@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X, Star, Send, UserCog, BookmarkPlus } from 'lucide-react'
+import { Plus, X, Star, Send, UserCog, BookmarkPlus, Eye, EyeOff } from 'lucide-react'
 import ConfirmDeleteButton from '@/components/ui/ConfirmDeleteButton'
 import EditorBloco from './EditorBloco'
 import { blocoNovo, blocosParaPassos, passosParaBlocos, novaChave, type Bloco } from '@/lib/treinos/blocos'
@@ -33,6 +33,7 @@ export type SessaoView = {
   distancia_km: number | null
   carga: number | null
   passos: Passo[]
+  oculto?: boolean
   situacao?: 'planejado' | 'feito' | 'nao_feito' | 'parcial'   // visão do atleta: o que ele marcou
   obsAtleta?: string | null
 }
@@ -84,6 +85,7 @@ export default function MontadorTreino({
     modalidade: (origem?.modalidade ?? 'running') as Modalidade,
     local: origem?.local ?? '',
     chave: sessao?.chave ?? false,
+    oculto: sessao?.oculto ?? false,
     notas: origem?.notas ?? '',
   }))
   const [pastaId, setPastaId] = useState<string>(modelo?.pasta_id ?? '')
@@ -202,6 +204,13 @@ export default function MontadorTreino({
               <input className="w-full text-lg font-semibold text-navy-500 bg-transparent focus:outline-none placeholder:text-gray-300"
                 placeholder="Título do treino (ex.: Intervalado 6×400)" value={f.titulo} onChange={(e) => setF({ ...f, titulo: e.target.value })} />
             </div>
+            {!ehModelo && (
+              <button type="button" onClick={() => setF({ ...f, oculto: !f.oculto })}
+                title="Oculto: o atleta não vê o treino e ele não vai para o Intervals/relógio (como no Movelly)"
+                className={`inline-flex items-center gap-1.5 text-xs font-medium rounded-lg border px-2.5 py-1.5 ${f.oculto ? 'bg-gray-100 border-gray-300 text-gray-600' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                {f.oculto ? <><EyeOff size={14} /> Oculto</> : <><Eye size={14} /> Visível</>}
+              </button>
+            )}
             <button onClick={onFechar} className="text-gray-400 hover:text-gray-600 p-1"><X size={18} /></button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 pb-3">
@@ -237,12 +246,6 @@ export default function MontadorTreino({
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {sessao && atletaDoTreino && atletas.length === 1 && sessao.status === 'publicado' && (
             <p className="text-xs text-gray-500 flex items-center gap-2">Intervals.icu: {seloIntervals(atletaDoTreino) ?? <span>—</span>}</p>
-          )}
-          {sessao?.situacao && sessao.situacao !== 'planejado' && (
-            <p className={`text-sm rounded-lg px-3 py-2 ${sessao.situacao === 'feito' ? 'bg-green-50 text-green-800' : sessao.situacao === 'parcial' ? 'bg-amber-50 text-amber-800' : 'bg-red-50 text-red-700'}`}>
-              <strong>O atleta marcou: {sessao.situacao === 'feito' ? 'feito' : sessao.situacao === 'parcial' ? 'parcial' : 'não fez'}</strong>
-              {sessao.obsAtleta && <> · “{sessao.obsAtleta}”</>}
-            </p>
           )}
           {aba === 'blocos' && (
             <>

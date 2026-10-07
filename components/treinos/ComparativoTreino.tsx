@@ -7,7 +7,6 @@ import { apagarAtividade, desvincularAtividade, vincularAtividade } from '@/app/
 import { faixaZona, formatarDuracao, formatarVelocidade, type Referencia } from '@/lib/treinos/calculos'
 import { descreverTreino, textoAlvo } from '@/lib/treinos/descricao'
 import { similaridade, type DadosExecucao, type Volta } from '@/lib/intervals/atividade'
-import GraficoIntensidade from './GraficoIntensidade'
 import { CORES_ZONA, TIPOS_PASSO, type Modalidade, type Passo } from '@/lib/treinos/tipos'
 
 export type ExecucaoView = {
@@ -153,6 +152,32 @@ function TiroATiro({ passos, voltas, modalidade, referencia, limites }: { passos
   )
 }
 
+/** Voltas/blocos executados (atividade sem treino planejado). */
+function TabelaVoltas({ voltas, modalidade }: { voltas: Volta[]; modalidade: Modalidade }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Voltas</p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead><tr className="text-[10px] text-gray-400 text-left"><th className="font-medium py-1 pr-2">#</th><th className="font-medium pr-2">Tipo</th><th className="font-medium pr-2">Distância</th><th className="font-medium pr-2">Tempo</th><th className="font-medium pr-2">{modalidade === 'cycling' ? 'Velocidade' : 'Pace'}</th><th className="font-medium">FC méd / máx</th></tr></thead>
+          <tbody className="divide-y divide-gray-50">
+            {voltas.slice(0, 60).map((v, i) => (
+              <tr key={i} className={v.tipo === 'WORK' ? 'font-medium text-navy-500' : 'text-gray-500'}>
+                <td className="py-1 pr-2 text-gray-400">{i + 1}</td>
+                <td className="pr-2">{v.rotulo ?? (v.tipo === 'WORK' ? 'Esforço' : v.tipo === 'RECOVERY' ? 'Recuperação' : '—')}</td>
+                <td className="pr-2">{v.distancia_m ? `${nf(v.distancia_m)} m` : '—'}</td>
+                <td className="pr-2">{v.duracao_s ? formatarDuracao(v.duracao_s) : '—'}</td>
+                <td className="pr-2">{v.vel_ms ? formatarVelocidade(v.vel_ms, modalidade) : '—'}</td>
+                <td>{v.fc_media ? `${v.fc_media} / ${v.fc_max ?? '—'}` : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ── Componente ──────────────────────────────────────────────────────────────
 export type PlanejadoView = {
   data: string
@@ -164,11 +189,11 @@ export type PlanejadoView = {
   passos?: Passo[]
 }
 
-export default function ComparativoTreino({ sessaoId, alunoId, modalidade, planejado, execucao, candidatas = [], referencia = null, limites, podeEditar = true, mostrarDownload = true, titulo, notas, comentario }: {
+export default function ComparativoTreino({ sessaoId, alunoId, modalidade, planejado, execucao, candidatas = [], referencia = null, limites, podeEditar = true, mostrarDownload = true, titulo, notas, comentario, ladoDireito }: {
   sessaoId: string
   alunoId: string
   modalidade: Modalidade
-  planejado: PlanejadoView
+  planejado?: PlanejadoView | null       // null = atividade sem treino (modal da extra)
   execucao: ExecucaoView | null
   candidatas?: ExecucaoView[]          // atividades sem treino perto da data (para vincular)
   referencia?: Referencia | null
@@ -178,7 +203,9 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
   titulo?: string
   notas?: string | null                // observações do treinador
   comentario?: string | null           // comentário pós-atividade do atleta
+  ladoDireito?: React.ReactNode         // sem treino: substitui descrição/comentários (vincular, mover)
 }) {
+  const pl = planejado ?? null
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
@@ -204,12 +231,12 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
 
   // Planejado | Realizado | unidade (como no TrainingPeaks)
   const tabela: { k: string; p: string | null; r: string | null; u: string; dif?: string | null }[] = [
-    { k: 'Duração', p: planejado.duracao_s ? formatarDuracao(planejado.duracao_s) : null, r: e?.duracao_s ? formatarDuracao(e.duracao_s) : null, u: 'h:m:s', dif: dif(e?.duracao_s, planejado.duracao_s) },
-    { k: 'Distância', p: planejado.distancia_km ? nf(planejado.distancia_km, 2) : null, r: realKm != null ? nf(realKm, 2) : null, u: 'km', dif: dif(realKm, planejado.distancia_km) },
-    { k: modalidade === 'cycling' ? 'Velocidade média' : 'Pace médio', p: ritmo(planejado.velocidade_ms), r: ritmo(e?.velocidade_media_ms), u: unidadeRitmo },
+    { k: 'Duração', p: pl?.duracao_s ? formatarDuracao(pl?.duracao_s) : null, r: e?.duracao_s ? formatarDuracao(e.duracao_s) : null, u: 'h:m:s', dif: dif(e?.duracao_s, pl?.duracao_s) },
+    { k: 'Distância', p: pl?.distancia_km ? nf(pl?.distancia_km, 2) : null, r: realKm != null ? nf(realKm, 2) : null, u: 'km', dif: dif(realKm, pl?.distancia_km) },
+    { k: modalidade === 'cycling' ? 'Velocidade média' : 'Pace médio', p: ritmo(pl?.velocidade_ms), r: ritmo(e?.velocidade_media_ms), u: unidadeRitmo },
     { k: 'Calorias', p: null, r: e?.calorias ? nf(e.calorias) : null, u: 'kcal' },
     { k: 'Elevação (subida)', p: null, r: e?.elevacao_m ?? d.elev_ganho ? nf(Number(e?.elevacao_m ?? d.elev_ganho)) : null, u: 'm' },
-    { k: 'Carga', p: planejado.carga != null ? nf(planejado.carga) : null, r: e?.tss ? nf(e.tss) : null, u: e?.tss ? 'carga / Intervals' : 'carga' },
+    { k: 'Carga', p: pl?.carga != null ? nf(pl?.carga) : null, r: e?.tss ? nf(e.tss) : null, u: e?.tss ? 'carga / Intervals' : 'carga' },
     { k: 'Intensidade', p: null, r: d.intensidade ? nf(d.intensidade) : null, u: '%' },
     { k: 'Elevação (descida)', p: null, r: d.elev_perda != null ? nf(d.elev_perda) : null, u: 'm' },
     { k: 'TRIMP', p: null, r: d.trimp ? nf(d.trimp) : null, u: '' },
@@ -222,10 +249,11 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
   ]
   const mostrados = new Set(['Tempo em movimento', 'Distância', 'Pace médio', 'Velocidade média', 'Pace máximo', 'Velocidade máxima', 'FC média / máx.', 'Cadência', 'Potência média / NP / máx.', 'Elevação + / −', 'Calorias', 'Carga (Intervals)', 'Intensidade', 'TRIMP', 'Esforço percebido', 'Sensação'])
   const maisDados = e ? linhasRealizado(e, modalidade).filter(([k]) => !mostrados.has(k)) : []
-  const descricao = planejado.passos?.length ? descreverTreino(planejado.passos, modalidade, { referencia, limites }) : []
+  const descricao = pl?.passos?.length ? descreverTreino(pl?.passos, modalidade, { referencia, limites }) : []
 
   const vinculo = d.vinculo
-  const seloVinculo = !e ? null : !vinculo ? { t: 'Vinculado', i: Link2, c: 'bg-gray-100 text-gray-600' }
+  // Selo só quando a atividade está ligada a um treino (no modal da extra não há vínculo).
+  const seloVinculo = !e || !pl || vinculo?.modo === 'desvinculado' ? null : !vinculo ? { t: 'Vinculado', i: Link2, c: 'bg-gray-100 text-gray-600' }
     : vinculo.modo === 'manual' ? { t: 'Vinculado manualmente', i: UserCheck, c: 'bg-sky-50 text-sky-700' }
       : vinculo.criterio === 'intervals' ? { t: 'Vinculado automaticamente (pareado pelo Intervals)', i: Sparkles, c: 'bg-green-50 text-green-700' }
         : { t: `Vinculado automaticamente · ${Math.round((vinculo.similaridade ?? 0) * 100)}% parecido`, i: Sparkles, c: 'bg-green-50 text-green-700' }
@@ -233,7 +261,7 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
   // Sugestões para vincular: mesma modalidade, até 3 dias, da mais parecida para a menos.
   const sugestoes = e ? [] : candidatas
     .map((c) => ({ c, s: similaridade(
-      { modalidade, data: planejado.data, duracao_s: planejado.duracao_s, distancia_m: planejado.distancia_km ? planejado.distancia_km * 1000 : null },
+      { modalidade, data: pl?.data ?? "", duracao_s: pl?.duracao_s ?? null, distancia_m: pl?.distancia_km ? pl?.distancia_km * 1000 : null },
       { modalidade: c.modalidade ?? '', data: diaLocal(c.executado_em), duracao_s: c.duracao_s, distancia_m: c.distancia_m ? Number(c.distancia_m) : null },
     ) }))
     .filter((x): x is { c: ExecucaoView; s: number } => x.s !== null)
@@ -254,9 +282,9 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
           {mostrarDownload && <a href={`/api/treinos/${sessaoId}/fit?aluno=${alunoId}`} title="Baixar o treino (.fit) para o relógio" className="p-1.5 rounded-lg text-gray-400 hover:text-navy-500 hover:bg-gray-50"><Download size={16} /></a>}
         </div>
         <div className="flex flex-wrap items-end gap-x-8 gap-y-1 mt-2">
-          {grande(e?.duracao_s ? formatarDuracao(e.duracao_s) : planejado.duracao_s ? formatarDuracao(planejado.duracao_s) : null, '')}
-          {grande(realKm != null ? nf(realKm, 1) : planejado.distancia_km ? nf(planejado.distancia_km, 1) : null, 'km')}
-          {grande(e?.tss ? nf(e.tss) : planejado.carga != null ? nf(planejado.carga) : null, 'carga')}
+          {grande(e?.duracao_s ? formatarDuracao(e.duracao_s) : pl?.duracao_s ? formatarDuracao(pl?.duracao_s) : null, '')}
+          {grande(realKm != null ? nf(realKm, 1) : pl?.distancia_km ? nf(pl?.distancia_km, 1) : null, 'km')}
+          {grande(e?.tss ? nf(e.tss) : pl?.carga != null ? nf(pl?.carga) : null, 'carga')}
           {!e && <span className="text-[11px] text-gray-400 pb-1">planejado</span>}
         </div>
         {(seloVinculo || d.cumprimento != null || d.prova) && (
@@ -270,19 +298,18 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
         )}
       </div>
 
-      {/* Estrutura do treino (gráfico de intensidade do Movelly) */}
-      {planejado.passos?.length ? <GraficoIntensidade passos={planejado.passos} modalidade={modalidade} referencia={referencia} limites={limites} /> : null}
+      {/* O gráfico de intensidade fica acima, no montador e no treino do portal (não repetir aqui). */}
 
       {/* Planejado × Realizado (esq.) · Descrição e comentários (dir.) */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <div className="space-y-3">
           <table className="w-full text-sm">
-            <thead><tr className="text-[11px] text-gray-500"><th></th><th className="font-semibold pb-1">Planejado</th><th className="font-semibold pb-1">Realizado</th><th></th></tr></thead>
+            <thead><tr className="text-[11px] text-gray-500"><th></th>{pl && <th className="font-semibold pb-1">Planejado</th>}<th className="font-semibold pb-1">Realizado</th><th></th></tr></thead>
             <tbody>
               {tabela.map((l) => (
                 <tr key={l.k}>
                   <td className="text-right pr-2 py-0.5 text-xs text-gray-600 whitespace-nowrap">{l.k}</td>
-                  <td className="px-0.5 py-0.5 w-[28%]"><div className={`${celula} ${l.p ? 'bg-white border-gray-200 text-gray-700' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>{l.p ?? '—'}</div></td>
+                  {pl && <td className="px-0.5 py-0.5 w-[28%]"><div className={`${celula} ${l.p ? 'bg-white border-gray-200 text-gray-700' : 'bg-gray-50 border-gray-100 text-gray-300'}`}>{l.p ?? '—'}</div></td>}
                   <td className="px-0.5 py-0.5 w-[28%]"><div className={`${celula} ${l.r ? 'bg-sky-50 border-sky-100 font-semibold text-navy-500' : 'bg-gray-50 border-gray-100 text-gray-300'}`} title={l.dif ? `${l.dif} em relação ao planejado` : undefined}>{l.r ?? '—'}{l.dif && <span className="block text-[9px] font-normal text-gray-400 leading-none">{l.dif}</span>}</div></td>
                   <td className="pl-1.5 text-[11px] text-gray-400 whitespace-nowrap">{l.u}</td>
                 </tr>
@@ -310,6 +337,7 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
           )}
         </div>
 
+        {ladoDireito ?? (
         <div className="space-y-3">
           <div>
             <p className="text-xs font-semibold text-gray-500 mb-1">Descrição do treino</p>
@@ -337,6 +365,7 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Sem atividade: vincular / enviar */}
@@ -371,7 +400,8 @@ export default function ComparativoTreino({ sessaoId, alunoId, modalidade, plane
       {/* Detalhes do realizado */}
       {e && (
         <div className="space-y-3">
-          {d.voltas?.length && planejado.passos?.length ? <TiroATiro passos={planejado.passos} voltas={d.voltas} modalidade={modalidade} referencia={referencia} limites={limites} /> : null}
+          {d.voltas?.length && pl?.passos?.length ? <TiroATiro passos={pl.passos} voltas={d.voltas} modalidade={modalidade} referencia={referencia} limites={limites} /> : null}
+          {d.voltas?.length && !pl?.passos?.length ? <TabelaVoltas voltas={d.voltas} modalidade={modalidade} /> : null}
           {d.resumo_intervalos?.length ? <div className="flex flex-wrap gap-1">{d.resumo_intervalos.map((r) => <span key={r} className="text-[10px] bg-gray-50 border border-gray-100 rounded px-1.5 py-0.5 text-gray-600">{r}</span>)}</div> : null}
           {e.zonas?.fc && <GraficoZonas segundos={e.zonas.fc} titulo="Tempo por zona de FC" />}
           {e.zonas?.pace && <GraficoZonas segundos={e.zonas.pace} titulo="Tempo por zona de pace" />}

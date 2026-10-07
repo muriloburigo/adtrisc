@@ -61,10 +61,11 @@ async function emLotes<T>(itens: T[], n: number, fn: (x: T) => Promise<void>) {
 export async function sincronizarSessao(sessaoId: string, soAluno?: string): Promise<void> {
   const db = createAdminClient() as Db
   try {
-    const { data: s } = await db.from('treino_sessoes').select('id, turma_id, aluno_id, data, titulo, modalidade, notas, status, treino_passos(*)').eq('id', sessaoId).maybeSingle()
+    const { data: s } = await db.from('treino_sessoes').select('id, turma_id, aluno_id, data, titulo, modalidade, notas, status, oculto, treino_passos(*)').eq('id', sessaoId).maybeSingle()
     const { data: ents } = await db.from('treino_entregas').select('aluno_id, intervals_event_id').eq('sessao_id', sessaoId)
     const existentes = new Map(((ents ?? []) as { aluno_id: string; intervals_event_id: string | null }[]).map((e) => [e.aluno_id, e.intervals_event_id]))
-    let quem = s && s.status === 'publicado' ? await destinatarios(db, s) : []
+    // Oculto ou rascunho: ninguém recebe (e os eventos já enviados são apagados abaixo).
+    let quem = s && s.status === 'publicado' && !s.oculto ? await destinatarios(db, s) : []
     if (soAluno) quem = quem.filter((a) => a === soAluno)
     const alvo = new Set(quem)
     const conex = await conexoes(db, [...new Set([...quem, ...existentes.keys()])].filter((a) => !soAluno || a === soAluno))
@@ -122,8 +123,8 @@ export async function removerEventos(sessaoIds: string[]): Promise<void> {
 async function sessoesDoAtleta(db: Db, aluno: { id: string; turma_id: string | null }, de: string, ate: string) {
   const sel = 'id, data, modalidade, duracao_min, distancia_km, sessao_origem_id'
   const [{ data: turma }, { data: dele }] = await Promise.all([
-    aluno.turma_id ? db.from('treino_sessoes').select(sel).eq('turma_id', aluno.turma_id).eq('status', 'publicado').gte('data', de).lte('data', ate) : Promise.resolve({ data: [] }),
-    db.from('treino_sessoes').select(sel).eq('aluno_id', aluno.id).eq('status', 'publicado').gte('data', de).lte('data', ate),
+    aluno.turma_id ? db.from('treino_sessoes').select(sel).eq('turma_id', aluno.turma_id).eq('status', 'publicado').eq('oculto', false).gte('data', de).lte('data', ate) : Promise.resolve({ data: [] }),
+    db.from('treino_sessoes').select(sel).eq('aluno_id', aluno.id).eq('status', 'publicado').eq('oculto', false).gte('data', de).lte('data', ate),
   ])
   type S = { id: string; data: string; modalidade: Modalidade; duracao_min: number | null; distancia_km: number | null; sessao_origem_id: string | null }
   const proprias = (dele ?? []) as S[]
