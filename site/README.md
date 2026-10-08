@@ -12,7 +12,6 @@ Inclui a apresentação institucional da ADTRISC e o Portal da Transparência.
 Projeto Vercel separado (`adtrisc-site`), na mesma conta usada pelo sistema de gestão,
 mas com build e deploy independentes do app Next.js na raiz do repositório.
 
-```bash
-cd site
-vercel --prod
-```
+Desde 08/10/2026 o projeto `adtrisc-site` está ligado ao GitHub (Root Directory `site`,
+`site/vercel.json` = estático, sem build): **todo push na `main` publica o site**. Não use
+`vercel --prod`.
