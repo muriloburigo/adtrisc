@@ -467,15 +467,6 @@
   .journey-step b { display: block; font-size: 0.95rem; margin-bottom: 6px; }
   .journey-step p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
 
-  .team-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, 1fr); }
-  @media (min-width: 720px) { .team-grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (min-width: 1040px) { .team-grid { grid-template-columns: repeat(4, 1fr); } }
-  .team-card { padding: 0; border: 0; background: none; cursor: zoom-in; text-align: left; font: inherit; color: inherit; }
-  .team-card .ph { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 520 / 805; background: var(--surface-2); transition: transform .2s; }
-  .team-card:hover .ph { transform: translateY(-3px); }
-  .team-card img { width: 100%; height: 100%; object-fit: cover; }
-  .team-card .nm { display: block; font-weight: 600; margin-top: 10px; font-size: 0.95rem; }
-  .team-card .rl { display: block; color: var(--text-muted); font-size: 0.82rem; }
   dialog.zoom { border: 0; padding: 0; background: transparent; max-width: min(560px, 92vw); max-height: 92vh; }
   dialog.zoom::backdrop { background: rgba(6,9,20,0.82); }
   dialog.zoom img { width: 100%; height: auto; max-height: 92vh; object-fit: contain; border-radius: 12px; }
@@ -559,6 +550,41 @@
   .qs-nova .acoes .btn-ghost { border-color: #c5cad6; color: var(--qs-navy); }
   .qs-gabi { justify-self: center; max-width: 340px; width: 100%; -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent); mask-image: linear-gradient(180deg, #000 82%, transparent); }
   .qs-gabi img { width: 100%; height: auto; border-radius: 18px 18px 0 0; }
+
+  /* ---------- equipe: "Conheça o time que move a ADTRISC" (carrossel) ---------- */
+  #equipe.time { background-color: #e9ebef; color: #141a3c; padding: 80px 0; overflow: hidden;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%23d5d8df' stroke-width='1'/%3E%3C/svg%3E"); }
+  .time-grid { display: grid; gap: 34px; align-items: center; }
+  @media (min-width: 1000px) { .time-grid { grid-template-columns: 340px 1fr; gap: 48px; } }
+  .time-title .pre { display: block; font-family: 'Anton', sans-serif; color: #2EA3DD; font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: 0.06em; line-height: 1; transform: rotate(-3deg); margin-left: 6px; }
+  .time-title .pre i { font-style: normal; font-family: 'Geist', sans-serif; font-weight: 400; }
+  .time-title h2 { display: inline-block; background: #E30613; color: #fff; font-size: clamp(3.6rem, 8vw, 5.6rem); line-height: 0.95; padding: 6px 30px 10px; margin-top: 8px; transform: rotate(-3deg); box-shadow: 8px 10px 0 rgba(0,0,0,0.12); }
+  .time-title .pos { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: #141a3c; font-size: clamp(1.15rem, 2.2vw, 1.5rem); margin: 14px 0 0 10px; transform: rotate(-3deg); }
+  .time-title .pos u { text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  .time-nomes { list-style: none; padding: 0; margin: 34px 0 0; display: none; gap: 2px; }
+  @media (min-width: 1000px) { .time-nomes { display: grid; } }
+  .time-nomes button { width: 100%; text-align: left; font: inherit; background: transparent; border: 0; border-left: 3px solid #c8ccd6; padding: 7px 14px; cursor: pointer; color: #141a3c; transition: border-color .15s, background .15s; }
+  .time-nomes button b { display: block; font-size: 0.95rem; }
+  .time-nomes button span { display: block; font-size: 0.8rem; color: #5a6180; }
+  .time-nomes button:hover { background: rgba(255,255,255,0.6); }
+  .time-nomes button[aria-current="true"] { border-left-color: #E30613; background: #fff; }
+  .time-ctrl { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+  .time-ctrl button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #141a3c; color: #fff; font-size: 1.2rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .time-ctrl button:hover { background: #E30613; }
+  .time-ctrl span { font-family: 'Geist Mono', monospace; font-size: 0.85rem; color: #5a6180; margin-left: 6px; }
+  .time-track { display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 18px 4px 28px; margin: -18px -4px -28px; scrollbar-width: none; }
+  .time-track::-webkit-scrollbar { display: none; }
+  .time-card { flex: 0 0 auto; width: min(78vw, 330px); scroll-snap-align: start; border: 0; padding: 0; background: none; cursor: zoom-in; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 22px 40px -22px rgba(20,26,60,0.6); transition: transform .25s, box-shadow .25s; }
+  .time-card img { width: 100%; height: auto; display: block; aspect-ratio: 520 / 805; object-fit: cover; }
+  .time-card:hover { transform: translateY(-6px) rotate(-1deg); box-shadow: 0 30px 50px -24px rgba(20,26,60,0.7); }
+  .time-dots { display: flex; gap: 8px; justify-content: center; margin-top: 26px; }
+  @media (min-width: 1000px) { .time-dots { display: none; } }
+  .time-dots i { width: 8px; height: 8px; border-radius: 50%; background: #c3c8d4; }
+  .time-dots i.on { background: #E30613; width: 22px; border-radius: 4px; }
+  .qs-titulo { font-family: 'Anton', sans-serif; text-transform: uppercase; color: #141a3c; font-size: clamp(3rem, 7vw, 5.2rem); line-height: 0.95; margin: 0 0 26px; letter-spacing: 0.01em; }
+  .qs-titulo::after { content: ""; display: block; width: 84px; height: 6px; margin-top: 14px; background: linear-gradient(90deg, #2EA3DD 0 33%, #141a3c 33% 66%, #E30613 66%); }
+  .time-track { --sangria: max(24px, calc((100vw - var(--maxw)) / 2 + 24px)); margin-right: calc(-1 * var(--sangria)); padding-right: var(--sangria); scroll-padding-left: 4px; }
 </style>
 </head>
 <body>
@@ -618,8 +644,8 @@
   <div class="qs-block">
     <div class="container qs-hero">
       <div class="reveal">
-        <div class="eyebrow" style="color:#2EA3DD; margin-bottom:18px;">Quem somos</div>
-        <h2 class="qs-tag"><small>UMA</small>COMUNIDADE</h2>
+        <h2 class="qs-titulo">Quem somos</h2>
+        <div class="qs-tag"><small>UMA</small>COMUNIDADE</div>
         <span class="qs-sub"><i>DE</i> ATLETAS, TREINADORES,<br />FAMÍLIAS <i>E</i> APOIADORES</span>
       </div>
       <div class="qs-photo reveal">
@@ -633,7 +659,7 @@
     <div class="container qs-two">
       <div class="reveal">
         <span class="qs-pre">A NOSSA</span>
-        <h2 class="qs-tag">HISTÓRIA</h2>
+        <h3 class="qs-tag">HISTÓRIA</h3>
         <div class="qs-line">
           <div><h4>2002</h4><p>Nasceu o <b>Projeto Escolinha de Triathlon</b>, com o <b>objetivo</b> de <b>aproximar crianças</b> e <b>adolescentes</b> do <b>esporte</b> e iniciar uma <b>nova geração</b> de <b>atletas</b>.</p></div>
           <div><h4>2003</h4><p>A <b>ADTRISC</b> foi criada para <b>fortalecer</b> esse movimento e <b>construir</b> uma trajetória baseada na <b>formação esportiva</b>, no <b>desenvolvimento</b> de talentos e na <b>transformação</b> através do <b>triathlon</b>.</p></div>
@@ -642,7 +668,7 @@
         </div>
       </div>
       <div class="reveal">
-        <h2 class="qs-tag"><small>A</small>JORNADA</h2>
+        <h3 class="qs-tag"><small>A</small>JORNADA</h3>
         <span class="qs-pre" style="margin-top:12px;">DENTRO DA ADTRISC</span>
         <div class="qs-line">
           <div><h4 class="sm">Escolinha de Triathlon</h4><p class="lead">O primeiro contato com o esporte.</p><p>Aqui começam as descobertas, o desenvolvimento motor e a paixão pelo triathlon.</p></div>
@@ -670,7 +696,7 @@
   <div class="qs-block" style="padding-bottom:0">
     <div class="container qs-nova">
       <div class="reveal" style="padding-bottom:72px">
-        <h2 class="qs-tag sky"><small>UMA</small>NOVA HISTÓRIA</h2>
+        <h3 class="qs-tag sky"><small>UMA</small>NOVA HISTÓRIA</h3>
         <span class="qs-sub">PODE COMEÇAR AQUI!</span>
         <p class="txt">Estamos sempre formando novos atletas e construindo novos caminhos através do esporte.</p>
         <div class="qs-parte"><span>Quer fazer</span><strong>PARTE?</strong></div>
@@ -686,42 +712,38 @@
   </div>
 </section>
 
-<section id="equipe" class="band-alt">
-  <div class="container">
-    <div class="section-head reveal">
-      <div class="eyebrow">Quem faz a ADTRISC</div>
-      <h2>Nossos profissionais</h2>
-      <p class="lede" style="margin-top:14px;">Treinadores, coordenação e voluntários que acompanham cada atleta. Toque em um card para ler a história de cada um.</p>
+<section id="equipe" class="time">
+  <div class="container time-grid">
+    <div class="time-title reveal">
+      <span class="pre">CONHEÇA <i>O</i></span>
+      <h2>TIME</h2>
+      <span class="pos">que move a <u>ADTRISC</u></span>
+      <ul class="time-nomes">
+        <li><button type="button" data-i="0" aria-current="true"><b>William D. Bonetti Dutra</b><span>Presidente</span></button></li>
+        <li><button type="button" data-i="1"><b>Elinai S. Freitas Schutz</b><span>Supervisora técnica e coordenadora dos projetos</span></button></li>
+        <li><button type="button" data-i="2"><b>Lucas de Oliveira</b><span>Equipe de Natação</span></button></li>
+        <li><button type="button" data-i="3"><b>Guilherme Vieira da Rosa</b><span>Treinador de triathlon · escolinha e equipe</span></button></li>
+        <li><button type="button" data-i="4"><b>Kauane de Farias Andrade</b><span>Treinadora de triathlon · pré equipe</span></button></li>
+        <li><button type="button" data-i="5"><b>Naida dos Santos Freitas</b><span>Fundadora · colaboradora voluntária</span></button></li>
+        <li><button type="button" data-i="6"><b>Thales Muller</b><span>Designer</span></button></li>
+      </ul>
+      <div class="time-ctrl">
+        <button type="button" data-dir="-1" aria-label="Anterior">←</button>
+        <button type="button" data-dir="1" aria-label="Próximo">→</button>
+        <span id="time-pos">1 / 7</span>
+      </div>
     </div>
-    <div class="team-grid reveal">
-      <button type="button" class="team-card" data-zoom="img/equipe/william-g.webp" data-alt="Apresentação de William D. Bonetti Dutra, Presidente">
-        <span class="ph"><img src="img/equipe/william.webp" width="520" height="805" loading="lazy" alt="William D. Bonetti Dutra, Presidente" /></span>
-        <span class="nm">William D. Bonetti Dutra</span><span class="rl">Presidente</span>
-      </button>
-      <button type="button" class="team-card" data-zoom="img/equipe/elinai-g.webp" data-alt="Apresentação de Elinai S. Freitas Schutz, Supervisora técnica e coordenadora dos projetos">
-        <span class="ph"><img src="img/equipe/elinai.webp" width="520" height="805" loading="lazy" alt="Elinai S. Freitas Schutz, Supervisora técnica e coordenadora dos projetos" /></span>
-        <span class="nm">Elinai S. Freitas Schutz</span><span class="rl">Supervisora técnica e coordenadora dos projetos</span>
-      </button>
-      <button type="button" class="team-card" data-zoom="img/equipe/lucas-g.webp" data-alt="Apresentação de Lucas de Oliveira, Equipe de Natação · treinador de natação e triathlon">
-        <span class="ph"><img src="img/equipe/lucas.webp" width="520" height="805" loading="lazy" alt="Lucas de Oliveira, Equipe de Natação · treinador de natação e triathlon" /></span>
-        <span class="nm">Lucas de Oliveira</span><span class="rl">Equipe de Natação · treinador de natação e triathlon</span>
-      </button>
-      <button type="button" class="team-card" data-zoom="img/equipe/guilherme-g.webp" data-alt="Apresentação de Guilherme Vieira da Rosa, Treinador de triathlon (escolinha e equipe)">
-        <span class="ph"><img src="img/equipe/guilherme.webp" width="520" height="805" loading="lazy" alt="Guilherme Vieira da Rosa, Treinador de triathlon (escolinha e equipe)" /></span>
-        <span class="nm">Guilherme Vieira da Rosa</span><span class="rl">Treinador de triathlon (escolinha e equipe)</span>
-      </button>
-      <button type="button" class="team-card" data-zoom="img/equipe/kauane-g.webp" data-alt="Apresentação de Kauane de Farias Andrade, Treinadora de triathlon (pré equipe)">
-        <span class="ph"><img src="img/equipe/kauane.webp" width="520" height="805" loading="lazy" alt="Kauane de Farias Andrade, Treinadora de triathlon (pré equipe)" /></span>
-        <span class="nm">Kauane de Farias Andrade</span><span class="rl">Treinadora de triathlon (pré equipe)</span>
-      </button>
-      <button type="button" class="team-card" data-zoom="img/equipe/naida-g.webp" data-alt="Apresentação de Naida dos Santos Freitas, Fundadora · colaboradora voluntária">
-        <span class="ph"><img src="img/equipe/naida.webp" width="520" height="805" loading="lazy" alt="Naida dos Santos Freitas, Fundadora · colaboradora voluntária" /></span>
-        <span class="nm">Naida dos Santos Freitas</span><span class="rl">Fundadora · colaboradora voluntária</span>
-      </button>
-      <button type="button" class="team-card" data-zoom="img/equipe/thales-g.webp" data-alt="Apresentação de Thales Muller, Designer">
-        <span class="ph"><img src="img/equipe/thales.webp" width="520" height="805" loading="lazy" alt="Thales Muller, Designer" /></span>
-        <span class="nm">Thales Muller</span><span class="rl">Designer</span>
-      </button>
+    <div class="reveal" style="min-width:0">
+      <div class="time-track" id="time-track" aria-label="Profissionais da ADTRISC">
+      <button type="button" class="time-card" data-zoom="img/equipe/william-g.webp" data-alt="Apresentação de William D. Bonetti Dutra, Presidente"><img src="img/equipe/william.webp" width="520" height="805" loading="lazy" alt="William D. Bonetti Dutra: Presidente" /></button>
+      <button type="button" class="time-card" data-zoom="img/equipe/elinai-g.webp" data-alt="Apresentação de Elinai S. Freitas Schutz, Supervisora técnica e coordenadora dos projetos"><img src="img/equipe/elinai.webp" width="520" height="805" loading="lazy" alt="Elinai S. Freitas Schutz: Supervisora técnica e coordenadora dos projetos" /></button>
+      <button type="button" class="time-card" data-zoom="img/equipe/lucas-g.webp" data-alt="Apresentação de Lucas de Oliveira, Equipe de Natação"><img src="img/equipe/lucas.webp" width="520" height="805" loading="lazy" alt="Lucas de Oliveira: Equipe de Natação" /></button>
+      <button type="button" class="time-card" data-zoom="img/equipe/guilherme-g.webp" data-alt="Apresentação de Guilherme Vieira da Rosa, Treinador de triathlon · escolinha e equipe"><img src="img/equipe/guilherme.webp" width="520" height="805" loading="lazy" alt="Guilherme Vieira da Rosa: Treinador de triathlon · escolinha e equipe" /></button>
+      <button type="button" class="time-card" data-zoom="img/equipe/kauane-g.webp" data-alt="Apresentação de Kauane de Farias Andrade, Treinadora de triathlon · pré equipe"><img src="img/equipe/kauane.webp" width="520" height="805" loading="lazy" alt="Kauane de Farias Andrade: Treinadora de triathlon · pré equipe" /></button>
+      <button type="button" class="time-card" data-zoom="img/equipe/naida-g.webp" data-alt="Apresentação de Naida dos Santos Freitas, Fundadora · colaboradora voluntária"><img src="img/equipe/naida.webp" width="520" height="805" loading="lazy" alt="Naida dos Santos Freitas: Fundadora · colaboradora voluntária" /></button>
+      <button type="button" class="time-card" data-zoom="img/equipe/thales-g.webp" data-alt="Apresentação de Thales Muller, Designer"><img src="img/equipe/thales.webp" width="520" height="805" loading="lazy" alt="Thales Muller: Designer" /></button>
+      </div>
+      <div class="time-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     </div>
   </div>
 </section>
@@ -1072,11 +1094,32 @@
   var zoom = document.getElementById('zoom');
   if (zoom && zoom.showModal) {
     var zimg = zoom.querySelector('img');
-    document.querySelectorAll('.team-card').forEach(function(c){
+    document.querySelectorAll('.time-card').forEach(function(c){
       c.addEventListener('click', function(){ zimg.src = c.getAttribute('data-zoom'); zimg.alt = c.getAttribute('data-alt'); zoom.showModal(); });
     });
     zoom.addEventListener('click', function(){ zoom.close(); });
   }
+  // Equipe: carrossel (setas, lista de nomes, pontos e posição)
+  (function(){
+    var track = document.getElementById('time-track'); if (!track) return;
+    var cards = track.querySelectorAll('.time-card');
+    var nomes = document.querySelectorAll('.time-nomes button');
+    var dots = document.querySelectorAll('.time-dots i');
+    var pos = document.getElementById('time-pos');
+    var atual = 0;
+    function ir(i){ i = Math.max(0, Math.min(cards.length - 1, i)); track.scrollTo({ left: cards[i].offsetLeft - track.offsetLeft, behavior: 'smooth' }); }
+    function marcar(i){ atual = i; pos.textContent = (i + 1) + ' / ' + cards.length;
+      nomes.forEach(function(n, k){ n.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+      dots.forEach(function(d, k){ d.className = k === i ? 'on' : ''; }); }
+    track.addEventListener('scroll', function(){
+      var x = track.scrollLeft, melhor = 0, dist = Infinity;
+      cards.forEach(function(c, k){ var d = Math.abs(c.offsetLeft - track.offsetLeft - x); if (d < dist) { dist = d; melhor = k; } });
+      if (track.scrollLeft + track.clientWidth >= track.scrollWidth - 4) melhor = Math.max(melhor, atual);
+      marcar(melhor);
+    }, { passive: true });
+    document.querySelectorAll('.time-ctrl button').forEach(function(b){ b.addEventListener('click', function(){ ir(atual + Number(b.getAttribute('data-dir'))); }); });
+    nomes.forEach(function(n){ n.addEventListener('click', function(){ var i = Number(n.getAttribute('data-i')); marcar(i); ir(i); }); });
+  })();
 </script>
 
 </body>
