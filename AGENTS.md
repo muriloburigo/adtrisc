@@ -1,7 +1,11 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->
 
 # ADTRISC — Sistema de Gestão
@@ -272,7 +276,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - **Coach signature.** It is registered in **Minha conta** by the coach, or in **Treinadores → Editar** by an admin (`salvarAssinatura` in `conta/assinatura-actions.ts`; the image itself never goes to the audit log). It is placed automatically above the signature line of the class report, the attendance export, the diário report and the diário print (`components/documentos/AssinaturaImpressa.tsx`). Each of those screens has an "incluir assinatura" checkbox; on the server-rendered ones, unchecking sets `?assinatura=0`. It is a drawn (simple electronic) signature; the upload of officially signed PDFs (`documentos_assinados`) stays as is.
 
 **`turmas`** — training classes
-- `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `status` (TurmaStatus), `observacoes`, `processo_sgpe_id` (FK → processos_sgpe, nullable; null = use the year's process when the year has exactly one)
+- `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `lista_espera` (bool — turma genérica de captação contínua; o formulário público a usa como fallback quando nenhuma outra turma está aberta), `status` (TurmaStatus), `observacoes`, `processo_sgpe_id` (FK → processos_sgpe, nullable; null = use the year's process when the year has exactly one)
 
 **`alunos`** — athletes/students
 - `id`, `turma_id` (FK → turmas), `profile_id` (FK → profiles, nullable), `nome`, `telefone`, `sexo` (SexoEnum), `data_nascimento`, address fields (`rua`, `numero`, `bairro`, `cep`, `cidade`), `foto_url`, `status` (AlunoStatus), `observacoes`
@@ -440,7 +444,7 @@ Port of Movelly Core's training module (spec = that code; `lib/` files say what 
 - Portal (mobile first): next workout, the week with the **same cards and status colors as the staff calendar** (`components/portal/SemanaPortal.tsx`: list on phones, 7-day grid on desktop; drag to reorder the day, drop an activity on a workout to link, or on another day to move it — athletes never create/edit workouts or move them between days), workout detail in plain language with **their** paces, mark done/partial/not done + comment to the coach, upload the activity .fit, download the workout .fit, link extras, my zones, account (password, Intervals connect/disconnect). Forgotten password → ask the coach for a new-password link (no e-mail flow).
 
 ### Public Enrollment (`/inscricao`)
-Parents fill a form to pre-enroll their child. Requires selecting a turma with `captacao_aberta = true`. Creates a `candidatos` record with status `pendente`. Uses `createAdminClient()` to bypass RLS.
+Parents fill a form to pre-enroll their child. Requires selecting a turma with `captacao_aberta = true`. Creates a `candidatos` record with status `pendente`. Uses `createAdminClient()` to bypass RLS. **Lista de espera:** quando nenhuma turma específica está com `captacao_aberta` (e não é `lista_espera`), o formulário cai na turma marcada `lista_espera = true` (campo oculto), para a captação nunca parar; a equipe move o candidato para a turma real quando abre vaga. Como essa turma não tem `coach_id`, só o admin vê seus candidatos (RLS por `coach_has_turma`).
 
 ### Candidate Management (`/candidatos`)
 Staff reviews applicants and changes status (approve, reject, lottery draw, waitlist, enroll). Status changes are audit-logged.
@@ -718,6 +722,8 @@ This is the unlikely worst case. Steps, roughly in order:
    39. `diario_varias_aulas.sql` — several aulas per coach per day (drops `registros_aula_coach_id_data_key`; documents `descricao`). Run after deploying the code that no longer upserts on `(coach_id, data)`.
 
    40. `responsaveis_candidatos_escopo.sql` — AppSec: escopa por turma o acesso de COACH a `responsaveis`/`aluno_responsavel`/`candidatos` (CPF/RG de menores), via `coach_has_responsavel()` SECURITY DEFINER e `coach_has_turma()`. Admin e atleta/responsável inalterados. Needs `aluno_responsavel_coach_fix.sql` (#31).
+
+      41. `turma_lista_espera.sql` — `turmas.lista_espera` + cria a turma genérica "Lista de espera" (fallback do formulário público de inscrição).
 
       #32–36 were run in production on 05/10/2026; #37 and #38 on 06/10/2026; #39 on 07/10/2026; #40 on 08/10/2026.
 

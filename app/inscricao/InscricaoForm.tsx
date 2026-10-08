@@ -18,7 +18,7 @@ import {
 
 type TurmaOption = { id: string; nome: string; modalidade: string }
 
-export default function InscricaoForm({ turmas }: { turmas: TurmaOption[] }) {
+export default function InscricaoForm({ turmas, apenasListaEspera = false }: { turmas: TurmaOption[]; apenasListaEspera?: boolean }) {
   const [state, formAction, isPending] = useActionState(submitInscricao, null)
   const [aceite, setAceite] = useState(false)
   const [sigData, setSigData] = useState<string | null>(null)
@@ -60,18 +60,31 @@ export default function InscricaoForm({ turmas }: { turmas: TurmaOption[] }) {
 
       {/* Turma */}
       <Section n={2} title="Escolha de Turma">
-        <Field label="Escolha uma das opções de turma" required>
-          <select name="turma_id" required className={inputCls}>
-            <option value="">Selecione a turma...</option>
-            {turmas.map((t) => (
-              <option key={t.id} value={t.id}>{t.nome} — {t.modalidade}</option>
-            ))}
-          </select>
-        </Field>
-        {turmas.length === 0 && (
-          <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2.5 rounded-lg">
-            Nenhuma turma está com inscrições abertas no momento.
-          </p>
+        {apenasListaEspera ? (
+          <>
+            <input type="hidden" name="turma_id" value={turmas[0]?.id ?? ''} />
+            <p className="text-sm text-gray-600 bg-sky-50 border border-sky-100 px-3 py-2.5 rounded-lg">
+              No momento não há turma com vagas abertas. Sua inscrição entra na{' '}
+              <strong>lista de espera</strong> e participa do próximo sorteio assim que uma turma
+              adequada à idade abrir. Você será avisado(a) pelo contato informado.
+            </p>
+          </>
+        ) : (
+          <>
+            <Field label="Escolha uma das opções de turma" required>
+              <select name="turma_id" required className={inputCls}>
+                <option value="">Selecione a turma...</option>
+                {turmas.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nome} — {t.modalidade}</option>
+                ))}
+              </select>
+            </Field>
+            {turmas.length === 0 && (
+              <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2.5 rounded-lg">
+                As inscrições estão temporariamente indisponíveis. Tente novamente mais tarde.
+              </p>
+            )}
+          </>
         )}
       </Section>
 
