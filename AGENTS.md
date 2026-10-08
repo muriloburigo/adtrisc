@@ -719,7 +719,7 @@ This is the unlikely worst case. Steps, roughly in order:
 
    40. `responsaveis_candidatos_escopo.sql` — AppSec: escopa por turma o acesso de COACH a `responsaveis`/`aluno_responsavel`/`candidatos` (CPF/RG de menores), via `coach_has_responsavel()` SECURITY DEFINER e `coach_has_turma()`. Admin e atleta/responsável inalterados. Needs `aluno_responsavel_coach_fix.sql` (#31).
 
-      #32–36 were run in production on 05/10/2026; #37 and #38 on 06/10/2026; #39 on 07/10/2026.
+      #32–36 were run in production on 05/10/2026; #37 and #38 on 06/10/2026; #39 on 07/10/2026; #40 on 08/10/2026.
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".

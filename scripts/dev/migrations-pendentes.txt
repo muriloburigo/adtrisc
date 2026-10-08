@@ -1,3 +1,2 @@
 # Migrations da branch ainda NÃO aplicadas em produção, na ordem (uma por linha).
 # Vazio = tudo já está em produção (o backup restaurado já traz o schema).
-supabase/responsaveis_candidatos_escopo.sql
