@@ -751,3 +751,10 @@ body.menu-aberto { overflow: hidden; }
   .banner .banner-titulo { position: absolute; left: 0; right: 0; top: 3.6%; z-index: 2; background: none; padding: 0 16px; }
   .banner .banner-titulo h1 { font-size: clamp(0.8rem, 1.38vw, 1.45rem); letter-spacing: 0.22em; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
 }
+
+/* escudo sempre sobre um quadrado branco (como no menu do sistema): no fundo escuro
+   o azul-marinho do escudo e o "ADTRISC" sumiam */
+.topbar-brand img, .footer-brand img { background: #fff; border-radius: 12px; padding: 5px 7px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.topbar-brand img { height: 56px; }
+.footer-brand img { height: 72px; border-radius: 14px; padding: 7px 9px; }
+@media (max-width: 520px) { .topbar-brand img { height: 48px; border-radius: 10px; padding: 4px 6px; } }
