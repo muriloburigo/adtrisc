@@ -783,3 +783,10 @@ body.menu-aberto { overflow: hidden; }
 .qs-comunidade { }
 @media (min-width: 860px) { .qs-comunidade { text-align: right; } .qs-comunidade .qs-sub { transform-origin: right; } }
 .qs-photo-wide { margin-top: 0; }
+
+/* Quem somos — bloco "Uma nova história": imagem exata da referência + botões */
+.qs-nova-foto { border-radius: 18px; overflow: hidden; box-shadow: 0 18px 40px -18px rgba(20,26,60,0.45); }
+.qs-nova-foto img { width: 100%; height: auto; display: block; }
+.qs-nova-acoes { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 26px; }
+.qs-nova-acoes .btn-ghost { border-color: #c5cad6; color: #141a3c; }
+.qs-nova-acoes .btn-ghost:hover { background: #141a3c; border-color: #141a3c; color: #fff; }
