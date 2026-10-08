@@ -518,11 +518,12 @@
   .time-ctrl button:hover { background: #E30613; }
   .time-ctrl span { font-family: 'Geist', sans-serif; font-size: 0.85rem; color: #5a6180; margin-left: 6px; }
   .time-carousel { position: relative; }
-  .time-arrow { position: absolute; z-index: 3; top: 0; bottom: 44px; height: 48px; margin-block: auto; width: 48px; border-radius: 50%; border: 0; background: rgba(20,26,60,0.9); color: #fff; font-size: 1.2rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.25); transition: background .15s; }
-  .time-arrow:hover { background: #E30613; }
-  .time-prev { left: -10px; }
-  .time-next { right: -10px; }
-  @media (max-width: 560px) { .time-arrow { width: 42px; height: 42px; } .time-prev { left: 4px; } .time-next { right: 4px; } }
+  .time-arrow { position: absolute; z-index: 3; top: 0; bottom: 44px; height: 44px; margin-block: auto; width: 44px; border-radius: 50%; border: 1px solid rgba(20,26,60,0.08); background: rgba(255,255,255,0.9); color: #141a3c; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px -8px rgba(20,26,60,0.4); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); transition: background .2s, color .2s, transform .2s, box-shadow .2s; }
+  .time-arrow svg { width: 17px; height: 17px; }
+  .time-arrow:hover { background: #141a3c; color: #fff; transform: scale(1.07); box-shadow: 0 12px 26px -8px rgba(20,26,60,0.5); }
+  .time-prev { left: 10px; }
+  .time-next { right: 10px; }
+  @media (max-width: 560px) { .time-arrow { width: 40px; height: 40px; } .time-prev { left: 6px; } .time-next { right: 6px; } }
   .time-track { display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 18px 4px 28px; margin: -18px -4px -28px; scrollbar-width: none; }
   .time-track::-webkit-scrollbar { display: none; }
   .time-card { flex: 0 0 auto; width: min(78vw, 330px); scroll-snap-align: start; border: 0; padding: 0; background: none; cursor: zoom-in; border-radius: 20px; overflow: hidden;
@@ -535,7 +536,6 @@
   .time-dots i.on { background: #E30613; width: 22px; border-radius: 4px; }
   .qs-titulo { font-family: 'Anton', sans-serif; text-transform: uppercase; color: #141a3c; font-size: clamp(3rem, 7vw, 5.2rem); line-height: 0.95; margin: 0 0 26px; letter-spacing: 0.01em; }
   .qs-titulo::after { content: ""; display: block; width: 84px; height: 6px; margin-top: 14px; background: linear-gradient(90deg, #2EA3DD 0 33%, #141a3c 33% 66%, #E30613 66%); }
-  .time-track { --sangria: max(24px, calc((100vw - var(--maxw)) / 2 + 24px)); margin-right: calc(-1 * var(--sangria)); padding-right: var(--sangria); scroll-padding-left: 4px; }
 
   /* ---------- quem somos: movimento (dispara quando o bloco entra na tela) ---------- */
   #historia .reveal { transition: opacity .5s ease, transform .5s ease; }
