@@ -12,8 +12,12 @@
 <link rel="canonical" href="https://www.adtrisc.com.br/" />
 <meta property="og:type" content="website" />
 <meta name="robots" content="index, follow" />
-<link rel="icon" type="image/png" href="img/favicon.png" />
-<link rel="apple-touch-icon" href="img/favicon.png" />
+<link rel="icon" href="/favicon.ico" sizes="48x48" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#0C143D" />
 <script>document.documentElement.classList.add('js')</script>
 <style>
   @font-face {
@@ -678,6 +682,19 @@
   .banner .banner-botao:hover, .banner .banner-botao:focus-visible { animation: none; transform: scale(1.08) rotate(-1.5deg); filter: drop-shadow(0 12px 18px rgba(0,0,0,0.28)); }
   @keyframes botao-chama { 0%, 82%, 100% { transform: none; } 86% { transform: scale(1.07) rotate(-2deg); } 90% { transform: scale(1.03) rotate(1.5deg); } 94% { transform: scale(1.06) rotate(-1deg); } }
   @media (prefers-reduced-motion: reduce) { .banner-botao { animation: none; } }
+
+  /* ---------- ajustes de celular ---------- */
+  :root[data-theme="dark"] .tag-city { background: rgba(159,179,255,0.16); color: #9FB3FF; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tag-city { background: rgba(159,179,255,0.16); color: #9FB3FF; } }
+  @media (max-width: 640px) {
+    .results-head span:last-child { display: none; }
+    .result-row { grid-template-columns: 1fr; gap: 8px; padding: 16px 18px; }
+    .result-row .result-badge { justify-self: start; }
+    .result-meta { text-align: left; white-space: normal; }
+    .result-meta br { display: none; }
+    .doc-row { flex-wrap: wrap; }
+    .doc-row .status-pill { margin-left: 34px; }
+  }
 </style>
 </head>
 <body>
@@ -919,7 +936,7 @@
           <div class="result-name">Sofia Gelati</div>
           <div class="result-desc">Elite feminino, tempo de 1h04min26s</div>
         </div>
-        <div class="result-meta tabular">Copa do Mundo de Triathlon<br/>Florianópolis · nov/2025</div>
+        <div class="result-meta tabular">Copa do Mundo de Triathlon <br/>Florianópolis · nov/2025</div>
       </div>
       <div class="result-row" data-ano="2025">
         <span class="result-badge">57º LUGAR</span>
@@ -927,7 +944,7 @@
           <div class="result-name">Júlio Monteiro Martins</div>
           <div class="result-desc">Elite masculino</div>
         </div>
-        <div class="result-meta tabular">Copa do Mundo de Triathlon<br/>Florianópolis · nov/2025</div>
+        <div class="result-meta tabular">Copa do Mundo de Triathlon <br/>Florianópolis · nov/2025</div>
       </div>
       <div class="result-row" data-ano="2024">
         <span class="result-badge gold">CAMPEÃO</span>
@@ -935,7 +952,7 @@
           <div class="result-name">Júlio Monteiro Martins</div>
           <div class="result-desc">Campeão categoria elite (56'43"), pela equipe ADTRISC, conveniada à Prefeitura de São José. Bolsista do Bolsa Atleta municipal.</div>
         </div>
-        <div class="result-meta tabular">Camp. Brasileiro de<br/>Triathlon Sprint · Brasília, nov/2024</div>
+        <div class="result-meta tabular">Camp. Brasileiro de <br/>Triathlon Sprint · Brasília, nov/2024</div>
       </div>
       <div class="result-row" data-ano="">
         <span class="result-badge gold">CAMPEÃO</span>
@@ -943,7 +960,7 @@
           <div class="result-name">Júlio Monteiro Martins</div>
           <div class="result-desc">Campeão geral da 3ª etapa do Catarinense e campeão geral do Duathlon de São José</div>
         </div>
-        <div class="result-meta">Campeonato Catarinense<br/>de Triathlon / Duathlon SJ</div>
+        <div class="result-meta">Campeonato Catarinense <br/>de Triathlon / Duathlon SJ</div>
       </div>
     </div>
     <p style="font-size:0.78rem; color:var(--text-muted); margin-top:14px;" class="reveal">
