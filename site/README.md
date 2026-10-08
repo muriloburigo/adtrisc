@@ -1,7 +1,8 @@
 # Site institucional ADTRISC
 
-Página estática pública e independente do sistema de gestão: `index.html` (fontes embutidas
-em base64) + imagens em `img/` (WebP, geradas a partir das artes originais da ADTRISC:
+Páginas estáticas públicas e independentes do sistema de gestão: `index.html` e
+`transparencia.html` (Portal da Transparência completo, em `/transparencia`), com CSS
+compartilhado em `css/site.css`, fontes em `fonts/` (Anton e Geist 400/600/700) e imagens em `img/` (WebP, geradas a partir das artes originais da ADTRISC:
 banner, cards dos profissionais, fotos e bonequinhos das modalidades, logos dos parceiros).
 Publicada em https://www.adtrisc.com.br (`adtrisc.com.br` redireciona para o www).
 
