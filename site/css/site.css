@@ -755,7 +755,7 @@ body.menu-aberto { overflow: hidden; }
 
 /* escudo sempre sobre um quadrado branco (como no menu do sistema): no fundo escuro
    o azul-marinho do escudo e o "ADTRISC" sumiam */
-.topbar-brand img, .footer-brand img { background: #fff; border-radius: 12px; padding: 5px 7px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-.topbar-brand img { height: 56px; }
-.footer-brand img { height: 72px; border-radius: 14px; padding: 7px 9px; }
-@media (max-width: 520px) { .topbar-brand img { height: 48px; border-radius: 10px; padding: 4px 6px; } }
+/* logo branco direto sobre o fundo escuro do topo/rodapé (sem quadrado branco) */
+.topbar-brand img { height: 52px; }
+.footer-brand img { height: 66px; }
+@media (max-width: 520px) { .topbar-brand img { height: 46px; } }
