@@ -773,3 +773,11 @@ body.menu-aberto { overflow: hidden; }
 }
 .footer-brand img { height: 66px; }
 @media (max-width: 520px) { .topbar-brand img { height: 46px; } }
+
+/* ---------- Quem somos v2: bloco de abertura (equipe + comunidade + foto) ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.qs-topo { display: grid; gap: 28px 48px; align-items: center; margin-bottom: 34px; }
+@media (min-width: 860px) { .qs-topo { grid-template-columns: 1fr 1fr; } }
+.qs-comunidade { }
+@media (min-width: 860px) { .qs-comunidade { text-align: right; } .qs-comunidade .qs-sub { transform-origin: right; } }
+.qs-photo-wide { margin-top: 0; }
