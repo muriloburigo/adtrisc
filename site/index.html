@@ -7,7 +7,7 @@
 <meta name="description" content="ADTRISC, Associação Desportiva Triatlética de Santa Catarina. Desde 2002 formando atletas e cidadãos pelo triathlon em São José/SC: escolinha, pré equipe, equipe e alto rendimento." />
 <meta property="og:title" content="ADTRISC · Formamos atletas e cidadãos" />
 <meta property="og:description" content="Escolinha de triathlon de São José/SC desde 2002. Natação, ciclismo e corrida para crianças e jovens: inscreva seu filho(a)." />
-<meta property="og:image" content="https://www.adtrisc.com.br/img/banner-1000.webp" />
+<meta property="og:image" content="https://www.adtrisc.com.br/img/banner-site-1000.webp" />
 <meta property="og:url" content="https://www.adtrisc.com.br/" />
 <link rel="canonical" href="https://www.adtrisc.com.br/" />
 <meta property="og:type" content="website" />
@@ -668,6 +668,15 @@
   .qs-gabi { max-width: 320px; }
   .qs-gabi img { height: 560px; width: 100%; object-fit: cover; object-position: center top; }
   @media (max-width: 899px) { .qs-gabi { max-width: 220px; } .qs-gabi img { height: 420px; } }
+
+  /* banner + botão "Inscrever" como camada separada (posição da arte original, acima de "MEU FILHO(A)") */
+  .banner { position: relative; overflow: hidden; }
+  .banner .banner-botao { position: absolute; left: 72.2%; top: 74.3%; width: 22.3%; height: auto; transform-origin: 50% 60%;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.18)); transition: transform .25s cubic-bezier(.2,.9,.3,1.3), filter .25s;
+    animation: botao-chama 4.5s ease-in-out 2s infinite; }
+  .banner:hover .banner-botao, .banner:focus-visible .banner-botao { animation: none; transform: scale(1.08) rotate(-1.5deg); filter: drop-shadow(0 12px 18px rgba(0,0,0,0.28)); }
+  @keyframes botao-chama { 0%, 82%, 100% { transform: none; } 86% { transform: scale(1.07) rotate(-2deg); } 90% { transform: scale(1.03) rotate(1.5deg); } 94% { transform: scale(1.06) rotate(-1deg); } }
+  @media (prefers-reduced-motion: reduce) { .banner-botao { animation: none; } }
 </style>
 </head>
 <body>
@@ -698,10 +707,11 @@
 <section class="hero-v2" id="inicio" style="padding:0">
   <a class="banner" href="https://app.adtrisc.com.br/inscricao" target="_blank" rel="noopener" aria-label="Inscrever meu filho(a) na ADTRISC">
     <picture>
-      <source media="(max-width: 900px)" srcset="img/banner-1000.webp" />
-      <img src="img/banner-2000.webp" width="2000" height="1125" fetchpriority="high"
-        alt="Formamos atletas e cidadãos. Na natação, no ciclismo e na corrida, crianças e jovens encontram desafios, constroem amizades e desenvolvem confiança para o esporte e para a vida. Inscrever meu filho(a). Escolinha de Triathlon ao Alto Rendimento · São José · Santa Catarina · Desde 2002." />
+      <source media="(max-width: 900px)" srcset="img/banner-site-1000.webp" />
+      <img src="img/banner-site-2000.webp" width="2000" height="1125" fetchpriority="high"
+        alt="Formamos atletas e cidadãos. Na natação, no ciclismo e na corrida, crianças e jovens encontram desafios, constroem amizades e desenvolvem confiança para o esporte e para a vida. Escolinha de Triathlon ao Alto Rendimento · São José · Santa Catarina · Desde 2002." />
     </picture>
+    <img class="banner-botao" src="img/botao-inscrever.webp" width="900" height="291" alt="" />
   </a>
   <div class="banner-strip">
     <div class="container banner-strip-inner">
