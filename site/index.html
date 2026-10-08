@@ -506,6 +506,59 @@
   .wa-float { position: fixed; right: 18px; bottom: 18px; z-index: 60; width: 56px; height: 56px; border-radius: 50%; background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px -6px rgba(0,0,0,0.35); }
   .wa-float svg { width: 30px; height: 30px; }
 
+
+  /* ---------- quem somos no estilo das artes do Instagram ---------- */
+  #historia.qs {
+    --qs-navy: #141a3c; --qs-red: #E30613; --qs-sky: #2EA3DD;
+    background-color: #f1f2f4; color: var(--qs-navy); padding: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%23d9dce2' stroke-width='1'/%3E%3C/svg%3E");
+  }
+  .qs-block { padding: 72px 0; }
+  .qs-block + .qs-block { border-top: 1px solid #dfe2e8; }
+  .qs-tag {
+    display: inline-block; background: var(--qs-red); color: #fff; font-family: 'Anton', sans-serif; text-transform: uppercase;
+    font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1; padding: 10px 26px 12px; transform: rotate(-2.5deg);
+    box-shadow: 6px 8px 0 rgba(0,0,0,0.12); letter-spacing: 0.01em;
+  }
+  .qs-tag.sky { background: var(--qs-sky); }
+  .qs-tag small { font-family: 'Geist', sans-serif; font-weight: 400; font-size: 0.55em; letter-spacing: 0; margin-right: 8px; }
+  .qs-pre { display: block; font-family: 'Geist', sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(1.4rem, 3vw, 2.1rem); color: var(--qs-navy); margin: 0 0 6px 8px; transform: rotate(-2.5deg); }
+  .qs-sub { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: var(--qs-navy); font-size: clamp(1.5rem, 3.4vw, 2.5rem); line-height: 1.05; margin-top: 18px; transform: rotate(-2.5deg); transform-origin: left; }
+  .qs-sub i { font-style: normal; font-family: 'Geist', sans-serif; font-weight: 400; font-size: 0.8em; }
+  .qs-hero { display: grid; gap: 34px; align-items: center; }
+  @media (min-width: 900px) { .qs-hero { grid-template-columns: 0.9fr 1.1fr; } }
+  .qs-photo { border-radius: 18px; overflow: hidden; box-shadow: 0 18px 40px -18px rgba(20,26,60,0.45); }
+  .qs-photo img { width: 100%; height: auto; }
+  .qs-two { display: grid; gap: 56px; }
+  @media (min-width: 960px) { .qs-two { grid-template-columns: 1fr 1fr; } }
+  .qs-line { margin-top: 38px; border-left: 3px solid var(--qs-sky); padding-left: 0; }
+  .qs-line > div { position: relative; padding: 0 0 26px 26px; }
+  .qs-line > div:last-child { padding-bottom: 0; }
+  .qs-line > div::before { content: ""; position: absolute; left: -7.5px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: var(--qs-sky); }
+  .qs-line h4 { font-family: 'Anton', sans-serif; font-weight: 400; color: var(--qs-sky); text-transform: uppercase; font-size: clamp(1.7rem, 3vw, 2.3rem); line-height: 1.05; margin: 0 0 6px; letter-spacing: 0.01em; }
+  .qs-line h4.sm { font-size: clamp(1.35rem, 2.4vw, 1.75rem); }
+  .qs-line p { margin: 0; font-size: 1.06rem; line-height: 1.5; color: #2a3050; }
+  .qs-line p b { color: var(--qs-navy); }
+  .qs-line .lead { font-weight: 700; color: var(--qs-navy); font-size: 1.1rem; margin-bottom: 4px; }
+  .qs-line .destaque { margin-top: 8px; color: var(--qs-red); font-family: 'Anton', sans-serif; font-style: italic; text-transform: uppercase; font-size: 1.35rem; letter-spacing: 0.01em; }
+  .qs-equipe { display: grid; gap: 30px; align-items: center; }
+  @media (min-width: 900px) { .qs-equipe { grid-template-columns: 0.8fr 1.2fr; } }
+  .qs-equipe-title { display: flex; align-items: center; gap: 18px; }
+  .qs-equipe-title img { width: clamp(90px, 14vw, 150px); height: auto; }
+  .qs-equipe-title p { margin: 0; font-family: 'Anton', sans-serif; text-transform: uppercase; color: var(--qs-navy); font-size: clamp(2rem, 4.6vw, 3.4rem); line-height: 0.95; }
+  .qs-equipe-title p span { display: block; }
+  .qs-equipe-title p i { font-style: normal; font-family: 'Geist', sans-serif; font-size: 0.42em; line-height: 1.05; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .qs-equipe-title p em { font-style: normal; color: var(--qs-red); }
+  .qs-nova { display: grid; gap: 28px; align-items: end; }
+  @media (min-width: 900px) { .qs-nova { grid-template-columns: 1.3fr 0.7fr; } }
+  .qs-nova .txt { font-family: 'Geist', sans-serif; text-transform: uppercase; font-size: clamp(1.1rem, 2.2vw, 1.5rem); color: var(--qs-navy); line-height: 1.35; margin: 22px 0 0; max-width: 28ch; }
+  .qs-parte { margin-top: 28px; }
+  .qs-parte span { display: block; color: var(--qs-red); font-family: 'Geist', sans-serif; text-transform: uppercase; font-size: clamp(1.5rem, 3vw, 2.2rem); line-height: 1; }
+  .qs-parte strong { display: block; color: var(--qs-red); font-family: 'Anton', sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(3rem, 7vw, 5rem); line-height: 0.95; border-bottom: 4px solid var(--qs-red); padding-bottom: 6px; max-width: 9ch; }
+  .qs-nova .acoes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+  .qs-nova .acoes .btn-ghost { border-color: #c5cad6; color: var(--qs-navy); }
+  .qs-gabi { justify-self: center; max-width: 340px; width: 100%; -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent); mask-image: linear-gradient(180deg, #000 82%, transparent); }
+  .qs-gabi img { width: 100%; height: auto; border-radius: 18px 18px 0 0; }
 </style>
 </head>
 <body>
@@ -559,58 +612,75 @@
 
 <div class="divider-tape"></div>
 
-<section id="historia">
-  <div class="container">
-    <div class="section-head reveal">
-      <div class="eyebrow">Quem somos</div>
-      <h2>Muito mais que uma equipe</h2>
-      <p class="lede" style="margin-top:14px;">
-        Uma comunidade de atletas, treinadores, famílias e apoiadores. Desde 2002, a ADTRISC forma
-        atletas e pessoas através do triathlon em São José, da iniciação ao alto rendimento.
-      </p>
-    </div>
-    <div class="about-grid">
-      <div class="timeline reveal">
-        <div class="tl-item">
-          <span class="tl-dot"></span>
-          <span class="tl-big">2002</span>
-          <h3>Nasce o Projeto Escolinha de Triathlon</h3>
-          <p>Com o objetivo de aproximar crianças e adolescentes do esporte e iniciar uma nova geração de atletas.</p>
-        </div>
-        <div class="tl-item">
-          <span class="tl-dot"></span>
-          <span class="tl-big">2003</span>
-          <h3>Criação da ADTRISC</h3>
-          <p>A associação foi criada para fortalecer esse movimento e construir uma trajetória baseada na formação esportiva, no desenvolvimento de talentos e na transformação através do triathlon.</p>
-        </div>
-        <div class="tl-item">
-          <span class="tl-dot"></span>
-          <span class="tl-big">+20 anos</span>
-          <h3>Uma jornada que cresceu</h3>
-          <p>Ao longo dos anos, a ADTRISC passou a acompanhar atletas em diferentes momentos da sua evolução:</p>
-          <p class="tl-highlight">Da iniciação ao alto rendimento.</p>
-        </div>
-        <div class="tl-item">
-          <span class="tl-dot"></span>
-          <span class="tl-big">E continua</span>
-          <h3>Formando atletas e pessoas através do esporte</h3>
-          <p>Hoje a escolinha segue ativa em São José, com atletas em formação e presença em competições estaduais, nacionais e internacionais.</p>
-        </div>
+<section id="historia" class="qs">
+  <!-- Quem somos: recriação das artes "Uma comunidade", "A nossa história", "A jornada",
+       "Muito mais que uma equipe" e "Uma nova história" do Instagram da ADTRISC -->
+  <div class="qs-block">
+    <div class="container qs-hero">
+      <div class="reveal">
+        <div class="eyebrow" style="color:#2EA3DD; margin-bottom:18px;">Quem somos</div>
+        <h2 class="qs-tag"><small>UMA</small>COMUNIDADE</h2>
+        <span class="qs-sub"><i>DE</i> ATLETAS, TREINADORES,<br />FAMÍLIAS <i>E</i> APOIADORES</span>
       </div>
-      <div class="about-photo reveal">
-        <img src="img/historia/equipe-podio.webp" width="1280" height="775" loading="lazy"
-          alt="Atletas, treinadores e famílias da ADTRISC comemorando no pódio do Campeonato Brasileiro de Triathlon em Brasília" />
+      <div class="qs-photo reveal">
+        <img src="img/historia/comunidade.webp" width="1280" height="888" loading="lazy"
+          alt="Atletas, treinadores e famílias da ADTRISC comemorando no Campeonato Brasileiro de Triathlon & Multisport" />
       </div>
     </div>
+  </div>
 
-    <div class="journey reveal">
-      <div class="eyebrow">A jornada dentro da ADTRISC</div>
-      <h3 class="jt">Da escolinha ao alto rendimento</h3>
-      <div class="journey-grid">
-        <div class="journey-step"><h4>Escolinha de Triathlon</h4><b>O primeiro contato com o esporte.</b><p>Aqui começam as descobertas, o desenvolvimento motor e a paixão pelo triathlon.</p></div>
-        <div class="journey-step"><h4>Pré equipe</h4><b>Evolução e primeiros desafios competitivos.</b><p>Aperfeiçoamento técnico, disciplina e preparação para novas etapas.</p></div>
-        <div class="journey-step"><h4>Equipe</h4><b>Comprometimento, evolução e representação.</b><p>Atletas preparados para competir e representar a ADTRISC em diferentes desafios.</p></div>
-        <div class="journey-step"><h4>Alto rendimento</h4><b>Excelência esportiva e busca por resultados.</b><p>O nível competitivo de atletas que representam a associação em competições de alto nível.</p></div>
+  <div class="qs-block">
+    <div class="container qs-two">
+      <div class="reveal">
+        <span class="qs-pre">A NOSSA</span>
+        <h2 class="qs-tag">HISTÓRIA</h2>
+        <div class="qs-line">
+          <div><h4>2002</h4><p>Nasceu o <b>Projeto Escolinha de Triathlon</b>, com o <b>objetivo</b> de <b>aproximar crianças</b> e <b>adolescentes</b> do <b>esporte</b> e iniciar uma <b>nova geração</b> de <b>atletas</b>.</p></div>
+          <div><h4>2003</h4><p>A <b>ADTRISC</b> foi criada para <b>fortalecer</b> esse movimento e <b>construir</b> uma trajetória baseada na <b>formação esportiva</b>, no <b>desenvolvimento</b> de talentos e na <b>transformação</b> através do <b>triathlon</b>.</p></div>
+          <div><h4>+ 20 anos</h4><p>Ao longo dos anos, essa <b>jornada cresceu</b> e passou a <b>acompanhar atletas</b> em diferentes momentos da sua <b>evolução</b>:</p><p class="destaque">Da iniciação ao alto rendimento.</p></div>
+          <div><h4>Continua</h4><p><b>Formando atletas</b> e pessoas através do esporte.</p></div>
+        </div>
+      </div>
+      <div class="reveal">
+        <h2 class="qs-tag"><small>A</small>JORNADA</h2>
+        <span class="qs-pre" style="margin-top:12px;">DENTRO DA ADTRISC</span>
+        <div class="qs-line">
+          <div><h4 class="sm">Escolinha de Triathlon</h4><p class="lead">O primeiro contato com o esporte.</p><p>Aqui começam as descobertas, o desenvolvimento motor e a paixão pelo triathlon.</p></div>
+          <div><h4 class="sm">Pré equipe</h4><p class="lead">Evolução e primeiros desafios competitivos.</p><p>Aperfeiçoamento técnico, disciplina e preparação para novas etapas.</p></div>
+          <div><h4 class="sm">Equipe</h4><p class="lead">Comprometimento, evolução e representação.</p><p>Atletas preparados para competir e representar a ADTRISC em diferentes desafios.</p></div>
+          <div><h4 class="sm">Alto rendimento</h4><p class="lead">Excelência esportiva e busca por resultados.</p><p>O nível competitivo de atletas que representam a associação em competições de alto nível.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="qs-block">
+    <div class="container qs-equipe">
+      <div class="qs-equipe-title reveal">
+        <img src="img/logo-adtrisc.webp" width="400" height="445" alt="" />
+        <p><span>MUITO MAIS</span><span><i>QUE<br />UMA</i><em>EQUIPE</em></span></p>
+      </div>
+      <div class="qs-photo reveal">
+        <img src="img/historia/equipe-podio.webp" width="1280" height="776" loading="lazy"
+          alt="Atletas da ADTRISC com medalhas no pódio em Brasília, braços para o alto" />
+      </div>
+    </div>
+  </div>
+
+  <div class="qs-block" style="padding-bottom:0">
+    <div class="container qs-nova">
+      <div class="reveal" style="padding-bottom:72px">
+        <h2 class="qs-tag sky"><small>UMA</small>NOVA HISTÓRIA</h2>
+        <span class="qs-sub">PODE COMEÇAR AQUI!</span>
+        <p class="txt">Estamos sempre formando novos atletas e construindo novos caminhos através do esporte.</p>
+        <div class="qs-parte"><span>Quer fazer</span><strong>PARTE?</strong></div>
+        <div class="acoes">
+          <a class="btn btn-red btn-lg" href="https://app.adtrisc.com.br/inscricao" target="_blank" rel="noopener">Inscrever meu filho(a) →</a>
+          <a class="btn btn-ghost btn-lg" href="https://www.instagram.com/adtrisc/" target="_blank" rel="noopener">Acompanhe no Instagram</a>
+        </div>
+      </div>
+      <div class="qs-gabi reveal">
+        <img src="img/historia/nova-historia.webp" width="532" height="1288" loading="lazy" alt="Gabi, atleta da ADTRISC, sorrindo depois de uma prova" />
       </div>
     </div>
   </div>
@@ -921,8 +991,8 @@
 <section id="matricule">
   <div class="container">
     <div class="final-cta reveal">
-      <div class="eyebrow" style="color:var(--sky)">Uma nova história pode começar aqui</div>
-      <h2>Quer fazer parte?</h2>
+      <div class="eyebrow" style="color:var(--sky)">Vagas por sorteio público</div>
+      <h2>Quer matricular seu filho ou filha?</h2>
       <p>A inscrição é permanente e gratuita. Quando surgem vagas, um sorteio público e auditável decide quem entra.</p>
       <div class="hero-ctas">
         <a class="btn btn-red btn-lg" href="https://app.adtrisc.com.br/inscricao" target="_blank" rel="noopener">Inscrever meu filho(a) →</a>
