@@ -585,7 +585,7 @@ git push origin main   # the only way to deploy to production
 
 `vercel.json` sets framework to `nextjs` with standard build/install commands and one cron (`/api/cron/intervals`, daily 09:00 UTC; needs `CRON_SECRET`). No custom headers, rewrites, or edge functions configured.
 
-**`site/`** (static institutional site + Portal da Transparência, a single `index.html`) is a **separate Vercel project, `adtrisc-site`** (`site/.vercel/project.json`), served at **https://www.adtrisc.com.br** (`adtrisc.com.br` redirects to www; also `adtrisc-site.vercel.app`). Unlike the app it is **not connected to Git** — it has only ever been published with the CLI from `site/`. As of 30/09/2026 the live page is byte-identical to `site/index.html` on `main`. Since CLI deploys are denied for agents in this repo, publishing a change to the site needs either the maintainer running `vercel --prod` inside `site/` **after committing**, or connecting `adtrisc-site` to the GitHub repo with Root Directory `site`.
+**`site/`** (static institutional site + Portal da Transparência: `index.html` + `img/`) is a **separate Vercel project, `adtrisc-site`**, served at **https://www.adtrisc.com.br** (`adtrisc.com.br` → 308 to www). Since 08/10/2026 it is **connected to this GitHub repo with Root Directory `site`** and `site/vercel.json` declares it static (no install/build — without it Vercel detects the root Next.js app and the build fails). **Every push to `main` publishes the site** (and rebuilds the app); never `vercel --prod`.
 
 ---
 
