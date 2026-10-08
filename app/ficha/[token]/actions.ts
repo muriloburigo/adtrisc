@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { friendlyError } from '@/lib/errors'
 import { logAudit } from '@/lib/audit'
 import { aplicarFichaNoCadastro, houveMudanca } from '@/lib/fichaCadastro'
 
@@ -96,7 +97,7 @@ export async function submitFicha(
     })
     .eq('id', ficha.id)
 
-  if (error) return { error: `Erro ao salvar: ${error.message}` }
+  if (error) { console.error('[ficha] erro ao salvar:', error); return { error: friendlyError(error, 'Não foi possível salvar o formulário. Tente novamente.') } }
 
   // Leva o que os pais enviaram para o cadastro do atleta e dos responsáveis.
   // Uma falha aqui não pode perder a ficha dos pais (já salva acima): fica no

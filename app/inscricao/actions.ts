@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { friendlyError } from '@/lib/errors'
 
 export async function submitInscricao(
   _prev: { error?: string } | null,
@@ -88,6 +89,6 @@ export async function submitInscricao(
     assinatura_data:    assinaturaData,
   })
 
-  if (error) return { error: `Erro ao enviar inscrição: ${error.message}` }
+  if (error) { console.error('[inscricao] erro ao inserir candidato:', error); return { error: friendlyError(error, 'Não foi possível enviar a inscrição. Tente novamente.') } }
   return { success: true }
 }
