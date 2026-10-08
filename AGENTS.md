@@ -234,7 +234,7 @@ These are called at the top of Server Actions to enforce authorization. `lib/aud
 - `/conta` ("Minha conta", in the sidebar for every role): change your own password — the current password is checked first with a throwaway, cookie-less client, then `auth.updateUser`.
 - New passwords follow `validatePassword()`/`validarNovaSenha()` in `lib/password.ts` (same 5 requirements as `PasswordInput`), checked on the server in every flow. All of them log `action: 'senha'` in `audit_logs`.
 - **No self-service recovery.** A "Esqueci minha senha" flow existed briefly (30/09/2026) and was removed on request, because without custom SMTP Supabase only e-mails members of the Supabase org. Someone who forgot their password asks an admin, who sets a new one in **Configurações → Editar usuário → Redefinir senha** (any account except their own; `redefinirSenhaUsuario`) or **Treinadores → Editar → Redefinir senha** (coaches only). Both use `components/usuarios/ResetPasswordForm.tsx`; the person then changes it in `/conta`.
-- Supabase Auth config left from that attempt (harmless): Site URL `https://adtrisc.vercel.app`, redirect allow list `…/auth/callback`, recovery template in Portuguese. **Public sign-up is disabled** (`disable_signup = true`); accounts are only created by an admin via `auth.admin.createUser`.
+- Supabase Auth config left from that attempt (harmless): Site URL `https://app.adtrisc.com.br` (since 08/10/2026), redirect allow list `…/auth/callback` for app.adtrisc.com.br, adtrisc.vercel.app and localhost, recovery template in Portuguese. **Public sign-up is disabled** (`disable_signup = true`); accounts are only created by an admin via `auth.admin.createUser`.
 
 **Roles** (stored in `profiles.role`):
 
