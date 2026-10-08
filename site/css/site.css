@@ -518,9 +518,11 @@
   .time-ctrl button:hover { background: #E30613; }
   .time-ctrl span { font-family: 'Geist', sans-serif; font-size: 0.85rem; color: #5a6180; margin-left: 6px; }
   .time-carousel { position: relative; }
-  .time-arrow { position: absolute; z-index: 3; top: 0; bottom: 44px; height: 44px; margin-block: auto; width: 44px; border-radius: 50%; border: 1px solid rgba(20,26,60,0.08); background: rgba(255,255,255,0.9); color: #141a3c; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 22px -8px rgba(20,26,60,0.4); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); transition: background .2s, color .2s, transform .2s, box-shadow .2s; }
+  .time-arrow { position: absolute; z-index: 3; top: 0; bottom: 44px; height: 44px; margin-block: auto; width: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.28); color: #141a3c; opacity: 0.55; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px -8px rgba(20,26,60,0.3); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); transition: background .25s, color .2s, transform .2s, box-shadow .25s, opacity .25s; }
   .time-arrow svg { width: 17px; height: 17px; }
-  .time-arrow:hover { background: #141a3c; color: #fff; transform: scale(1.07); box-shadow: 0 12px 26px -8px rgba(20,26,60,0.5); }
+  /* destaca as setas quando o mouse está no carrossel */
+  .time-carousel:hover .time-arrow, .time-carousel:focus-within .time-arrow { opacity: 1; background: rgba(255,255,255,0.85); border-color: rgba(20,26,60,0.08); box-shadow: 0 8px 22px -8px rgba(20,26,60,0.4); }
+  .time-arrow:hover { opacity: 1; background: #141a3c; color: #fff; border-color: #141a3c; transform: scale(1.07); box-shadow: 0 12px 26px -8px rgba(20,26,60,0.5); }
   .time-prev { left: 10px; }
   .time-next { right: 10px; }
   @media (max-width: 560px) { .time-arrow { width: 40px; height: 40px; } .time-prev { left: 6px; } .time-next { right: 6px; } }
