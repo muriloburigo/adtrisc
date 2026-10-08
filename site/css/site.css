@@ -509,10 +509,16 @@
   .time-nomes button span { display: block; font-size: 0.8rem; color: #5a6180; }
   .time-nomes button:hover { background: rgba(255,255,255,0.6); }
   .time-nomes button[aria-current="true"] { border-left-color: #E30613; background: #fff; }
-  .time-ctrl { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+  .time-ctrl { margin-top: 22px; }
   .time-ctrl button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #141a3c; color: #fff; font-size: 1.2rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   .time-ctrl button:hover { background: #E30613; }
   .time-ctrl span { font-family: 'Geist', sans-serif; font-size: 0.85rem; color: #5a6180; margin-left: 6px; }
+  .time-carousel { position: relative; }
+  .time-arrow { position: absolute; z-index: 3; top: 0; bottom: 44px; height: 48px; margin-block: auto; width: 48px; border-radius: 50%; border: 0; background: rgba(20,26,60,0.9); color: #fff; font-size: 1.2rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,0.25); transition: background .15s; }
+  .time-arrow:hover { background: #E30613; }
+  .time-prev { left: -10px; }
+  .time-next { right: -10px; }
+  @media (max-width: 560px) { .time-arrow { width: 42px; height: 42px; } .time-prev { left: 4px; } .time-next { right: 4px; } }
   .time-track { display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; padding: 18px 4px 28px; margin: -18px -4px -28px; scrollbar-width: none; }
   .time-track::-webkit-scrollbar { display: none; }
   .time-card { flex: 0 0 auto; width: min(78vw, 330px); scroll-snap-align: start; border: 0; padding: 0; background: none; cursor: zoom-in; border-radius: 20px; overflow: hidden;

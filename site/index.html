@@ -193,13 +193,11 @@
         <li><button type="button" data-i="5"><b>Naida dos Santos Freitas</b><span>Fundadora · colaboradora voluntária</span></button></li>
         <li><button type="button" data-i="6"><b>Thales Muller</b><span>Designer</span></button></li>
       </ul>
-      <div class="time-ctrl">
-        <button type="button" data-dir="-1" aria-label="Anterior">←</button>
-        <button type="button" data-dir="1" aria-label="Próximo">→</button>
-        <span id="time-pos">1 / 7</span>
-      </div>
+      <div class="time-ctrl"><span id="time-pos">1 / 7</span></div>
     </div>
-    <div class="reveal" style="min-width:0">
+    <div class="reveal time-carousel" style="min-width:0">
+      <button type="button" class="time-arrow time-prev" data-dir="-1" aria-label="Anterior">←</button>
+      <button type="button" class="time-arrow time-next" data-dir="1" aria-label="Próximo">→</button>
       <div class="time-track" id="time-track" aria-label="Profissionais da ADTRISC">
       <button type="button" class="time-card" data-zoom="img/equipe/william-g.webp" data-alt="Apresentação de William D. Bonetti Dutra, Presidente"><img src="img/equipe/william.webp" width="520" height="805" loading="lazy" alt="William D. Bonetti Dutra: Presidente" /></button>
       <button type="button" class="time-card" data-zoom="img/equipe/elinai-g.webp" data-alt="Apresentação de Elinai S. Freitas Schutz, Supervisora técnica e coordenadora dos projetos"><img src="img/equipe/elinai.webp" width="520" height="805" loading="lazy" alt="Elinai S. Freitas Schutz: Supervisora técnica e coordenadora dos projetos" /></button>
@@ -498,7 +496,7 @@
       if (track.scrollLeft + track.clientWidth >= track.scrollWidth - 4) melhor = Math.max(melhor, atual);
       marcar(melhor);
     }, { passive: true });
-    document.querySelectorAll('.time-ctrl button').forEach(function(b){ b.addEventListener('click', function(){ ir(atual + Number(b.getAttribute('data-dir'))); }); });
+    document.querySelectorAll('.time-arrow').forEach(function(b){ b.addEventListener('click', function(){ ir(atual + Number(b.getAttribute('data-dir'))); }); });
     nomes.forEach(function(n){ n.addEventListener('click', function(){ var i = Number(n.getAttribute('data-i')); marcar(i); ir(i); }); });
   })();
   // Menu do celular/tablet
