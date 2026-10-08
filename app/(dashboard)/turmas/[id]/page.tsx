@@ -82,7 +82,7 @@ export default async function TurmaDetailPage({
       }
     }
 
-    const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://adtrisc.vercel.app'
+    const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://app.adtrisc.com.br'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const fichaByAluno = new Map<string, string>((fichasRaw ?? []).map((f: any) => [f.aluno_id, f.token]))
 

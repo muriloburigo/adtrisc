@@ -2,7 +2,7 @@
 
 Sistema da **Associação Desportiva Triatlética de Santa Catarina (ADTRISC)** para a Escolinha de Triathlon São José e as equipes: turmas, atletas, presenças, avaliações físicas, inscrições e prestação de contas.
 
-Produção: https://adtrisc.vercel.app
+Produção: https://app.adtrisc.com.br (sistema) · https://www.adtrisc.com.br (site institucional)
 
 > A documentação técnica completa (schema, regras de acesso, convenções, deploy, backup e restauração) está em **[AGENTS.md](./AGENTS.md)**. Leia antes de mexer no código.
 

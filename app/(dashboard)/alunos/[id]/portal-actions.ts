@@ -38,7 +38,7 @@ export async function gerarConvitePortal(alunoId: string): Promise<{ error?: str
     resourceId: alunoId, resourceLabel: `${tipo === 'criar' ? 'Convite do portal' : 'Link de nova senha'}: ${aluno.nome}`,
   })
   revalidatePath(`/alunos/${alunoId}`)
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://adtrisc.vercel.app'
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.adtrisc.com.br'
   return { url: `${base}/convite/${data.token}`, tipo }
 }
 

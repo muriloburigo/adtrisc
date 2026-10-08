@@ -12,7 +12,7 @@ export const ESCOPOS = 'CALENDAR:WRITE,ACTIVITY:READ'
 export type Resposta<T = unknown> = { ok: true; data: T } | { ok: false; error: string; status?: number }
 
 const base = () => (process.env.INTERVALS_BASE_URL ?? 'https://intervals.icu').replace(/\/$/, '')
-export const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL ?? 'https://adtrisc.vercel.app').replace(/\/$/, '')
+export const appUrl = () => (process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.adtrisc.com.br').replace(/\/$/, '')
 export const redirectUri = () => `${appUrl()}/api/intervals/callback`
 
 export const oauthLigado = () => Boolean(process.env.INTERVALS_CLIENT_ID && process.env.INTERVALS_CLIENT_SECRET && process.env.INTERVALS_TOKEN_KEY)

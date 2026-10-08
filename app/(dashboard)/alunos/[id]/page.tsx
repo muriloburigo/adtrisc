@@ -63,7 +63,7 @@ export default async function AlunoDetailPage({ params }: { params: Promise<{ id
         .gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     const u = conta?.data?.user as { email?: string; last_sign_in_at?: string } | null
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://adtrisc.vercel.app'
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.adtrisc.com.br'
     portal = {
       login: u ? loginDeExibicao(u.email) : null,
       ultimoAcesso: u?.last_sign_in_at ?? null,

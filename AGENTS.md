@@ -67,7 +67,7 @@ SUPABASE_DB_PASSWORD=<db password>
 Optional (used by `fichas/actions.ts`, portal invites and the Intervals OAuth redirect to build links):
 
 ```
-NEXT_PUBLIC_APP_URL=https://adtrisc.vercel.app
+NEXT_PUBLIC_APP_URL=https://app.adtrisc.com.br
 ```
 
 Training module / Intervals.icu (server-only; without them the Intervals connection button says "not available"):
@@ -574,7 +574,7 @@ brand-red-500 = #EB2127   (danger / logout button hover)
 
 ## Deployment
 
-Deployed on Vercel (project: `adtrisc`) via the GitHub integration: **every push to `main` on `muriloburigo/adtrisc` rebuilds production from the repo.**
+Deployed on Vercel (project: `adtrisc`, **https://app.adtrisc.com.br** since 08/10/2026; `adtrisc.vercel.app` still works) via the GitHub integration: **every push to `main` on `muriloburigo/adtrisc` rebuilds production from the repo.**
 
 ```bash
 npm run build          # verify locally first
@@ -585,7 +585,7 @@ git push origin main   # the only way to deploy to production
 
 `vercel.json` sets framework to `nextjs` with standard build/install commands and one cron (`/api/cron/intervals`, daily 09:00 UTC; needs `CRON_SECRET`). No custom headers, rewrites, or edge functions configured.
 
-**`site/`** (static institutional site + Portal da Transparência, a single `index.html`) is a **separate Vercel project, `adtrisc-site`** (`site/.vercel/project.json`), served at `adtrisc-site.vercel.app`. Unlike the app it is **not connected to Git** — it has only ever been published with the CLI from `site/`. As of 30/09/2026 the live page is byte-identical to `site/index.html` on `main`. Since CLI deploys are denied for agents in this repo, publishing a change to the site needs either the maintainer running `vercel --prod` inside `site/` **after committing**, or connecting `adtrisc-site` to the GitHub repo with Root Directory `site`.
+**`site/`** (static institutional site + Portal da Transparência, a single `index.html`) is a **separate Vercel project, `adtrisc-site`** (`site/.vercel/project.json`), served at **https://www.adtrisc.com.br** (`adtrisc.com.br` redirects to www; also `adtrisc-site.vercel.app`). Unlike the app it is **not connected to Git** — it has only ever been published with the CLI from `site/`. As of 30/09/2026 the live page is byte-identical to `site/index.html` on `main`. Since CLI deploys are denied for agents in this repo, publishing a change to the site needs either the maintainer running `vercel --prod` inside `site/` **after committing**, or connecting `adtrisc-site` to the GitHub repo with Root Directory `site`.
 
 ---
 
@@ -728,7 +728,7 @@ This is the unlikely worst case. Steps, roughly in order:
    - `~/.adtrisc-backup.env` — new DB password.
 7. **Reconfigure things that live outside the database and aren't backed up at all:**
    - Supabase Auth settings: email templates, redirect URLs, site URL (Authentication → URL Configuration).
-   - Any custom domain on Vercel, if one was ever added (currently just `adtrisc.vercel.app`).
+   - Custom domains on Vercel: `app.adtrisc.com.br` (project `adtrisc`), `www.adtrisc.com.br` + `adtrisc.com.br` → 308 to www (project `adtrisc-site`). DNS is at **GoDaddy** (the .br domain was bought there; Registro.br shows it read-only): A `@` 216.198.79.1 / 64.29.17.1, CNAME `www` and `app` to the `*.vercel-dns-017.com` values shown by Vercel.
 8. **Redeploy**: Vercel dashboard → Deployments → latest `main` deployment → Redeploy (or push a commit to `main`). Don't use `vercel --prod` (see Deployment).
 9. Update `NEXT_PUBLIC_SUPABASE_URL` in this file's Environment Variables section and anywhere else the old project ref (`gjsbxpdkfmqtfwkdcbxh`) is hardcoded — notably `DB_HOST`/`DB_USER` in `~/.adtrisc-backup.env` and the `EXPECTED_PROJECT_REF` constant in both `scripts/backup/backup-storage.mjs` and `scripts/backup/restore-storage.mjs`.
 

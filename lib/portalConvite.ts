@@ -30,7 +30,7 @@ export type ConviteTurmaItem = {
  */
 export async function convitesDaTurma(turmaId: string, gerar: boolean, criadoPor?: string): Promise<{ itens: ConviteTurmaItem[]; comAcesso: number }> {
   const db = createAdminClient() as Db
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://adtrisc.vercel.app').replace(/\/$/, '')
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.adtrisc.com.br').replace(/\/$/, '')
   const { data: alunos } = await db.from('alunos').select('id, nome, telefone, profile_id').eq('turma_id', turmaId).eq('status', 'ativo').order('nome')
   const todos = (alunos ?? []) as { id: string; nome: string; telefone: string | null; profile_id: string | null }[]
   const semConta = todos.filter((a) => !a.profile_id)

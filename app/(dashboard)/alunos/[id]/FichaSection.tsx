@@ -76,7 +76,7 @@ export default function FichaSection({
 
   const base = typeof window !== 'undefined'
     ? window.location.origin
-    : 'https://adtrisc.vercel.app'
+    : 'https://app.adtrisc.com.br'
 
   function fichaUrl(token: string) {
     return `${base}/ficha/${token}`

@@ -156,7 +156,7 @@ export async function fetchLinkPreview(url: URL): Promise<LinkPreview> {
       redirect: 'manual',
       signal: AbortSignal.timeout(8000),
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ADTRISCBot/1.0; +https://adtrisc.vercel.app)',
+        'User-Agent': 'Mozilla/5.0 (compatible; ADTRISCBot/1.0; +https://app.adtrisc.com.br)',
         Accept: 'text/html',
       },
     })

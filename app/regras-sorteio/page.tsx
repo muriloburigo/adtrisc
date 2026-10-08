@@ -77,7 +77,7 @@ export default function RegrasSorteioPage() {
                 {
                   n: '01',
                   title: 'Formulário sempre aberto',
-                  desc: 'O formulário público está permanentemente disponível em adtrisc.vercel.app/inscricao. Qualquer família pode se inscrever a qualquer momento para uma turma com vagas.',
+                  desc: 'O formulário público está permanentemente disponível em app.adtrisc.com.br/inscricao. Qualquer família pode se inscrever a qualquer momento para uma turma com vagas.',
                 },
                 {
                   n: '02',

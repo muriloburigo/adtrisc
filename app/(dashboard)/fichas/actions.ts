@@ -82,7 +82,7 @@ export async function criarFicha(
 
   if (error || !ficha) return { error: error?.message ?? 'Erro ao criar ficha.' }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://adtrisc.vercel.app'
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://app.adtrisc.com.br'
   const url = `${base}/ficha/${ficha.token}`
 
   // Sem dados sensíveis (CPF/RG) no log — só o vínculo aluno/ficha.
@@ -109,7 +109,7 @@ export async function criarFichasTurma(turmaId: string): Promise<{
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createAdminClient() as any
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://adtrisc.vercel.app'
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ?? 'https://app.adtrisc.com.br'
 
   const { data: alunos } = await db
     .from('alunos')
