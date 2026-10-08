@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const AUTH_CHECK_TIMEOUT_MS = 5000
+const DOMINIO_ANTIGO = 'adtrisc.vercel.app'
+const DOMINIO_NOVO = 'https://app.adtrisc.com.br'
 
 /** fetch com timeout: evita que uma Auth API lenta prenda o proxy até o limite da Vercel */
 function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
@@ -11,6 +13,12 @@ function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
 }
 
 export async function proxy(request: NextRequest) {
+  // Endereço antigo (adtrisc.vercel.app) → domínio próprio, mesmo caminho. As rotas
+  // /api/* ficam de fora: webhook do Intervals e cron da Vercel não seguem redirect.
+  if (request.headers.get('host') === DOMINIO_ANTIGO && !request.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.redirect(`${DOMINIO_NOVO}${request.nextUrl.pathname}${request.nextUrl.search}`, 308)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

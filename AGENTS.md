@@ -574,7 +574,7 @@ brand-red-500 = #EB2127   (danger / logout button hover)
 
 ## Deployment
 
-Deployed on Vercel (project: `adtrisc`, **https://app.adtrisc.com.br** since 08/10/2026; `adtrisc.vercel.app` still works) via the GitHub integration: **every push to `main` on `muriloburigo/adtrisc` rebuilds production from the repo.**
+Deployed on Vercel (project: `adtrisc`, **https://app.adtrisc.com.br** since 08/10/2026; `proxy.ts` 308-redirects `adtrisc.vercel.app/*` to the same path on the new domain, except `/api/*` so the Intervals webhook and Vercel cron keep working) via the GitHub integration: **every push to `main` on `muriloburigo/adtrisc` rebuilds production from the repo.**
 
 ```bash
 npm run build          # verify locally first
