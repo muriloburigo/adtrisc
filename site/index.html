@@ -644,6 +644,25 @@
     #historia .qs-equipe-title p, #historia .qs-parte, #historia .qs-nova .txt, #historia .qs-nova .acoes, #historia .qs-titulo { opacity: 1; }
     #historia .qs-line::before, #historia .qs-line > div::before, #historia .qs-parte strong::after { transform: none; }
   }
+
+  /* ---------- quem somos: painéis claros sobre fundo escuro ---------- */
+  #historia.qs {
+    background-color: #0b1030; padding: 84px 0 96px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%23ffffff' stroke-opacity='0.05' stroke-width='1'/%3E%3C/svg%3E"),
+      radial-gradient(1200px 500px at 15% 0%, rgba(46,163,221,0.18), transparent 60%),
+      radial-gradient(900px 500px at 100% 100%, rgba(227,6,19,0.14), transparent 60%);
+  }
+  .qs-cabeca { margin-bottom: 40px; }
+  .qs-cabeca .qs-titulo { color: #fff; margin-bottom: 12px; }
+  .qs-cabeca p { color: rgba(255,255,255,0.72); font-size: 1.1rem; max-width: 56ch; margin: 18px 0 0; }
+  .qs-block {
+    width: min(var(--maxw), calc(100% - 32px)); margin: 0 auto; padding: 60px 0; border-radius: 28px; overflow: hidden;
+    background-color: #f1f2f4; box-shadow: 0 30px 60px -30px rgba(0,0,0,0.6);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%23d9dce2' stroke-width='1'/%3E%3C/svg%3E");
+  }
+  .qs-block + .qs-block { border-top: 0; margin-top: 28px; }
+  .qs-block > .container { padding: 0 clamp(22px, 4.5vw, 64px); }
+  @media (max-width: 640px) { .qs-block { border-radius: 20px; padding: 44px 0; } }
 </style>
 </head>
 <body>
@@ -700,10 +719,14 @@
 <section id="historia" class="qs">
   <!-- Quem somos: recriação das artes "Uma comunidade", "A nossa história", "A jornada",
        "Muito mais que uma equipe" e "Uma nova história" do Instagram da ADTRISC -->
+  <div class="container qs-cabeca reveal">
+    <h2 class="qs-titulo">Quem somos</h2>
+    <p>Desde 2002 formando atletas e pessoas através do triathlon em São José. Conheça a nossa história.</p>
+  </div>
+
   <div class="qs-block">
     <div class="container qs-hero">
       <div class="reveal">
-        <h2 class="qs-titulo">Quem somos</h2>
         <div class="qs-tag"><small>UMA</small>COMUNIDADE</div>
         <span class="qs-sub"><i>DE</i> ATLETAS, TREINADORES,<br />FAMÍLIAS <i>E</i> APOIADORES</span>
       </div>
