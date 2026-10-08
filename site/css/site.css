@@ -787,4 +787,6 @@ body.menu-aberto { overflow: hidden; }
 /* Quem somos — bloco "Uma nova história": imagem exata da referência + botões */
 /* "Uma nova história": a imagem preenche o slide inteiro (mesmo fundo), virando um só elemento */
 .qs-nova-bloco { padding: 0; }
-.qs-nova-bloco .qs-nova-img { width: 100%; height: auto; display: block; }
+.qs-nova-bloco .qs-nova-img { width: 100%; height: auto; display: block;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 9%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 9%); }
