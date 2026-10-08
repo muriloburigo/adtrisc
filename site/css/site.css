@@ -110,7 +110,7 @@
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
   }
-  .topbar-inner { display: flex; align-items: center; gap: 14px; height: 76px; }
+  .topbar-inner { display: flex; align-items: center; gap: 14px; height: 58px; }
   .topbar-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
   .topbar-brand img { height: 58px; width: auto; }
   .topbar-brand-name { font-family: 'Anton', sans-serif; font-size: 1.05rem; letter-spacing: 0.02em; color: var(--text); }
@@ -372,7 +372,7 @@
   .btn-red { background: var(--red); color: #fff; box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--red) 70%, transparent); }
   .btn-red:hover { filter: brightness(1.08); }
   .btn-lg { font-size: 1rem; padding: 14px 26px; }
-  .topbar-cta .btn-red { font-size: 0.95rem; padding: 11px 22px; letter-spacing: 0.02em; text-transform: uppercase; font-weight: 700; box-shadow: none; }
+  .topbar-cta .btn-red { font-size: 0.92rem; padding: 9px 20px; letter-spacing: 0.02em; text-transform: uppercase; font-weight: 700; box-shadow: none; }
   .social { display: flex; align-items: center; gap: 4px; }
   .social a { display: inline-flex; width: 38px; height: 38px; align-items: center; justify-content: center; border-radius: 10px; color: var(--navy); transition: background .15s, color .15s; }
   :root[data-theme="dark"] .social a { color: #fff; }
@@ -767,7 +767,7 @@ body.menu-aberto { overflow: hidden; }
    o azul-marinho do escudo e o "ADTRISC" sumiam */
 /* logo do cabeçalho acompanha o tema: colorido no claro, branco no escuro.
    O rodapé é sempre escuro -> logo branco fixo. */
-.topbar-brand img { height: 52px; }
+.topbar-brand img { height: 44px; }
 .topbar-brand .logo-branco { display: none; }
 :root[data-theme="dark"] .topbar-brand .logo-cor { display: none; }
 :root[data-theme="dark"] .topbar-brand .logo-branco { display: block; }
