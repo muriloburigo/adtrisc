@@ -610,7 +610,7 @@
 
   /* banner + botão "Inscrever" como camada separada (posição da arte original, acima de "MEU FILHO(A)") */
   .banner { position: relative; overflow: hidden; }
-  .banner .banner-botao { display: block; line-height: 0; position: absolute; left: 66.1%; top: 71.2%; width: 17%; height: auto; transform-origin: 50% 60%;
+  .banner .banner-botao { display: block; line-height: 0; position: absolute; left: 66.4%; top: 74.5%; width: 17%; height: auto; transform-origin: 50% 60%;
     filter: drop-shadow(0 6px 10px rgba(0,0,0,0.18)); transition: transform .25s cubic-bezier(.2,.9,.3,1.3), filter .25s;
     animation: botao-chama 4.5s ease-in-out 2s infinite; }
   .banner .banner-botao img { width: 100%; height: auto; }
