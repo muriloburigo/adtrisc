@@ -663,6 +663,11 @@
   .qs-block + .qs-block { border-top: 0; margin-top: 28px; }
   .qs-block > .container { padding: 0 clamp(22px, 4.5vw, 64px); }
   @media (max-width: 640px) { .qs-block { border-radius: 20px; padding: 44px 0; } }
+  /* foto da Gabi proporcional ao texto do painel "Uma nova história" */
+  @media (min-width: 900px) { .qs-nova { grid-template-columns: 1fr auto; align-items: end; } }
+  .qs-gabi { max-width: 260px; }
+  .qs-gabi img { height: 520px; width: 100%; object-fit: cover; object-position: center top; }
+  @media (max-width: 899px) { .qs-gabi { max-width: 220px; } .qs-gabi img { height: 420px; } }
 </style>
 </head>
 <body>
