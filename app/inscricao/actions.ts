@@ -12,7 +12,6 @@ export async function submitInscricao(
 
   const turma_id = String(formData.get('turma_id') ?? '').trim()
   const nome     = String(formData.get('p_nome') ?? '').trim()
-  if (!turma_id) return { error: 'Selecione uma turma.' }
   if (!nome)     return { error: 'Nome do atleta é obrigatório.' }
 
   const responsavelAssina = String(formData.get('responsavel_assina') ?? '').trim()
@@ -26,9 +25,19 @@ export async function submitInscricao(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createAdminClient() as any
 
-  const { data: turma } = await supabase
-    .from('turmas').select('captacao_aberta').eq('id', turma_id).single()
-  if (!turma?.captacao_aberta) return { error: 'Esta turma não está aceitando inscrições no momento.' }
+  if (turma_id) {
+    // Turma escolhida: precisa estar com captação aberta.
+    const { data: turma } = await supabase
+      .from('turmas').select('captacao_aberta').eq('id', turma_id).single()
+    if (!turma?.captacao_aberta) return { error: 'Esta turma não está aceitando inscrições no momento.' }
+  } else {
+    // Sem turma: só permitido quando NENHUMA turma está com captação aberta. O
+    // candidato fica "sem turma" no menu Candidatos, para a equipe distribuir depois.
+    const { count } = await supabase
+      .from('turmas').select('id', { count: 'exact', head: true })
+      .eq('captacao_aberta', true).eq('status', 'ativa')
+    if (count && count > 0) return { error: 'Selecione uma turma.' }
+  }
 
   const str = (key: string) => String(formData.get(key) ?? '').trim() || null
   const yn  = (key: string) => formData.get(key) === 'sim'
@@ -40,7 +49,7 @@ export async function submitInscricao(
   const paiNome = str('pai_nome'), paiTelefone = str('pai_telefone'), paiEmail = str('pai_email')
 
   const { error } = await supabase.from('candidatos').insert({
-    turma_id,
+    turma_id: turma_id || null,
     status:             'pendente',
     email_responsavel:  str('email_responsavel'),
     aceite_termos:      true,

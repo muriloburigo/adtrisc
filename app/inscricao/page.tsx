@@ -7,31 +7,15 @@ export const dynamic = 'force-dynamic'
 
 export default async function InscricaoPage() {
   const supabase = createAdminClient()
-  type TurmaOption = { id: string; nome: string; modalidade: string }
-
-  // Turmas específicas com captação aberta (a Lista de espera fica de fora daqui).
-  const { data: abertas } = await supabase
+  const { data } = await supabase
     .from('turmas')
     .select('id, nome, modalidade')
     .eq('captacao_aberta', true)
     .eq('status', 'ativa')
-    .eq('lista_espera', false)
     .order('nome')
 
-  let turmas = (abertas ?? []) as TurmaOption[]
-  let apenasListaEspera = false
-
-  // Sem turma específica aberta: cai na Lista de espera, para a captação nunca parar.
-  if (turmas.length === 0) {
-    const { data: espera } = await supabase
-      .from('turmas')
-      .select('id, nome, modalidade')
-      .eq('lista_espera', true)
-      .eq('status', 'ativa')
-      .limit(1)
-    turmas = (espera ?? []) as TurmaOption[]
-    apenasListaEspera = turmas.length > 0
-  }
+  type TurmaOption = { id: string; nome: string; modalidade: string }
+  const turmas = (data ?? []) as TurmaOption[]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -66,7 +50,7 @@ export default async function InscricaoPage() {
 
       {/* Form */}
       <div className="max-w-2xl mx-auto px-4 py-5">
-        <InscricaoForm turmas={turmas} apenasListaEspera={apenasListaEspera} />
+        <InscricaoForm turmas={turmas} />
       </div>
     </div>
   )

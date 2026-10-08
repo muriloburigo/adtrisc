@@ -276,7 +276,7 @@ UserRole        = 'admin' | 'coach' | 'aluno' | 'pai'
 - **Coach signature.** It is registered in **Minha conta** by the coach, or in **Treinadores → Editar** by an admin (`salvarAssinatura` in `conta/assinatura-actions.ts`; the image itself never goes to the audit log). It is placed automatically above the signature line of the class report, the attendance export, the diário report and the diário print (`components/documentos/AssinaturaImpressa.tsx`). Each of those screens has an "incluir assinatura" checkbox; on the server-rendered ones, unchecking sets `?assinatura=0`. It is a drawn (simple electronic) signature; the upload of officially signed PDFs (`documentos_assinados`) stays as is.
 
 **`turmas`** — training classes
-- `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `lista_espera` (bool — turma genérica de captação contínua; o formulário público a usa como fallback quando nenhuma outra turma está aberta), `status` (TurmaStatus), `observacoes`, `processo_sgpe_id` (FK → processos_sgpe, nullable; null = use the year's process when the year has exactly one)
+- `id`, `nome`, `modalidade` (TurmaModalidade), `dias_semana` (DiaSemana[]), `horario_inicio`, `horario_fim`, `coach_id` (FK → profiles), `capacidade`, `ano`, `semestre` (1|2), `idade_min`, `idade_max`, `captacao_aberta` (bool), `status` (TurmaStatus), `observacoes`, `processo_sgpe_id` (FK → processos_sgpe, nullable; null = use the year's process when the year has exactly one)
 
 **`alunos`** — athletes/students
 - `id`, `turma_id` (FK → turmas), `profile_id` (FK → profiles, nullable), `nome`, `telefone`, `sexo` (SexoEnum), `data_nascimento`, address fields (`rua`, `numero`, `bairro`, `cep`, `cidade`), `foto_url`, `status` (AlunoStatus), `observacoes`
@@ -444,7 +444,7 @@ Port of Movelly Core's training module (spec = that code; `lib/` files say what 
 - Portal (mobile first): next workout, the week with the **same cards and status colors as the staff calendar** (`components/portal/SemanaPortal.tsx`: list on phones, 7-day grid on desktop; drag to reorder the day, drop an activity on a workout to link, or on another day to move it — athletes never create/edit workouts or move them between days), workout detail in plain language with **their** paces, mark done/partial/not done + comment to the coach, upload the activity .fit, download the workout .fit, link extras, my zones, account (password, Intervals connect/disconnect). Forgotten password → ask the coach for a new-password link (no e-mail flow).
 
 ### Public Enrollment (`/inscricao`)
-Parents fill a form to pre-enroll their child. Requires selecting a turma with `captacao_aberta = true`. Creates a `candidatos` record with status `pendente`. Uses `createAdminClient()` to bypass RLS. **Lista de espera:** quando nenhuma turma específica está com `captacao_aberta` (e não é `lista_espera`), o formulário cai na turma marcada `lista_espera = true` (campo oculto), para a captação nunca parar; a equipe move o candidato para a turma real quando abre vaga. Como essa turma não tem `coach_id`, só o admin vê seus candidatos (RLS por `coach_has_turma`).
+Parents fill a form to pre-enroll their child. Requires selecting a turma with `captacao_aberta = true`. Creates a `candidatos` record with status `pendente`. Uses `createAdminClient()` to bypass RLS. **Captação sempre aberta:** quando NENHUMA turma está com `captacao_aberta`, o formulário permite enviar sem turma (sem campo de turma) e cria o candidato com `turma_id = null`; ele aparece no menu Candidatos como "Sem turma" para a equipe atribuir a uma turma depois. A action só aceita `turma_id` vazio quando de fato não há turma aberta. Como `coach_has_turma(null)` é falso, só o admin vê candidatos sem turma na RLS.
 
 ### Candidate Management (`/candidatos`)
 Staff reviews applicants and changes status (approve, reject, lottery draw, waitlist, enroll). Status changes are audit-logged.
@@ -723,9 +723,10 @@ This is the unlikely worst case. Steps, roughly in order:
 
    40. `responsaveis_candidatos_escopo.sql` — AppSec: escopa por turma o acesso de COACH a `responsaveis`/`aluno_responsavel`/`candidatos` (CPF/RG de menores), via `coach_has_responsavel()` SECURITY DEFINER e `coach_has_turma()`. Admin e atleta/responsável inalterados. Needs `aluno_responsavel_coach_fix.sql` (#31).
 
-      41. `turma_lista_espera.sql` — `turmas.lista_espera` + cria a turma genérica "Lista de espera" (fallback do formulário público de inscrição).
+      41. `turma_lista_espera.sql` — `turmas.lista_espera` + turma "Lista de espera" (fallback do formulário). **Revertido pelo #42** — a abordagem virou candidato sem turma.
+   42. `lista_espera_remover.sql` — desfaz o #41 (remove a turma e a coluna `lista_espera`); a captação contínua passou a usar candidato sem turma (`turma_id null`).
 
-      #32–36 were run in production on 05/10/2026; #37 and #38 on 06/10/2026; #39 on 07/10/2026; #40 and #41 on 08/10/2026.
+      #32–36 were run in production on 05/10/2026; #37 and #38 on 06/10/2026; #39 on 07/10/2026; #40, #41 and #42 on 08/10/2026.
 
    This recreates all tables, RLS policies, functions, and the storage buckets (empty). If in doubt about a file not listed above (this list is kept in sync manually — check its header comment and grep it for `coach_has_turma`/`alter table` to place it correctly), run `schema_v2.sql` + `turma_coaches.sql` + `turma_access_scoping.sql` first no matter what, since almost everything else depends on one of those three.
 3. **Restore the data**: run `psql -f database.sql` against the new project (same command as above, new host/user/password). Since the schema from step 2 already exists, either drop the tables first or strip the `CREATE TABLE`/`CREATE POLICY` statements from `database.sql` and keep only the `COPY ... FROM stdin` data sections — running both the schema files and a full `database.sql` back to back will error on "already exists".
