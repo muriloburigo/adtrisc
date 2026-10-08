@@ -761,7 +761,15 @@ body.menu-aberto { overflow: hidden; }
 
 /* escudo sempre sobre um quadrado branco (como no menu do sistema): no fundo escuro
    o azul-marinho do escudo e o "ADTRISC" sumiam */
-/* logo branco direto sobre o fundo escuro do topo/rodapé (sem quadrado branco) */
+/* logo do cabeçalho acompanha o tema: colorido no claro, branco no escuro.
+   O rodapé é sempre escuro -> logo branco fixo. */
 .topbar-brand img { height: 52px; }
+.topbar-brand .logo-branco { display: none; }
+:root[data-theme="dark"] .topbar-brand .logo-cor { display: none; }
+:root[data-theme="dark"] .topbar-brand .logo-branco { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .topbar-brand .logo-cor { display: none; }
+  :root:not([data-theme="light"]) .topbar-brand .logo-branco { display: block; }
+}
 .footer-brand img { height: 66px; }
 @media (max-width: 520px) { .topbar-brand img { height: 46px; } }
