@@ -14,6 +14,7 @@
 <meta name="robots" content="index, follow" />
 <link rel="icon" type="image/png" href="img/favicon.png" />
 <link rel="apple-touch-icon" href="img/favicon.png" />
+<script>document.documentElement.classList.add('js')</script>
 <style>
   @font-face {
     font-family: 'Anton';
@@ -585,6 +586,63 @@
   .qs-titulo { font-family: 'Anton', sans-serif; text-transform: uppercase; color: #141a3c; font-size: clamp(3rem, 7vw, 5.2rem); line-height: 0.95; margin: 0 0 26px; letter-spacing: 0.01em; }
   .qs-titulo::after { content: ""; display: block; width: 84px; height: 6px; margin-top: 14px; background: linear-gradient(90deg, #2EA3DD 0 33%, #141a3c 33% 66%, #E30613 66%); }
   .time-track { --sangria: max(24px, calc((100vw - var(--maxw)) / 2 + 24px)); margin-right: calc(-1 * var(--sangria)); padding-right: var(--sangria); scroll-padding-left: 4px; }
+
+  /* ---------- quem somos: movimento (dispara quando o bloco entra na tela) ---------- */
+  #historia .reveal { transition: opacity .5s ease, transform .5s ease; }
+  @keyframes qs-carimbo { 0% { opacity: 0; transform: rotate(-14deg) scale(1.5); } 60% { opacity: 1; transform: rotate(0deg) scale(0.94); } 100% { opacity: 1; transform: rotate(-2.5deg) scale(1); } }
+  @keyframes qs-esquerda { from { opacity: 0; transform: translateX(-26px) rotate(-2.5deg); } to { opacity: 1; transform: rotate(-2.5deg); } }
+  @keyframes qs-item { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+  @keyframes qs-linha { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @keyframes qs-ponto { 0% { transform: scale(0); } 70% { transform: scale(1.5); } 100% { transform: scale(1); } }
+  @keyframes qs-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+  @keyframes qs-sobe { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+  @keyframes qs-giro { from { opacity: 0; transform: perspective(600px) rotateY(-90deg) scale(.7); } to { opacity: 1; transform: none; } }
+  @keyframes qs-risco { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  @keyframes qs-flutua { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  @keyframes qs-brilho { 0%, 100% { box-shadow: 6px 8px 0 rgba(0,0,0,0.12); } 50% { box-shadow: 10px 12px 0 rgba(0,0,0,0.16); } }
+
+  .js #historia .qs-tag, .js #historia .qs-pre, .js #historia .qs-sub, .js #historia .qs-line > div, .js #historia .qs-equipe-title img,
+  .js #historia .qs-equipe-title p, .js #historia .qs-parte, .js #historia .qs-nova .txt, .js #historia .qs-nova .acoes, .js #historia .qs-titulo { opacity: 0; }
+  #historia .in .qs-titulo { animation: qs-item .6s ease forwards; }
+  #historia .in .qs-tag { animation: qs-carimbo .7s cubic-bezier(.2,.9,.3,1.2) .15s forwards, qs-brilho 4s ease-in-out 1.2s infinite; }
+  #historia .in .qs-pre { animation: qs-esquerda .6s ease forwards; }
+  #historia .in .qs-sub { animation: qs-esquerda .6s ease .55s forwards; }
+
+  #historia .qs-line { position: relative; border-left: 0; }
+  #historia .qs-line::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #2EA3DD; transform-origin: top; }
+  .js #historia .qs-line::before { transform: scaleY(0); }
+  #historia .in .qs-line::before { animation: qs-linha 1.4s ease .5s forwards; }
+  .js #historia .qs-line > div::before { transform: scale(0); }
+  #historia .in .qs-line > div { animation: qs-item .55s ease forwards; }
+  #historia .in .qs-line > div::before { animation: qs-ponto .45s ease forwards; }
+  #historia .in .qs-line > div:nth-child(1), #historia .in .qs-line > div:nth-child(1)::before { animation-delay: .7s; }
+  #historia .in .qs-line > div:nth-child(2), #historia .in .qs-line > div:nth-child(2)::before { animation-delay: 1s; }
+  #historia .in .qs-line > div:nth-child(3), #historia .in .qs-line > div:nth-child(3)::before { animation-delay: 1.3s; }
+  #historia .in .qs-line > div:nth-child(4), #historia .in .qs-line > div:nth-child(4)::before { animation-delay: 1.6s; }
+
+  #historia .qs-photo.reveal { transform: none; }
+  #historia .qs-photo.reveal.in { animation: qs-sobe .8s ease forwards; }
+  #historia .qs-photo img { transition: transform .6s ease; }
+  #historia .qs-photo.in img { animation: qs-zoom 1.6s ease forwards; }
+  #historia .qs-photo:hover img { transform: scale(1.04); }
+
+  #historia .qs-equipe-title.in img { animation: qs-giro .8s cubic-bezier(.2,.9,.3,1.1) forwards; }
+  #historia .qs-equipe-title.in p { animation: qs-item .6s ease .35s forwards; }
+
+  #historia .qs-nova .in .txt { animation: qs-item .6s ease .8s forwards; }
+  #historia .qs-nova .in .qs-parte { animation: qs-item .6s ease 1.05s forwards; }
+  #historia .qs-parte strong { border-bottom: 0; position: relative; }
+  #historia .qs-parte strong::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #E30613; transform-origin: left; }
+  .js #historia .qs-parte strong::after { transform: scaleX(0); }
+  #historia .qs-nova .in .qs-parte strong::after { animation: qs-risco .6s ease 1.5s forwards; }
+  #historia .qs-nova .in .acoes { animation: qs-item .6s ease 1.4s forwards; }
+  #historia .qs-gabi.in img { animation: qs-flutua 5s ease-in-out 1s infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #historia .qs-tag, #historia .qs-pre, #historia .qs-sub, #historia .qs-line > div, #historia .qs-equipe-title img,
+    #historia .qs-equipe-title p, #historia .qs-parte, #historia .qs-nova .txt, #historia .qs-nova .acoes, #historia .qs-titulo { opacity: 1; }
+    #historia .qs-line::before, #historia .qs-line > div::before, #historia .qs-parte strong::after { transform: none; }
+  }
 </style>
 </head>
 <body>
