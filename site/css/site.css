@@ -495,7 +495,7 @@
   .time-title .pre { display: block; font-family: 'Anton', sans-serif; color: #2EA3DD; font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: 0.06em; line-height: 1; transform: rotate(-3deg); margin-left: 6px; }
   .time-title .pre i { font-style: normal; font-family: 'Geist', sans-serif; font-weight: 400; }
   .time-title h2 { display: inline-block; background: #E30613; color: #fff; font-size: clamp(3.6rem, 8vw, 5.6rem); line-height: 0.95; padding: 6px 30px 10px; margin-top: 8px; transform: rotate(-3deg); box-shadow: 8px 10px 0 rgba(0,0,0,0.12); }
-  .time-title .pos { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: #141a3c; font-size: clamp(1.15rem, 2.2vw, 1.5rem); margin: 14px 0 0 10px; transform: rotate(-3deg); }
+  .time-title .pos { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: var(--text); font-size: clamp(1.15rem, 2.2vw, 1.5rem); margin: 14px 0 0 10px; transform: rotate(-3deg); }
   .time-title .pos u { text-decoration-thickness: 3px; text-underline-offset: 4px; }
   .time-nomes { list-style: none; padding: 6px; margin: 34px 0 0; display: none; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
   @media (min-width: 1000px) { .time-nomes { display: grid; } }
