@@ -497,8 +497,7 @@
     mask-composite: intersect; }
 
   /* ---------- equipe: "Conheça o time que move a ADTRISC" (carrossel) ---------- */
-  #equipe.time { background-color: #e9ebef; color: #141a3c; padding: 80px 0; overflow: hidden;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48' viewBox='0 0 28 48'%3E%3Cpath d='M14 0l14 8v16l-14 8L0 24V8z M14 32l14 8v16 M14 32L0 40v16' fill='none' stroke='%23d5d8df' stroke-width='1'/%3E%3C/svg%3E"); }
+  #equipe.time { background: transparent; color: #141a3c; padding: 80px 0; overflow: hidden; }
   .time-grid { display: grid; gap: 34px; align-items: center; }
   @media (min-width: 1000px) { .time-grid { grid-template-columns: 340px 1fr; gap: 48px; } }
   .time-title .pre { display: block; font-family: 'Anton', sans-serif; color: #2EA3DD; font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: 0.06em; line-height: 1; transform: rotate(-3deg); margin-left: 6px; }
@@ -725,6 +724,7 @@ footer li { font-size: 0.9rem; }
 .como-cta { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
 .como-cta span { color: var(--text-muted); font-size: 0.92rem; }
 .como-cta a:not(.btn) { color: var(--eyebrow); font-weight: 600; }
+.como-cta .btn-red { box-shadow: none; }
 
 /* ---------- menu do celular/tablet (< 980px) ---------- */
 .menu-btn { display: inline-flex; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); align-items: center; justify-content: center; cursor: pointer; margin-left: 2px; }
