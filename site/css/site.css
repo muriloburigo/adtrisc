@@ -497,13 +497,13 @@
   .time-title h2 { display: inline-block; background: #E30613; color: #fff; font-size: clamp(3.6rem, 8vw, 5.6rem); line-height: 0.95; padding: 6px 30px 10px; margin-top: 8px; transform: rotate(-3deg); box-shadow: 8px 10px 0 rgba(0,0,0,0.12); }
   .time-title .pos { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: #141a3c; font-size: clamp(1.15rem, 2.2vw, 1.5rem); margin: 14px 0 0 10px; transform: rotate(-3deg); }
   .time-title .pos u { text-decoration-thickness: 3px; text-underline-offset: 4px; }
-  .time-nomes { list-style: none; padding: 0; margin: 34px 0 0; display: none; gap: 2px; }
+  .time-nomes { list-style: none; padding: 6px; margin: 34px 0 0; display: none; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
   @media (min-width: 1000px) { .time-nomes { display: grid; } }
-  .time-nomes button { width: 100%; text-align: left; font: inherit; background: transparent; border: 0; border-left: 3px solid var(--border-strong); padding: 7px 14px; cursor: pointer; color: var(--text); transition: border-color .15s, background .15s; }
+  .time-nomes button { width: 100%; text-align: left; font: inherit; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 10px; padding: 8px 14px; cursor: pointer; color: var(--text); transition: border-color .15s, background .15s; }
   .time-nomes button b { display: block; font-size: 0.95rem; }
   .time-nomes button span { display: block; font-size: 0.8rem; color: var(--text-muted); }
-  .time-nomes button:hover { background: var(--surface); }
-  .time-nomes button[aria-current="true"] { border-left-color: #E30613; background: var(--surface); box-shadow: var(--shadow); }
+  .time-nomes button:hover { background: var(--surface-2); }
+  .time-nomes button[aria-current="true"] { border-left-color: #E30613; background: var(--surface-2); }
   .time-ctrl { margin-top: 22px; }
   .time-ctrl button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #141a3c; color: #fff; font-size: 1.2rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   .time-ctrl button:hover { background: #E30613; }
