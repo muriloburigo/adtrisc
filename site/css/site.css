@@ -337,14 +337,6 @@
   .partner-role b { display: block; color: var(--text); margin-bottom: 3px; }
   .partner-role span { color: var(--text-muted); }
 
-  /* ---------- final cta ---------- */
-  .final-cta {
-    background: var(--navy); color: #fff; border-radius: var(--radius);
-    padding: 48px 34px; text-align: center; position: relative; overflow: hidden;
-  }
-  .final-cta h2 { color: #fff; font-size: clamp(1.8rem, 3.6vw, 2.6rem); }
-  .final-cta p { color: rgba(255,255,255,0.78); max-width: 52ch; margin: 14px auto 0; }
-  .final-cta .hero-ctas { justify-content: center; margin-top: 28px; }
 
   /* ---------- footer ---------- */
   footer { background: var(--navy-deep); color: rgba(255,255,255,0.7); padding: 56px 0 28px; }
@@ -507,11 +499,11 @@
   .time-title .pos u { text-decoration-thickness: 3px; text-underline-offset: 4px; }
   .time-nomes { list-style: none; padding: 0; margin: 34px 0 0; display: none; gap: 2px; }
   @media (min-width: 1000px) { .time-nomes { display: grid; } }
-  .time-nomes button { width: 100%; text-align: left; font: inherit; background: transparent; border: 0; border-left: 3px solid #c8ccd6; padding: 7px 14px; cursor: pointer; color: #141a3c; transition: border-color .15s, background .15s; }
+  .time-nomes button { width: 100%; text-align: left; font: inherit; background: transparent; border: 0; border-left: 3px solid var(--border-strong); padding: 7px 14px; cursor: pointer; color: var(--text); transition: border-color .15s, background .15s; }
   .time-nomes button b { display: block; font-size: 0.95rem; }
-  .time-nomes button span { display: block; font-size: 0.8rem; color: #5a6180; }
-  .time-nomes button:hover { background: rgba(255,255,255,0.6); }
-  .time-nomes button[aria-current="true"] { border-left-color: #E30613; background: #fff; }
+  .time-nomes button span { display: block; font-size: 0.8rem; color: var(--text-muted); }
+  .time-nomes button:hover { background: var(--surface); }
+  .time-nomes button[aria-current="true"] { border-left-color: #E30613; background: var(--surface); box-shadow: var(--shadow); }
   .time-ctrl { margin-top: 22px; }
   .time-ctrl button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #141a3c; color: #fff; font-size: 1.2rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   .time-ctrl button:hover { background: #E30613; }
