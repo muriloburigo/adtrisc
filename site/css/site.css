@@ -504,6 +504,16 @@
   .time-nomes button span { display: block; font-size: 0.8rem; color: var(--text-muted); }
   .time-nomes button:hover { background: var(--surface-2); }
   .time-nomes button[aria-current="true"] { border-left-color: #E30613; background: var(--surface-2); }
+  /* no tema escuro, --surface fica quase igual ao fundo e --surface-2 fica mais ESCURO
+     que o painel; aqui o painel clareia e os estados (hover/selecionado) clareiam sobre ele */
+  :root[data-theme="dark"] .time-nomes { background: #161D40; border-color: rgba(237,239,250,0.12); }
+  :root[data-theme="dark"] .time-nomes button:hover { background: rgba(237,239,250,0.07); }
+  :root[data-theme="dark"] .time-nomes button[aria-current="true"] { background: rgba(237,239,250,0.13); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .time-nomes { background: #161D40; border-color: rgba(237,239,250,0.12); }
+    :root:not([data-theme="light"]) .time-nomes button:hover { background: rgba(237,239,250,0.07); }
+    :root:not([data-theme="light"]) .time-nomes button[aria-current="true"] { background: rgba(237,239,250,0.13); }
+  }
   .time-ctrl { margin-top: 22px; }
   .time-ctrl button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #141a3c; color: #fff; font-size: 1.2rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   .time-ctrl button:hover { background: #E30613; }
