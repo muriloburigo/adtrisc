@@ -111,3 +111,42 @@ export function formatTelefone(raw: string | null | undefined): string {
   if (digits.length === 8)  return `${digits.slice(0,4)}-${digits.slice(4)}`
   return raw
 }
+
+// ── Validações de cadastro (compartilhadas cliente/servidor) ────────────────
+
+/** Valida um CPF pelos dígitos verificadores (ignora pontuação). */
+export function cpfValido(raw: string | null | undefined): boolean {
+  const cpf = (raw ?? '').replace(/\D/g, '')
+  if (cpf.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(cpf)) return false // todos os dígitos iguais (ex: 111.111.111-11)
+  const digito = (base: string, pesoInicial: number): number => {
+    let soma = 0
+    for (let i = 0; i < base.length; i++) soma += Number(base[i]) * (pesoInicial - i)
+    const resto = (soma * 10) % 11
+    return resto === 10 ? 0 : resto
+  }
+  const d1 = digito(cpf.slice(0, 9), 10)
+  const d2 = digito(cpf.slice(0, 10), 11)
+  return d1 === Number(cpf[9]) && d2 === Number(cpf[10])
+}
+
+/** Valida formato de e-mail (um @, domínio com ponto, sem espaços). */
+export function emailValido(raw: string | null | undefined): boolean {
+  const email = (raw ?? '').trim()
+  if (!email || email.length > 254) return false
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)
+}
+
+/**
+ * Valida o FORMATO de um celular brasileiro (o formato que o WhatsApp usa):
+ * DDD válido (11–99) + 9 + 8 dígitos. Aceita o código do país 55 opcional.
+ * Não confirma que a conta existe no WhatsApp — isso exigiria uma API externa.
+ */
+export function celularWhatsappValido(raw: string | null | undefined): boolean {
+  let d = (raw ?? '').replace(/\D/g, '')
+  if (d.length === 13 && d.startsWith('55')) d = d.slice(2) // tira o +55
+  if (d.length !== 11) return false
+  const ddd = Number(d.slice(0, 2))
+  if (ddd < 11 || ddd > 99) return false
+  return d[2] === '9' // celular: o primeiro dígito após o DDD é 9
+}

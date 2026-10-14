@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { submitInscricao } from './actions'
+import { lerResponsavel, validarResponsaveis } from '@/lib/validacaoInscricao'
 import {
   Section,
   Field,
@@ -22,6 +23,22 @@ export default function InscricaoForm({ turmas }: { turmas: TurmaOption[] }) {
   const [state, formAction, isPending] = useActionState(submitInscricao, null)
   const [aceite, setAceite] = useState(false)
   const [sigData, setSigData] = useState<string | null>(null)
+  const [clientError, setClientError] = useState<string | null>(null)
+
+  // Validação no cliente dos responsáveis (mesma regra do servidor). Se falhar,
+  // impede o envio e mostra a mensagem, sem disparar a server action.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    const fd = new FormData(e.currentTarget)
+    const get = (k: string) => String(fd.get(k) ?? '').trim()
+    const erro = validarResponsaveis(lerResponsavel(get, 'mae'), lerResponsavel(get, 'pai'))
+    if (erro) {
+      e.preventDefault()
+      setClientError(erro)
+      document.getElementById('secao-responsaveis')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    setClientError(null)
+  }
 
   if (state?.success) {
     return (
@@ -40,7 +57,7 @@ export default function InscricaoForm({ turmas }: { turmas: TurmaOption[] }) {
   }
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} onSubmit={handleSubmit} className="space-y-4">
       <input type="hidden" name="aceite_termos" value={aceite ? 'true' : 'false'} />
       <input type="hidden" name="assinatura_data" value={sigData ?? ''} />
 
@@ -82,15 +99,22 @@ export default function InscricaoForm({ turmas }: { turmas: TurmaOption[] }) {
       <DadosEscolaresSection n={4} />
       <SaudeSection n={5} />
       <HistoricoEsportivoSection n={6} />
-      <FiliacaoSection n={7} parent="mae" />
-      <FiliacaoSection n={8} parent="pai" />
+      <div id="secao-responsaveis" className="space-y-4">
+        <FiliacaoSection
+          n={7}
+          parent="mae"
+          contatoObrigatorio
+          nota="Preencha os dados de ao menos um responsável (mãe ou pai). No responsável preenchido, CPF, e-mail e telefone/WhatsApp são obrigatórios."
+        />
+        <FiliacaoSection n={8} parent="pai" contatoObrigatorio />
+      </div>
       <EquipamentosSection n={9} />
       <TermosSection n={10} aceite={aceite} onChange={setAceite} />
       <AutorizacaoAssinaturaSection n={11} onSigChange={setSigData} />
 
-      {state?.error && (
+      {(clientError || state?.error) && (
         <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
-          {state.error}
+          {clientError || state?.error}
         </div>
       )}
 

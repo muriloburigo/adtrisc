@@ -228,26 +228,45 @@ export function HistoricoEsportivoSection({
 
 export type FiliacaoDefaults = { nome?: string | null; cpf?: string | null; rg?: string | null; email?: string | null; telefone?: string | null }
 
-export function FiliacaoSection({ n, parent, defaults }: { n: number; parent: 'mae' | 'pai'; defaults?: FiliacaoDefaults }) {
+export function FiliacaoSection({
+  n,
+  parent,
+  defaults,
+  contatoObrigatorio,
+  nota,
+}: {
+  n: number
+  parent: 'mae' | 'pai'
+  defaults?: FiliacaoDefaults
+  /** Quando true, marca CPF/e-mail/telefone como obrigatórios (formulário público). */
+  contatoObrigatorio?: boolean
+  /** Texto de instrução exibido no topo da seção. */
+  nota?: string
+}) {
   const title = parent === 'mae' ? 'Filiação — Mãe' : 'Filiação — Pai'
   return (
     <Section n={n} title={title}>
+      {nota && (
+        <p className="text-xs text-gray-600 bg-sky-50 border border-sky-100 px-3 py-2.5 rounded-lg leading-relaxed">
+          {nota}
+        </p>
+      )}
       <Field label={`Nome completo ${parent === 'mae' ? 'da mãe' : 'do pai'}`}>
         <input type="text" name={`${parent}_nome`} defaultValue={defaults?.nome ?? ''} className={inputCls} placeholder="Nome completo" />
       </Field>
       <Row>
-        <Field label="CPF">
-          <input type="text" name={`${parent}_cpf`} defaultValue={defaults?.cpf ?? ''} className={inputCls} placeholder="000.000.000-00" />
+        <Field label="CPF" required={contatoObrigatorio}>
+          <input type="text" name={`${parent}_cpf`} defaultValue={defaults?.cpf ?? ''} className={inputCls} placeholder="000.000.000-00" inputMode="numeric" />
         </Field>
         <Field label="RG">
           <input type="text" name={`${parent}_rg`} defaultValue={defaults?.rg ?? ''} className={inputCls} placeholder="RG" />
         </Field>
       </Row>
       <Row>
-        <Field label="E-mail">
+        <Field label="E-mail" required={contatoObrigatorio}>
           <input type="email" name={`${parent}_email`} defaultValue={defaults?.email ?? ''} className={inputCls} placeholder="email@exemplo.com" />
         </Field>
-        <Field label="Telefone">
+        <Field label="Telefone / WhatsApp" required={contatoObrigatorio} hint={contatoObrigatorio ? 'Celular com DDD' : undefined}>
           <input type="tel" name={`${parent}_telefone`} defaultValue={defaults?.telefone ?? ''} className={inputCls} placeholder="(48) 99999-9999" />
         </Field>
       </Row>

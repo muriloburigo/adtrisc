@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { friendlyError } from '@/lib/errors'
+import { emailValido } from '@/lib/utils'
+import { lerResponsavel, validarResponsaveis } from '@/lib/validacaoInscricao'
 
 export async function submitInscricao(
   _prev: { error?: string } | null,
@@ -13,6 +15,14 @@ export async function submitInscricao(
   const turma_id = String(formData.get('turma_id') ?? '').trim()
   const nome     = String(formData.get('p_nome') ?? '').trim()
   if (!nome)     return { error: 'Nome do atleta é obrigatório.' }
+
+  const emailContato = String(formData.get('email_responsavel') ?? '').trim()
+  if (!emailValido(emailContato)) return { error: 'Informe um e-mail de contato válido.' }
+
+  // Ao menos um responsável, com CPF/e-mail/telefone válidos (mesma regra do cliente).
+  const getResp = (k: string) => String(formData.get(k) ?? '').trim()
+  const erroResp = validarResponsaveis(lerResponsavel(getResp, 'mae'), lerResponsavel(getResp, 'pai'))
+  if (erroResp) return { error: erroResp }
 
   const responsavelAssina = String(formData.get('responsavel_assina') ?? '').trim()
   if (!responsavelAssina) return { error: 'Informe o nome de quem está assinando.' }
