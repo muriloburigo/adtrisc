@@ -376,10 +376,8 @@
   .banner { display: block; background: #0b1020; line-height: 0; }
   .banner img { width: 100%; height: auto; }
   .banner-strip { background: var(--navy-deep); color: #fff; padding: 26px 0 30px; }
-  .banner-strip-inner { display: grid; gap: 22px; align-items: center; }
-  @media (min-width: 900px) { .banner-strip-inner { grid-template-columns: auto 1fr; } }
-  .banner-strip .cta-main { display: flex; flex-direction: column; gap: 8px; }
-  .banner-strip .cta-main small { color: rgba(255,255,255,0.65); font-size: 0.82rem; }
+  .banner-strip-inner { display: flex; flex-direction: column; gap: 18px; }
+  .banner-strip .banner-strip-lede { margin: 0; text-align: center; color: rgba(255,255,255,0.72); font-size: 0.9rem; letter-spacing: 0.02em; }
   .banner-strip .hero-stats { margin-top: 0; }
 
   .about-grid { display: grid; gap: 40px; align-items: start; }
@@ -491,13 +489,13 @@
   /* ---------- equipe: "Conheça o time que move a ADTRISC" (carrossel) ---------- */
   #equipe.time { background: transparent; color: #141a3c; padding: 80px 0; overflow: hidden; }
   .time-grid { display: grid; gap: 34px; align-items: center; }
-  @media (min-width: 1000px) { .time-grid { grid-template-columns: 340px 1fr; gap: 48px; } }
-  .time-title .pre { display: block; font-family: 'Anton', sans-serif; color: #2EA3DD; font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: 0.06em; line-height: 1; transform: rotate(-3deg); margin-left: 6px; }
+  @media (min-width: 1000px) { .time-grid { grid-template-columns: 340px 1fr; gap: 48px; align-items: end; } }
+  .time-title .pre { display: block; font-family: 'Anton', sans-serif; color: #2EA3DD; font-size: clamp(1.6rem, 3.2vw, 2.24rem); letter-spacing: 0.06em; line-height: 1; transform: rotate(-3deg); margin-left: 6px; }
   .time-title .pre i { font-style: normal; font-family: 'Geist', sans-serif; font-weight: 400; }
-  .time-title h2 { display: inline-block; background: #E30613; color: #fff; font-size: clamp(3.6rem, 8vw, 5.6rem); line-height: 0.95; padding: 6px 30px 10px; margin-top: 8px; transform: rotate(-3deg); box-shadow: 8px 10px 0 rgba(0,0,0,0.12); }
-  .time-title .pos { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: var(--text); font-size: clamp(1.15rem, 2.2vw, 1.5rem); margin: 14px 0 0 10px; transform: rotate(-3deg); }
+  .time-title h2 { display: inline-block; background: #E30613; color: #fff; font-size: clamp(2.88rem, 6.4vw, 4.48rem); line-height: 0.95; padding: 6px 30px 10px; margin-top: 8px; transform: rotate(-3deg); box-shadow: 8px 10px 0 rgba(0,0,0,0.12); }
+  .time-title .pos { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: var(--text); font-size: clamp(0.92rem, 1.76vw, 1.2rem); margin: 14px 0 0 10px; transform: rotate(-3deg); }
   .time-title .pos u { text-decoration-thickness: 3px; text-underline-offset: 4px; }
-  .time-nomes { list-style: none; padding: 6px; margin: 34px 0 0; display: none; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+  .time-nomes { list-style: none; padding: 6px; margin: 12px 0 0; display: none; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
   @media (min-width: 1000px) { .time-nomes { display: grid; } }
   .time-nomes button { width: 100%; text-align: left; font: inherit; background: transparent; border: 0; border-left: 3px solid transparent; border-radius: 10px; padding: 8px 14px; cursor: pointer; color: var(--text); transition: border-color .15s, background .15s; }
   .time-nomes button b { display: block; font-size: 0.95rem; }
@@ -661,6 +659,9 @@ body { background-image: var(--hex); }
 /* títulos das seções com a etiqueta inclinada das artes */
 .sec-tag { display: inline-block; background: var(--tag-red); color: #fff !important; padding: 8px 22px 10px; margin-top: 14px !important;
   transform: rotate(-2deg); box-shadow: 6px 8px 0 rgba(0,0,0,0.14); font-size: clamp(1.8rem, 3.6vw, 2.6rem) !important; line-height: 1.05; }
+/* títulos das seções da home reduzidos ~20% (mantém o padrão entre elas).
+   Escopado a .section-head para não mexer no cabeçalho da página /transparencia (.page-top). */
+.section-head .sec-tag { font-size: clamp(1.44rem, 2.88vw, 2.08rem) !important; }
 #conquistas .sec-tag { background: #2EA3DD; color: #051224 !important; }
 #parceiros .sec-tag, #transparencia .sec-tag { background: #141a3c; }
 :root[data-theme="dark"] #parceiros .sec-tag, :root[data-theme="dark"] #transparencia .sec-tag { background: #2A3470; }
@@ -762,7 +763,7 @@ body.menu-aberto { overflow: hidden; }
 @media (min-width: 761px) {
   .banner .banner-titulo { position: absolute; left: 50%; right: auto; transform: translateX(-50%); top: 3.6%; z-index: 2; background: none;
     width: min(calc(100% - 48px), var(--maxw)); padding: 0 24px; }
-  .banner .banner-titulo h1 { white-space: nowrap; font-size: clamp(0.72rem, 1.22vw, 1.15rem); letter-spacing: 0.12em; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
+  .banner .banner-titulo h1 { white-space: nowrap; font-size: clamp(0.58rem, 1.05vw, 0.98rem); letter-spacing: 0.12em; text-shadow: 0 1px 6px rgba(0,0,0,0.35); }
 }
 
 /* escudo sempre sobre um quadrado branco (como no menu do sistema): no fundo escuro
