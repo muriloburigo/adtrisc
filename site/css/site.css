@@ -787,7 +787,8 @@ body.menu-aberto { overflow: hidden; }
 @media (min-width: 860px) { .qs-topo { grid-template-columns: 1fr 1fr; } }
 .qs-comunidade { }
 @media (min-width: 860px) { .qs-comunidade { text-align: right; } .qs-comunidade .qs-sub { transform-origin: right; } }
-.qs-photo-wide { margin-top: 0; }
+/* sombra uniforme: o céu claro da foto se confundia com o fundo do painel */
+.qs-photo-wide { margin-top: 0; box-shadow: 0 4px 22px rgba(20,26,60,0.28); }
 
 /* Quem somos — bloco "Uma nova história": imagem exata da referência + botões */
 /* "Uma nova história": a imagem preenche o slide inteiro (mesmo fundo), virando um só elemento */
