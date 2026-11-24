@@ -841,5 +841,5 @@ body.menu-aberto { overflow: hidden; }
 .qs-arte-nova .corpo { font-size: 2.75em; font-weight: 300; line-height: .97; padding-bottom: .5em; }
 .qs-arte-nova .corpo b { font-weight: 600; }
 /* moldura azul: sai de trás da faixa e fecha abaixo do parágrafo */
-.qs-arte-nova .qs-letreiro::before { content: ""; position: absolute; left: 1.3em; right: 1.5em; top: 3em; bottom: 5.5em; border: .18em solid #35abe2; }
+.qs-arte-nova .qs-letreiro::before { content: ""; position: absolute; left: 1.3em; right: 1.5em; top: 3em; bottom: 5.5em; border: .18em solid #35abe2; z-index: -1; pointer-events: none; }
 .qs-arte-nova .venha { font-size: 4.7em; font-weight: 800; text-transform: uppercase; line-height: 1.1702; }
