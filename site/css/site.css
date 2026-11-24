@@ -886,3 +886,5 @@ body.menu-aberto { overflow: hidden; }
 .como-cta .inscrever { color: var(--text); }
 .qs-arte-nova .inscrever { width: 21em; margin: 1.6em auto 0; }
 .como-cta .inscrever span { color: inherit; }
+
+.voltar { display: table; margin-bottom: 18px; padding: 8px 0; color: var(--eyebrow); font-weight: 600; font-size: 0.95rem; }
