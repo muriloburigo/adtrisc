@@ -787,12 +787,25 @@ body.menu-aberto { overflow: hidden; }
 @media (min-width: 860px) { .qs-topo { grid-template-columns: 1fr 1fr; } }
 .qs-comunidade { }
 @media (min-width: 860px) { .qs-comunidade { text-align: right; } .qs-comunidade .qs-sub { transform-origin: right; } }
-/* sombra uniforme: o céu claro da foto se confundia com o fundo do painel */
-.qs-photo-wide { margin-top: 0; box-shadow: 0 4px 22px rgba(20,26,60,0.28); }
 
-/* Quem somos — bloco "Uma nova história": imagem exata da referência + botões */
-/* "Uma nova história": a imagem preenche o slide inteiro (mesmo fundo), virando um só elemento */
-.qs-nova-bloco { padding: 0; }
-.qs-nova-bloco .qs-nova-img { width: 100%; height: auto; display: block;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 9%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 9%); }
+/* Quem somos — fundo e artes do designer (nov/2026): foto + letreiro em camadas separadas */
+#historia .qs-block { background: #f7f7f7 url("../img/historia/fundo-hex.webp") top center / 1200px auto; }
+.qs-block.qs-arte { position: relative; padding: 0; }
+.qs-arte img { display: block; height: auto; }
+.qs-arte-foto { width: 100%; }
+@media (min-width: 761px) {
+  .qs-arte-texto { position: absolute; }
+  /* sobre o céu livre da foto */
+  .qs-arte-topo .qs-arte-texto { width: 66%; left: 17%; top: 3.5%; }
+  .qs-arte-nova .qs-arte-texto { width: 43%; right: 4%; top: 24%; }
+}
+/* celular: empilhado, para o letreiro continuar legível */
+@media (max-width: 760px) {
+  #historia .qs-block { background-size: 760px auto; }
+  .qs-arte { display: flex; flex-direction: column; }
+  .qs-arte-texto { width: calc(100% - 36px); margin: 24px auto; }
+  .qs-arte-topo .qs-arte-texto { order: -1; }
+  .qs-arte .qs-arte-foto { object-fit: cover; }
+  .qs-arte-topo .qs-arte-foto { aspect-ratio: 1.75; object-position: bottom; }
+  .qs-arte-nova .qs-arte-foto { aspect-ratio: 1.15; object-position: left; }
+}
