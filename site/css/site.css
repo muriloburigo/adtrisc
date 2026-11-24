@@ -731,7 +731,7 @@ footer li { font-size: 0.9rem; }
 .faq details a { color: var(--eyebrow); }
 .como-cta { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
 .como-cta span { color: var(--text-muted); font-size: 0.92rem; }
-.como-cta a:not(.btn) { color: var(--eyebrow); font-weight: 600; }
+.como-cta span a { color: var(--eyebrow); font-weight: 600; }
 .como-cta .btn-red { box-shadow: none; }
 
 /* ---------- menu do celular/tablet (< 1180px) ---------- */
@@ -872,6 +872,17 @@ body.menu-aberto { overflow: hidden; }
 /* alvos de toque confortáveis em telas de toque */
 @media (max-width: 1179px), (pointer: coarse) {
   footer li a { display: inline-block; padding: 6px 0; }
-  .como-cta a:not(.btn) { display: inline-block; padding: 8px 0; }
+  .como-cta span a { display: inline-block; padding: 8px 0; }
 }
 @media (max-width: 350px) { .banner-titulo .p { white-space: normal; } }
+
+/* botão "Inscrever participante" (arte): PARTICIPANTE é máscara, para acompanhar a cor do tema */
+.inscrever { display: block; position: relative; width: 250px; line-height: 0; text-decoration: none; color: #1b1d3f; transition: transform .2s; }
+.inscrever img { width: 100%; height: auto; }
+.inscrever span { display: block; width: 70.9%; aspect-ratio: 640 / 129; margin: -1.5% 0 0 13.2%; background: currentColor;
+  -webkit-mask: url("../img/participante.webp") center / contain no-repeat; mask: url("../img/participante.webp") center / contain no-repeat; }
+.inscrever:hover, .inscrever:focus-visible { transform: scale(1.05) rotate(-1deg); }
+@media (prefers-reduced-motion: reduce) { .inscrever { transition: none; } .inscrever:hover { transform: none; } }
+.como-cta .inscrever { color: var(--text); }
+.qs-arte-nova .inscrever { width: 21em; margin: 1.6em auto 0; }
+.como-cta .inscrever span { color: inherit; }
