@@ -856,7 +856,7 @@ body.menu-aberto { overflow: hidden; }
 .banner-movel { display: none; }
 @media (max-width: 760px) {
   /* texto e botão da arte do banner ficam pequenos demais no celular: repetidos em tamanho legível */
-  html { scroll-padding-top: 40px; }
+  html { scroll-padding-top: 58px; }
   .banner-movel { display: grid; gap: 16px; text-align: center; }
   .banner-movel p { margin: 0; font-size: 1.02rem; line-height: 1.5; }
   .banner-movel .btn { justify-content: center; }
@@ -897,4 +897,10 @@ body.menu-aberto { overflow: hidden; }
   .banner .banner-botao { left: 34.05%; top: 70.68%; width: 31.79%; }
   /* área de toque inclui a palavra PARTICIPANTE, que faz parte da arte */
   .banner .banner-botao::after { content: ""; position: absolute; left: 0; right: 0; top: 0; bottom: -55%; }
+}
+
+/* celular/tablet: barra do topo mais alta, para dar respiro antes do banner */
+@media (max-width: 900px) {
+  .topbar-inner { height: 76px; }
+  .menu-movel { inset: 77px 0 0 0; }
 }
