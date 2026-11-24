@@ -810,9 +810,8 @@ body.menu-aberto { overflow: hidden; }
   .qs-arte { display: flex; flex-direction: column; }
   .qs-arte .qs-arte-texto { font-size: 1.18cqw; margin: 22px auto 0; position: relative; z-index: 1; }
   .qs-arte.qs-arte-nova .qs-arte-texto { font-size: 1.47cqw; margin: -2% auto 24px; }
-  .qs-arte-topo .qs-arte-texto { order: -1; }
-  /* as fotos já vêm com degradê: o começo do céu passa por trás do letreiro */
-  .qs-arte-topo .qs-arte-pic { margin-top: -5%; }
+  /* letreiro sobre o céu azul da foto */
+  .qs-arte.qs-arte-topo .qs-arte-texto { position: absolute; left: 50%; translate: -50% 0; top: 3.4cqw; margin: 0; width: max-content; }
 }
 
 /* letreiros em texto (SEO). 1em = 1% da largura do painel; tudo abaixo é proporcional à arte */
