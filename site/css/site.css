@@ -871,7 +871,7 @@ body.menu-aberto { overflow: hidden; }
 /* botão "Inscrever participante" (arte): PARTICIPANTE é máscara, para acompanhar a cor do tema */
 .inscrever { display: block; position: relative; width: 250px; line-height: 0; text-decoration: none; color: #1b1d3f; transition: transform .2s; }
 .inscrever img { width: 100%; height: auto; }
-.inscrever span { display: block; width: 70.9%; aspect-ratio: 640 / 129; margin: -1.5% 0 0 13.2%; background: currentColor;
+.inscrever span { display: block; width: 70.9%; aspect-ratio: 640 / 129; margin: -5% 0 0 13.2%; background: currentColor;
   -webkit-mask: url("../img/participante.webp") center / contain no-repeat; mask: url("../img/participante.webp") center / contain no-repeat; }
 .inscrever:hover, .inscrever:focus-visible { transform: scale(1.05) rotate(-1deg); }
 @media (prefers-reduced-motion: reduce) { .inscrever { transition: none; } .inscrever:hover { transform: none; } }
