@@ -796,16 +796,50 @@ body.menu-aberto { overflow: hidden; }
 @media (min-width: 761px) {
   .qs-arte-texto { position: absolute; }
   /* sobre o céu livre da foto */
-  .qs-arte-topo .qs-arte-texto { width: 66%; left: 17%; top: 3.5%; }
-  .qs-arte-nova .qs-arte-texto { width: 43%; right: 4%; top: 24%; }
+  .qs-arte-topo .qs-arte-texto { left: 23%; top: 5.5%; }
+  .qs-arte-nova .qs-arte-texto { right: 4%; top: 17%; }
 }
 /* celular: empilhado, para o letreiro continuar legível */
 @media (max-width: 760px) {
   #historia .qs-block { background-size: 760px auto; }
   .qs-arte { display: flex; flex-direction: column; }
-  .qs-arte-texto { width: calc(100% - 36px); margin: 24px auto; }
+  .qs-arte .qs-arte-texto { font-size: 1.68cqw; margin: 24px auto; }
+  .qs-arte.qs-arte-nova .qs-arte-texto { font-size: 2.1cqw; }
   .qs-arte-topo .qs-arte-texto { order: -1; }
   .qs-arte .qs-arte-foto { object-fit: cover; }
   .qs-arte-topo .qs-arte-foto { aspect-ratio: 1.75; object-position: bottom; }
   .qs-arte-nova .qs-arte-foto { aspect-ratio: 1.15; object-position: left; }
 }
+
+/* letreiros em texto (SEO). 1em = 1% da largura do painel; tudo abaixo é proporcional à arte */
+@font-face { font-family: 'Archivo'; src: url('../fonts/archivo-var.woff2') format('woff2'); font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; }
+.qs-arte { container-type: inline-size; }
+.qs-arte-texto { font-size: 1cqw; }
+.qs-arte-topo .qs-arte-texto { display: flex; align-items: center; gap: 1.6em; }
+.qs-arte-topo .qs-arte-texto img { width: 13.4em; flex: none; }
+.qs-letreiro { font-family: 'Archivo', 'Arial Narrow', sans-serif; font-stretch: 70%; word-spacing: .07em; color: #1b1d3f; transform: rotate(-2.2deg); white-space: nowrap; }
+.qs-letreiro h3, .qs-letreiro p { margin: 0; font: inherit; letter-spacing: 0; color: inherit; }
+.qs-letreiro h3 { text-transform: uppercase; }
+.qs-letreiro h3 > span { display: block; }
+.qs-letreiro b { font-weight: 800; }
+.qs-letreiro i { font-style: normal; font-weight: 500; }
+.qs-letreiro .faixa { filter: drop-shadow(.25em .3em .25em rgba(0,0,0,.4)); }
+.qs-letreiro .faixa > span { display: flex; align-items: baseline; background: #e30d17; color: #fff; clip-path: polygon(0 0, 100% 0, 97.8% 100%, 0 100%); line-height: 1; }
+.qs-arte-topo .l1 { font-size: 3.5em; font-weight: 500; line-height: 1.25; }
+.qs-arte-topo .faixa > span { width: 38.8em; padding: .5em 1.4em; gap: .9em; }
+.qs-arte-topo .faixa i { font-size: 3.6em; }
+.qs-arte-topo .qs-letreiro { font-stretch: 64%; }
+.qs-arte-topo .faixa b { font-size: 5.5em; font-weight: 800; line-height: .95; }
+.qs-arte-topo .l3 { font-size: 1.95em; text-transform: uppercase; font-weight: 300; line-height: 1.2; margin-top: .3em; }
+.qs-arte-topo .l3 b { font-weight: 600; }
+.qs-arte-nova .qs-letreiro { width: 43em; position: relative; text-align: center; }
+.qs-arte-nova .faixa { position: relative; z-index: 1; }
+.qs-arte-nova .faixa > span { padding: .7em 0 .8em; justify-content: center; gap: 1em; }
+.qs-arte-nova .faixa i { font-size: 4.3em; }
+.qs-arte-nova .faixa b { font-size: 4.9em; }
+.qs-arte-nova .pode { font-size: 4.3em; font-weight: 800; color: #35abe2; line-height: 1; padding: .14em 0 .12em; }
+.qs-arte-nova .corpo { font-size: 2.75em; font-weight: 300; line-height: .97; padding-bottom: .5em; }
+.qs-arte-nova .corpo b { font-weight: 600; }
+/* moldura azul: sai de trás da faixa e fecha abaixo do parágrafo */
+.qs-arte-nova .qs-letreiro::before { content: ""; position: absolute; left: 1.3em; right: 1.5em; top: 3em; bottom: 5.5em; border: .18em solid #35abe2; }
+.qs-arte-nova .venha { font-size: 4.7em; font-weight: 800; text-transform: uppercase; line-height: 1.1702; }
