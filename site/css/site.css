@@ -289,7 +289,7 @@
   .tag-city { background: color-mix(in srgb, var(--navy) 14%, transparent); color: var(--navy); }
   .tag-private { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
   :root[data-theme="dark"] .tag-city, @media (prefers-color-scheme: dark) { }
-  .funding-card h4 { font-family: 'Geist'; font-weight: 600; font-size: 1rem; margin: 0 0 8px; letter-spacing: 0; }
+  .funding-card h3 { text-transform: none; font-family: 'Geist'; font-weight: 600; font-size: 1rem; margin: 0 0 8px; letter-spacing: 0; }
   .funding-card p { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
 
   .docs-list { display: grid; gap: 10px; margin-bottom: 40px; }
@@ -311,7 +311,7 @@
     border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 40px;
   }
   @media (min-width: 780px) { .audit-card { grid-template-columns: 1fr auto; align-items: center; } }
-  .audit-card h4 { font-family: 'Geist'; text-transform: none; font-weight: 600; font-size: 1.15rem; letter-spacing: 0; margin: 0 0 8px; }
+  .audit-card h3 { font-family: 'Geist'; text-transform: none; font-weight: 600; font-size: 1.15rem; letter-spacing: 0; margin: 0 0 8px; }
   .audit-card p { color: var(--text-muted); font-size: 0.92rem; margin: 0; max-width: 60ch; }
   .audit-steps { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   .audit-step {
@@ -492,7 +492,7 @@
   @media (min-width: 1000px) { .time-grid { grid-template-columns: 340px 1fr; gap: 48px; align-items: end; } }
   .time-title .pre { display: block; font-family: 'Anton', sans-serif; color: #2EA3DD; font-size: clamp(1.6rem, 3.2vw, 2.24rem); letter-spacing: 0.06em; line-height: 1; transform: rotate(-3deg); margin-left: 6px; }
   .time-title .pre i { font-style: normal; font-family: 'Geist', sans-serif; font-weight: 400; }
-  .time-title h2 { display: inline-block; background: #E30613; color: #fff; font-size: clamp(2.88rem, 6.4vw, 4.48rem); line-height: 0.95; padding: 6px 30px 10px; margin-top: 8px; transform: rotate(-3deg); box-shadow: 8px 10px 0 rgba(0,0,0,0.12); }
+  .time-title .tt { font-family: 'Anton', sans-serif; text-transform: uppercase; letter-spacing: 0.01em; display: inline-block; background: #E30613; color: #fff; font-size: clamp(2.88rem, 6.4vw, 4.48rem); line-height: 0.95; padding: 6px 30px 10px; margin-top: 8px; transform: rotate(-3deg); box-shadow: 8px 10px 0 rgba(0,0,0,0.12); }
   .time-title .pos { display: block; font-family: 'Anton', sans-serif; text-transform: uppercase; color: var(--text); font-size: clamp(0.92rem, 1.76vw, 1.2rem); margin: 14px 0 0 10px; transform: rotate(-3deg); }
   .time-title .pos u { text-decoration-thickness: 3px; text-underline-offset: 4px; }
   .time-nomes { list-style: none; padding: 6px; margin: 12px 0 0; display: none; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
@@ -843,3 +843,7 @@ body.menu-aberto { overflow: hidden; }
 /* moldura azul: sai de trás da faixa e fecha abaixo do parágrafo */
 .qs-arte-nova .qs-letreiro::before { content: ""; position: absolute; left: 1.3em; right: 1.5em; top: 3em; bottom: 5.5em; border: .18em solid #35abe2; z-index: -1; pointer-events: none; }
 .qs-arte-nova .venha { font-size: 4.7em; font-weight: 800; text-transform: uppercase; line-height: 1.1702; }
+
+/* título semântico que junta as partes do letreiro sem mudar o visual delas */
+.tit { font: inherit; letter-spacing: inherit; text-transform: none; text-wrap: inherit; }
+.tit .qs-tag small { margin-right: 1px; } /* o espaço do texto já separa */

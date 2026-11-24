@@ -16,3 +16,10 @@ mas com build e deploy independentes do app Next.js na raiz do repositório.
 Desde 08/10/2026 o projeto `adtrisc-site` está ligado ao GitHub (Root Directory `site`,
 `site/vercel.json` = estático, sem build): **todo push na `main` publica o site**. Não use
 `vercel --prod`.
+
+## SEO e cache
+
+- `robots.txt`, `sitemap.xml` (atualizar `lastmod` ao mudar conteúdo), JSON-LD no `<head>` das duas páginas e
+  imagem de compartilhamento em `img/og-adtrisc.jpg` (1200×630).
+- O FAQ está duplicado no JSON-LD de `index.html`: ao editar uma pergunta, editar os dois.
+- `img/` tem cache de 7 dias e `fonts/` de 1 ano: ao trocar um arquivo, **usar nome novo**.
