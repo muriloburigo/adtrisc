@@ -189,7 +189,7 @@
   }
   @media (min-width: 720px) { .hero-stats { grid-template-columns: repeat(4,1fr); } }
   .hero-stat { background: rgba(6,9,20,0.55); padding: 18px 18px; }
-  .hero-stat b { display: block; font-family: 'Anton'; font-size: 1.6rem; color: #fff; }
+  .hero-stat b { display: block; font-family: 'Anton'; font-weight: 400; letter-spacing: 0.02em; font-size: 1.6rem; color: #fff; }
   .hero-stat span { font-size: 0.78rem; color: rgba(255,255,255,0.68); }
 
   /* ---------- generic sections ---------- */
@@ -258,7 +258,7 @@
   @media (min-width: 780px) { .transp-hero { grid-template-columns: 1.3fr 1fr; align-items: center; } }
   .transp-hero p { color: rgba(255,255,255,0.82); margin: 12px 0 0; }
   .transp-hero-fact { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; padding: 16px 18px; }
-  .transp-hero-fact b { font-family: 'Anton'; font-size: 1.3rem; display: block; }
+  .transp-hero-fact b { font-family: 'Anton'; font-weight: 400; letter-spacing: 0.02em; font-size: 1.3rem; display: block; }
   .transp-hero-fact span { font-size: 0.8rem; color: rgba(255,255,255,0.65); }
 
   .id-card {
