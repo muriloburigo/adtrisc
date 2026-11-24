@@ -853,13 +853,8 @@ body.menu-aberto { overflow: hidden; }
 .tit .qs-tag small { margin-right: 1px; } /* o espaço do texto já separa */
 
 /* ---------- revisão mobile (nov/2026) ---------- */
-.banner-movel { display: none; }
 @media (max-width: 760px) {
-  /* texto e botão da arte do banner ficam pequenos demais no celular: repetidos em tamanho legível */
   html { scroll-padding-top: 58px; }
-  .banner-movel { display: grid; gap: 16px; text-align: center; }
-  .banner-movel p { margin: 0; font-size: 1.02rem; line-height: 1.5; }
-  .banner-movel .btn { justify-content: center; }
   section:not(.hero-v2):not(.qs) { padding: 60px 0; }
   #historia.qs { padding: 48px 0 56px; }
   .eyebrow, .result-badge, .status-pill, .audit-step, .tag, .funding-card .tag, .id-row dt, .id-row dt .mono, footer h5 { font-size: 0.75rem !important; }
@@ -894,9 +889,9 @@ body.menu-aberto { overflow: hidden; }
   .banner .banner-titulo h1 { font-size: clamp(0.7rem, 3.1vw, 0.95rem); letter-spacing: 0.12em; line-height: 1.4; text-shadow: 0 1px 6px rgba(0,0,0,.55); }
 }
 @media (max-width: 760px) {
-  .banner .banner-botao { left: 34.05%; top: 70.68%; width: 31.79%; }
-  /* área de toque inclui a palavra PARTICIPANTE, que faz parte da arte */
-  .banner .banner-botao::after { content: ""; position: absolute; left: 0; right: 0; top: 0; bottom: -55%; }
+  .banner .banner-botao { left: 23.09%; top: 79.10%; width: 39.80%; }
+  /* o céu desta arte é claro: escurece só o topo para o título branco ler bem */
+  .banner .banner-titulo { top: 0; padding-top: 4%; padding-bottom: 9%; background: linear-gradient(180deg, rgba(16,20,48,.62), rgba(16,20,48,.4) 55%, transparent); }
 }
 
 /* celular/tablet: barra do topo mais alta, para dar respiro antes do banner */
